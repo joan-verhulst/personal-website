@@ -1,1 +1,48 @@
 @import "tailwindcss";
+
+@theme {
+  /* Neutral colors */
+  --color-neutral-50: #faf9f9;
+  --color-neutral-100: #f3f3f3;
+  --color-neutral-200: #d8d8d8;
+  --color-neutral-300: #bdbdbd;
+  --color-neutral-400: #a2a2a2;
+  --color-neutral-500: #878787;
+  --color-neutral-600: #6d6d6d;
+  --color-neutral-700: #525252;
+  --color-neutral-800: #373737;
+  --color-neutral-900: #1c1c1c;
+  --color-neutral-950: #0f0f0f;
+  --color-neutral: #0f0f0f;
+
+  /* Primary colors */
+  --color-primary-50: #ecf5fb;
+  --color-primary-100: #d8ebf7;
+  --color-primary-200: #b1d7f0;
+  --color-primary-300: #89c3e8;
+  --color-primary-400: #62afe0;
+  --color-primary-500: #3a9bd8;
+  --color-primary-600: #247fb8;
+  --color-primary-700: #1b608a;
+  --color-primary-800: #12405d;
+  --color-primary-900: #0a2130;
+  --color-primary-950: #05121a;
+  --color-primary: #3a9bd8;
+
+  /* Font sizes */
+  --font-size-sm: 0.75rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+}
+
+/* Page transition container - prevent overflow during animations */
+html,
+body {
+  overflow-x: hidden;
+}
+
+/* Disable View Transitions API default animations (GSAP handles it) */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}

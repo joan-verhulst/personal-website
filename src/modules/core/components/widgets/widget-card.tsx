@@ -2,6 +2,7 @@
 import Image from "next/image";
 import { useRef, useEffect } from "react";
 import { gsap } from "gsap";
+import cn from "~utils/cn";
 
 type WidgetCardProps = {
   label: string;
@@ -9,7 +10,6 @@ type WidgetCardProps = {
   alt?: string;
   className?: string;
   imgClassName?: string;
-  aspectClass?: string;
   children?: React.ReactNode;
 };
 
@@ -19,7 +19,6 @@ const WidgetCard = ({
   alt = "",
   className = "",
   imgClassName = "object-cover",
-  aspectClass = "aspect-square",
   children,
 }: WidgetCardProps) => {
   const cardRef = useRef<HTMLDivElement>(null);
@@ -90,7 +89,10 @@ const WidgetCard = ({
   return (
     <div
       ref={cardRef}
-      className={`relative w-full ${aspectClass} rounded-4xl border border-neutral-950/10 select-none cursor-pointer ${className}`}
+      className={cn(
+        "relative w-full aspect-square rounded-4xl border border-neutral-950/10 select-none cursor-pointer",
+        className,
+      )}
     >
       {src && !children && (
         <div className="relative w-full h-full overflow-hidden rounded-4xl">
@@ -98,7 +100,7 @@ const WidgetCard = ({
             src={src}
             alt={alt}
             fill
-            className={`${imgClassName} pointer-events-none rounded-4xl`}
+            className={cn(imgClassName, "pointer-events-none rounded-4xl")}
           />
         </div>
       )}

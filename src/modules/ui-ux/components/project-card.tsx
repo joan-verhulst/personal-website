@@ -5,6 +5,7 @@ import Image from "next/image";
 import { gsap } from "gsap";
 import cn from "~/utils/cn";
 import type { UiUxProject } from "~/data/ui-ux-projects";
+import AnimatedText from "~/modules/core/components/utils/AnimatedText";
 
 interface Props {
   project: UiUxProject;
@@ -45,10 +46,23 @@ const ProjectCard = ({ project, onClick, className }: Props) => {
     >
       {/* Title and Date header */}
       <div className="flex justify-between items-center mb-4 ">
-        <h2 className="text-neutral-950 text-lg font-regular">
+        <AnimatedText
+          as="h2"
+          className="text-neutral-950 text-lg font-regular"
+          trigger="hover"
+          hoverRef={cardRef}
+        >
           {project.title}
-        </h2>
-        <span className="text-neutral-950/33 text-lg">{project.date}</span>
+        </AnimatedText>
+        <AnimatedText
+          as="span"
+          className="text-neutral-950/33 text-lg"
+          trigger="hover"
+          hoverRef={cardRef}
+          delay={0.2}
+        >
+          {project.date}
+        </AnimatedText>
       </div>
 
       {/* Project Image */}

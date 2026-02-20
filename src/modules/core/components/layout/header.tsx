@@ -7,6 +7,7 @@ import { gsap } from "gsap";
 import { siteData } from "~/data/site";
 import cn from "~/utils/cn";
 import { navigateWithTransition } from "~/utils/page-transition";
+import AnimatedText from "~components/utils/AnimatedText";
 
 interface Props {
   showBackButton?: boolean;
@@ -76,9 +77,14 @@ const Header = ({ showBackButton = false, className }: Props) => {
       )}
     >
       <div className="flex items-center">
-        <h1 className="text-neutral-950 font-regular text-lg">
+        <AnimatedText
+          as="h1"
+          className="text-neutral-950 font-regular text-lg"
+          trigger="load"
+          delay={0.8}
+        >
           {siteData.owner.name}
-        </h1>
+        </AnimatedText>
         {showBackButton && (
           <div
             ref={buttonWrapperRef}

@@ -6,76 +6,63 @@ import { gsap } from "gsap";
 interface Props {
   labels: string[];
   activeIndex: number | null;
-  top?: number;
+  position?: number;
+  orientation?: "vertical" | "horizontal";
   className?: string;
 }
 
 const ANIMATION_DURATION = 0.3;
-const LABEL_HEIGHT = 40; // Height of each label item in pixels
+const LABEL_HEIGHT = 32;
+const LABEL_WIDTH = 128;
 
-const SliderLabel = ({ labels, activeIndex, top, className }: Props) => {
+const SliderLabel = ({
+  labels,
+  activeIndex,
+  position,
+  orientation = "vertical",
+  className,
+}: Props) => {
+  const isHorizontal = orientation === "horizontal";
   const containerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  const prevActiveIndex = useRef<number | null>(null);
-  const isFirstRender = useRef(true);
+  const hasMounted = useRef(false);
 
-  // Animate vertical position (following hovered stem)
+  // Animate position (following hovered stem)
   useEffect(() => {
-    if (containerRef.current && top !== undefined) {
-      gsap.to(containerRef.current, {
-        top,
+    if (containerRef.current && position !== undefined) {
+      const animate = hasMounted.current ? gsap.to : gsap.set;
+      animate(containerRef.current, {
+        [isHorizontal ? "left" : "top"]: position,
         duration: ANIMATION_DURATION,
         ease: "power2.inOut",
+        overwrite: "auto",
       });
     }
-  }, [top]);
+  }, [position, isHorizontal]);
 
-  // Animate list translateY and visibility
+  // Animate list translation and visibility
   useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      prevActiveIndex.current = activeIndex;
+    const animate = hasMounted.current ? gsap.to : gsap.set;
+    const offset = isHorizontal ? LABEL_WIDTH : LABEL_HEIGHT;
+    const animProps = {
+      duration: ANIMATION_DURATION,
+      ease: "power2.inOut",
+      overwrite: true,
+    };
 
-      // Set initial state
-      if (containerRef.current) {
-        gsap.set(containerRef.current, {
-          opacity: activeIndex !== null ? 1 : 0,
-        });
-      }
-      if (listRef.current && activeIndex !== null) {
-        gsap.set(listRef.current, { y: -activeIndex * LABEL_HEIGHT });
-      }
-      return;
-    }
-
-    const hasActive = activeIndex !== null;
-    const hadActive = prevActiveIndex.current !== null;
-
-    // Handle visibility
-    if (hasActive && !hadActive) {
-      // Show container and set initial list position
-      if (listRef.current) {
-        gsap.set(listRef.current, { y: -activeIndex * LABEL_HEIGHT });
-      }
-      gsap.to(containerRef.current, {
-        opacity: 1,
-        duration: ANIMATION_DURATION,
-        ease: "power2.inOut",
+    if (activeIndex !== null) {
+      animate(listRef.current, {
+        [isHorizontal ? "x" : "y"]: -activeIndex * offset,
+        ...animProps,
       });
-    } else if (!hasActive && hadActive) {
-      // Instantly hide
+      animate(containerRef.current, { opacity: 1, ...animProps });
+    } else {
+      gsap.killTweensOf(containerRef.current);
       gsap.set(containerRef.current, { opacity: 0 });
-    } else if (hasActive && hadActive) {
-      // Animate list to new position
-      gsap.to(listRef.current, {
-        y: -activeIndex * LABEL_HEIGHT,
-        duration: ANIMATION_DURATION,
-        ease: "power2.inOut",
-      });
     }
 
-    prevActiveIndex.current = activeIndex;
-  }, [activeIndex]);
+    hasMounted.current = true;
+  }, [activeIndex, isHorizontal]);
 
   return (
     <div
@@ -83,19 +70,26 @@ const SliderLabel = ({ labels, activeIndex, top, className }: Props) => {
       className={className}
       style={{
         opacity: 0,
-        top: top ?? 0,
+        [isHorizontal ? "left" : "top"]: position ?? 0,
+        width: isHorizontal ? LABEL_WIDTH : undefined,
         height: LABEL_HEIGHT,
         overflow: "hidden",
       }}
     >
-      <div ref={listRef} className="flex flex-col">
+      <div
+        ref={listRef}
+        className={isHorizontal ? "flex flex-row" : "flex flex-col"}
+      >
         {labels.map((label, index) => (
           <div
             key={index}
-            className="flex items-center"
-            style={{ height: LABEL_HEIGHT }}
+            className="flex items-center shrink-0 px-2"
+            style={{
+              width: isHorizontal ? LABEL_WIDTH : undefined,
+              height: LABEL_HEIGHT,
+            }}
           >
-            <span className="truncate">{label}</span>
+            <span className="truncate w-full text-center">{label}</span>
           </div>
         ))}
       </div>

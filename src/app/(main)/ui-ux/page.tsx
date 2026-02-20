@@ -6,6 +6,7 @@ import SliderIndicator from "~/modules/ui-ux/components/slider-indicator";
 import ProjectCard from "~/modules/ui-ux/components/project-card";
 import ProjectModal from "~/modules/ui-ux/components/project-modal";
 import FloatingActionBar from "~/modules/ui-ux/components/floating-action-bar";
+import AnimatedText from "~/modules/core/components/utils/AnimatedText";
 import {
   uiUxProjects,
   uiUxSnippets,
@@ -201,14 +202,19 @@ const UiUxPage = () => {
       ) : (
         <div className="h-full overflow-auto pt-32 pb-24 px-8 md:px-16 lg:px-32 xl:px-64">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {uiUxSnippets.map((snippet) => (
+            {uiUxSnippets.map((snippet, index) => (
               <div
                 key={snippet.id}
                 className="aspect-video bg-neutral-200 rounded-2xl overflow-hidden relative"
               >
-                <span className="absolute bottom-4 left-4 text-neutral-950 text-sm font-medium">
+                <AnimatedText
+                  as="span"
+                  className="absolute bottom-4 left-4 text-neutral-950 text-sm font-medium"
+                  trigger="load"
+                  delay={0.8 + index * 0.05}
+                >
                   {snippet.title}
-                </span>
+                </AnimatedText>
               </div>
             ))}
           </div>

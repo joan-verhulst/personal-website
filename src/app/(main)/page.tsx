@@ -359,14 +359,17 @@ const Page = () => {
               style={{ gap: "2rem" }}
             >
               {/* BOTTOM ROW - Column 1: Digital Art */}
-              <div className="aspect-2/1 md:aspect-square w-full md:h-full">
+              <TransitionLink
+                href="/digital-art"
+                className="aspect-2/1 md:aspect-square w-full md:h-full block"
+              >
                 <WidgetCard
                   label={widgets.digitalArt.label}
                   src={widgets.digitalArt.image}
                   alt={widgets.digitalArt.alt}
-                  className="bg-neutral-400"
+                  className="bg-neutral-400 h-full"
                 />
-              </div>
+              </TransitionLink>
 
               {/* BOTTOM ROW - Column 2: Photography */}
               <div className="aspect-2/1 md:aspect-square w-full md:h-full">

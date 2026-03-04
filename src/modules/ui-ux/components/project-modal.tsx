@@ -4,7 +4,6 @@ import { useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { X } from "lucide-react";
 import { gsap } from "gsap";
-import cn from "~/utils/cn";
 import type { UiUxProject } from "~/data/ui-ux-projects";
 import AnimatedText, {
   type AnimatedTextHandle,

@@ -13,6 +13,7 @@ type TriggerMode = "load" | "hover" | "manual";
 export interface AnimatedTextHandle {
   triggerAnimation: () => void;
   resetAnimation: () => void;
+  resplit: () => void;
 }
 
 interface AnimatedTextOwnProps {
@@ -58,17 +59,20 @@ const AnimatedText = forwardRef<AnimatedTextHandle, AnimatedTextProps>(
     },
     forwardedRef,
   ) => {
-    const { ref, triggerAnimation, resetAnimation } = useTextAnimation({
-      trigger,
-      delay,
-      duration,
-      stagger,
-      hoverRef,
-    });
+    const { ref, triggerAnimation, resetAnimation, resplit } = useTextAnimation(
+      {
+        trigger,
+        delay,
+        duration,
+        stagger,
+        hoverRef,
+      },
+    );
 
     useImperativeHandle(forwardedRef, () => ({
       triggerAnimation,
       resetAnimation,
+      resplit,
     }));
 
     return (

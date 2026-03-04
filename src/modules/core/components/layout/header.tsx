@@ -72,7 +72,7 @@ const Header = ({ showBackButton = false, className }: Props) => {
   return (
     <div
       className={cn(
-        "w-full flex absolute justify-center pt-12 pb-12 z-50",
+        "w-full flex fixed justify-center pt-12 pb-10 z-1 bg-neutral-50",
         className,
       )}
     >

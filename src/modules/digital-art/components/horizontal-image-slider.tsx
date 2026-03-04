@@ -78,6 +78,7 @@ interface Props {
   onActiveIndexChange: (index: number) => void;
   pendingIndex: number | null;
   onPendingIndexChange: (index: number | null) => void;
+  onOpenPopover: () => void;
 }
 
 const HorizontalImageSlider = ({
@@ -86,12 +87,15 @@ const HorizontalImageSlider = ({
   onActiveIndexChange,
   pendingIndex,
   onPendingIndexChange,
+  onOpenPopover,
 }: Props) => {
   const sliderRef = useRef<HTMLDivElement>(null);
   const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
   const imgRefs = useRef<(HTMLImageElement | null)[]>([]);
   const shouldSnapInstantly = useRef(true);
   const prevIsVertical = useRef<boolean | null>(null);
+
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
   const { width: viewportWidth, height: viewportHeight } = useViewportSize();
   const isVertical = viewportWidth > 0 && viewportWidth < MD_BREAKPOINT;
@@ -283,8 +287,10 @@ const HorizontalImageSlider = ({
 
       const parallaxX = Math.max(-20, Math.min(20, dragVelocity.current * -8));
       imgRefs.current.forEach((img, index) => {
-        if (img && index !== activeIndex)
+        if (isVertical) return;
+        else if (img && index !== activeIndex) {
           gsap.to(img, { x: parallaxX, duration: 0.6, ease: "power2.out" });
+        }
       });
 
       const axis = isVertical ? "y" : "x";
@@ -454,6 +460,9 @@ const HorizontalImageSlider = ({
             onClick={() => handleSlideClick(index)}
             onMouseEnter={() => setHoveredIndex(index)}
             onMouseLeave={() => setHoveredIndex(null)}
+            onOpenPopover={() => {
+              onOpenPopover();
+            }}
           />
         ))}
       </div>

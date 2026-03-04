@@ -18,6 +18,7 @@ interface UseTextAnimationReturn {
   ref: React.RefObject<HTMLElement | null>;
   triggerAnimation: () => void;
   resetAnimation: () => void;
+  resplit: () => void;
 }
 
 /**
@@ -106,6 +107,12 @@ const useTextAnimation = ({
     isSetup.current = true;
   }, []);
 
+  const resplit = useCallback(() => {
+    isSetup.current = false;
+    hasAnimated.current = false;
+    setupAnimation();
+  }, [setupAnimation]);
+
   const triggerAnimation = useCallback(() => {
     const element = ref.current;
     if (!element || hasAnimated.current || !isSetup.current) return;
@@ -177,7 +184,7 @@ const useTextAnimation = ({
     };
   }, [trigger, replayAnimation, hoverRef]);
 
-  return { ref, triggerAnimation, resetAnimation };
+  return { ref, triggerAnimation, resetAnimation, resplit };
 };
 
 export default useTextAnimation;

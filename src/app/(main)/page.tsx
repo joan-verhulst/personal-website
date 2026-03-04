@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import TransitionLink from "~components/utils/TransitionLink";
-import WidgetCard from "~components/widgets/widget-card";
+import WidgetCard from "~components/widget-card";
 import { Instagram, Linkedin, Mail, Dot } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
@@ -361,7 +361,7 @@ const Page = () => {
               {/* BOTTOM ROW - Column 1: Digital Art */}
               <TransitionLink
                 href="/digital-art"
-                className="aspect-2/1 md:aspect-square w-full md:h-full block"
+                className="aspect-2/1 md:aspect-square w-full block"
               >
                 <WidgetCard
                   label={widgets.digitalArt.label}
@@ -372,14 +372,17 @@ const Page = () => {
               </TransitionLink>
 
               {/* BOTTOM ROW - Column 2: Photography */}
-              <div className="aspect-2/1 md:aspect-square w-full md:h-full">
+              <TransitionLink
+                href="/photography"
+                className="aspect-2/1 md:aspect-square w-full md:h-full"
+              >
                 <WidgetCard
                   label={widgets.photography.label}
                   src={widgets.photography.image}
                   alt={widgets.photography.alt}
                   className="bg-neutral-500 "
                 />
-              </div>
+              </TransitionLink>
 
               {/* BOTTOM ROW - Column 3: Experiments + Contact subgrid */}
               <div

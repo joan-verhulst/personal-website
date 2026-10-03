@@ -37,8 +37,10 @@ import {
 } from "~/modules/cms/utils/shared";
 
 // Photography and digital art work the same, they only differ in table, and
-// in photos keeping their color for the photo table
-export type { GalleryKind };
+// in photos keeping their color for the photo table. GalleryKind is imported
+// from the gallery config, never re-exported here: a "use server" file may
+// only export async functions, and Next turns a re-export into a runtime
+// value that doesn't exist
 
 // Actions can be called with anything, so the kind and ids are checked too
 const kindSchema = v.picklist(GALLERY_KINDS, "Unknown gallery.");

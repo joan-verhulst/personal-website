@@ -1,12 +1,17 @@
 "use client";
 
 import { Maximize } from "lucide-react";
-import { useState } from "react";
-import type { DigitalArtProject } from "~/data/digital-art-projects";
+import Image from "next/image";
 import cn from "~/utils/cn";
+import { useHapticSound } from "~/modules/core/hooks/use-haptic-sound";
+import {
+  type Artwork,
+  FIRST_SLIDES,
+  getSlideSizes,
+} from "~/modules/digital-art/utils/slide-image";
 
 interface SlideCardProps {
-  item: DigitalArtProject;
+  item: Artwork;
   index: number;
   isActive: boolean;
   isHovered: boolean;
@@ -21,6 +26,7 @@ interface SlideCardProps {
 
 const SlideCard = ({
   item,
+  index,
   isActive,
   isHovered,
   isVertical,
@@ -31,25 +37,40 @@ const SlideCard = ({
   onMouseLeave,
   onOpenPopover,
 }: SlideCardProps) => {
+  const haptic = useHapticSound();
+
   return (
     <div
       ref={slideRef}
       className={cn(
-        "relative shrink-0 overflow-hidden rounded-2xl",
+        // The background stands in until the picture has loaded
+        "relative shrink-0 overflow-hidden rounded-2xl bg-neutral-200",
         isVertical ? "w-full" : "h-full",
         !isActive && "cursor-pointer",
       )}
-      onClick={onClick}
-      onMouseEnter={onMouseEnter}
+      onClick={() => {
+        haptic.onClick();
+        onClick();
+      }}
+      onMouseEnter={() => {
+        haptic.onMouseEnter();
+        onMouseEnter();
+      }}
       onMouseLeave={onMouseLeave}
     >
       <div
         className={cn("h-full", !isActive ? "w-[130%] -ml-[15%]" : "w-full")}
       >
-        <img
+        <Image
           ref={imgRef}
           src={item.image}
           alt={item.title}
+          width={item.width}
+          height={item.height}
+          sizes={getSlideSizes(item)}
+          // The first slides are on screen when the page opens, the rest
+          // load as they come near
+          loading={index < FIRST_SLIDES ? "eager" : "lazy"}
           className={cn(
             "w-full h-full object-cover pointer-events-none transition-[filter] duration-300",
             !isActive && !isHovered && "grayscale",
@@ -64,7 +85,13 @@ const SlideCard = ({
           <p className="text-white text-sm font-medium truncate">
             {item.title}
           </p>
-          <button onClick={onOpenPopover}>
+          <button
+            onClick={() => {
+              haptic.onClick();
+              onOpenPopover();
+            }}
+            onMouseEnter={haptic.onMouseEnter}
+          >
             <Maximize
               className="text-neutral-50 mt-1 hover:scale-90 hover:text-neutral-50/50 duration-200"
               size={18}

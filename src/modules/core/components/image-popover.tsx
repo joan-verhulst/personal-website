@@ -4,29 +4,36 @@ import { useRef, useEffect, useCallback, useState } from "react";
 import { createPortal } from "react-dom";
 import { gsap } from "gsap";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
-import type { DigitalArtProject } from "~/data/digital-art-projects";
+import type { DigitalArtProject } from "~/modules/content/types";
 import AnimatedText, {
   type AnimatedTextHandle,
 } from "~/modules/core/components/utils/AnimatedText";
 import cn from "~/utils/cn";
+import { useHapticSound } from "~/modules/core/hooks/use-haptic-sound";
+import { useAnimationPreference } from "~/modules/core/context/animation-preference-context";
+
+// Width and height are optional, without them the size is known once the image has preloaded
+type PopoverItem = DigitalArtProject & { width?: number; height?: number };
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  items: DigitalArtProject[];
+  items: PopoverItem[];
   activeIndex: number;
   onActiveIndexChange: (index: number) => void;
 }
 
 const VERTICAL_PADDING = 96;
+const HORIZONTAL_PADDING = 48;
 const PRELOAD_RADIUS = 2;
 
 const getImageHeight = () => window.innerHeight - VERTICAL_PADDING;
+const getMaxWidth = () => window.innerWidth - HORIZONTAL_PADDING;
 const getImageWidth = (
   naturalWidth: number,
   naturalHeight: number,
   fixedHeight: number,
-) => fixedHeight * (naturalWidth / naturalHeight);
+) => Math.min(fixedHeight * (naturalWidth / naturalHeight), getMaxWidth());
 
 const ImagePopover = ({
   isOpen,
@@ -39,6 +46,8 @@ const ImagePopover = ({
   const contentRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const actionBarRef = useRef<HTMLDivElement>(null);
+  const haptic = useHapticSound();
+  const { animationsEnabled } = useAnimationPreference();
   const imgARef = useRef<HTMLImageElement>(null);
   const imgBRef = useRef<HTMLImageElement>(null);
 
@@ -82,12 +91,13 @@ const ImagePopover = ({
         if (preloadedIndices.current.has(i)) continue;
         preloadedIndices.current.add(i);
         const img = new Image();
-        img.onload = async () => {
-          await img.decode();
+        img.onload = () => {
           imageCache.current[i] = {
             width: img.naturalWidth,
             height: img.naturalHeight,
           };
+          // Decoding ahead keeps the slide smooth, a failed decode just happens on show instead
+          img.decode().catch(() => {});
         };
         img.src = items[i].image;
       }
@@ -98,6 +108,17 @@ const ImagePopover = ({
   useEffect(() => {
     preloadAround(activeIndex);
   }, [activeIndex, preloadAround]);
+
+  // Natural size of an item: from the preload, or from the item itself before that
+  const getKnownSize = useCallback(
+    (index: number) => {
+      const cached = imageCache.current[index];
+      if (cached) return cached;
+      const { width, height } = items[index] ?? {};
+      return width && height ? { width, height } : undefined;
+    },
+    [items],
+  );
 
   // ── Text ──────────────────────────────────────────────────────────────────────
 
@@ -135,11 +156,14 @@ const ImagePopover = ({
     if (imgBRef.current) gsap.set(imgBRef.current, { opacity: 0, x: 0 });
 
     const fixedHeight = getImageHeight();
-    const cached = imageCache.current[activeIndexRef.current];
+    const cached = getKnownSize(activeIndexRef.current);
     const width = cached
       ? getImageWidth(cached.width, cached.height, fixedHeight)
+      : Math.min(fixedHeight, getMaxWidth());
+    const height = cached
+      ? Math.min(fixedHeight, width / (cached.width / cached.height))
       : fixedHeight;
-    gsap.set(containerRef.current, { width, height: fixedHeight });
+    gsap.set(containerRef.current, { width, height });
     gsap.set(contentRef.current, {
       y: window.innerHeight,
       scale: 1.3,
@@ -147,7 +171,19 @@ const ImagePopover = ({
     });
     gsap.set(actionBarRef.current, { y: 100, opacity: 1 });
 
+    // Title and description otherwise keep showing the last item navigated to
+    setDisplayIndex(activeIndexRef.current);
     resplitText();
+
+    if (!animationsEnabled) {
+      gsap.set(overlayRef.current, { opacity: 1 });
+      gsap.set(contentRef.current, { y: 0, scale: 1 });
+      gsap.set(actionBarRef.current, { y: 0 });
+      isFirstOpen.current = false;
+      prevActiveIndex.current = activeIndexRef.current;
+      triggerTextAnimations();
+      return;
+    }
 
     gsap
       .timeline({
@@ -172,7 +208,13 @@ const ImagePopover = ({
         { y: 0, duration: 0.4, ease: "power2.out" },
         "-=0.35",
       );
-  }, [items, triggerTextAnimations, resplitText]);
+  }, [
+    items,
+    getKnownSize,
+    triggerTextAnimations,
+    resplitText,
+    animationsEnabled,
+  ]);
 
   // ── Close ─────────────────────────────────────────────────────────────────────
 
@@ -182,6 +224,12 @@ const ImagePopover = ({
 
     isFirstOpen.current = true;
     prevActiveIndex.current = activeIndexRef.current;
+
+    if (!animationsEnabled) {
+      gsap.set(overlayRef.current, { display: "none" });
+      onClose();
+      return;
+    }
 
     gsap
       .timeline({
@@ -206,7 +254,7 @@ const ImagePopover = ({
         { opacity: 0, duration: 0.15, ease: "power2.in" },
         "-=0.15",
       );
-  }, [onClose]);
+  }, [onClose, animationsEnabled]);
 
   useEffect(() => {
     if (isOpen) animateOpen();
@@ -263,7 +311,27 @@ const ImagePopover = ({
     resplitText();
 
     const fixedHeight = getImageHeight();
-    const cached = imageCache.current[toIndex];
+    const cached = getKnownSize(toIndex);
+
+    if (!animationsEnabled) {
+      // Instant snap: position incoming image, hide outgoing
+      gsap.set(outgoingImg, { opacity: 0, x: 0 });
+      gsap.set(incomingImg, { x: 0, opacity: 1 });
+      if (cached) {
+        const w = getImageWidth(cached.width, cached.height, fixedHeight);
+        const h = Math.min(fixedHeight, w / (cached.width / cached.height));
+        gsap.set(containerRef.current, { width: w, height: h });
+      }
+      isAnimating.current = false;
+      setIsAnimatingState(false);
+      triggerTextAnimations();
+      if (pendingIndex.current !== null) {
+        const next = pendingIndex.current;
+        pendingIndex.current = null;
+        onActiveIndexChange(next);
+      }
+      return;
+    }
 
     gsap
       .timeline({
@@ -290,8 +358,13 @@ const ImagePopover = ({
         cached
           ? {
               width: getImageWidth(cached.width, cached.height, fixedHeight),
-              duration: 0.5,
-              delay: 0.05,
+              height: Math.min(
+                fixedHeight,
+                getImageWidth(cached.width, cached.height, fixedHeight) /
+                  (cached.width / cached.height),
+              ),
+              duration: animationsEnabled ? 0.5 : 0,
+              delay: animationsEnabled ? 0.05 : 0,
               ease: "power2.inOut",
             }
           : {},
@@ -301,9 +374,11 @@ const ImagePopover = ({
     activeIndex,
     isOpen,
     items,
+    getKnownSize,
     onActiveIndexChange,
     triggerTextAnimations,
     resplitText,
+    animationsEnabled,
   ]);
 
   // ── Keyboard ──────────────────────────────────────────────────────────────────
@@ -348,16 +423,36 @@ const ImagePopover = ({
       resizeTimer.current = setTimeout(() => {
         if (!containerRef.current) return;
         const fixedHeight = getImageHeight();
-        const cached = imageCache.current[activeIndexRef.current];
+        const cached = getKnownSize(activeIndexRef.current);
         const width = cached
           ? getImageWidth(cached.width, cached.height, fixedHeight)
+          : Math.min(fixedHeight, getMaxWidth());
+        const height = cached
+          ? Math.min(fixedHeight, width / (cached.width / cached.height))
           : fixedHeight;
-        gsap.set(containerRef.current, { width, height: fixedHeight });
+        gsap.set(containerRef.current, { width, height });
       }, 100);
     };
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, [isOpen]);
+  }, [isOpen, getKnownSize]);
+
+  // ── Cleanup all GSAP animations on unmount ────────────────────────────────────
+
+  useEffect(() => {
+    return () => {
+      [
+        overlayRef,
+        contentRef,
+        containerRef,
+        actionBarRef,
+        imgARef,
+        imgBRef,
+      ].forEach((r) => {
+        if (r.current) gsap.killTweensOf(r.current);
+      });
+    };
+  }, []);
 
   // ── Render ────────────────────────────────────────────────────────────────────
 
@@ -380,7 +475,7 @@ const ImagePopover = ({
         >
           <div
             ref={containerRef}
-            className="relative overflow-hidden rounded-2xl border border-neutral-50/20"
+            className="relative overflow-hidden rounded-2xl inset-border [--inset-border-color:color-mix(in_oklab,var(--color-neutral-50)_20%,transparent)]"
           >
             <img
               ref={imgARef}
@@ -425,11 +520,13 @@ const ImagePopover = ({
         className="fixed z-50 bottom-8 left-1/2 -translate-x-1/2 border border-neutral-50/10 flex items-center gap-1.5 bg-neutral-50 rounded-xl px-1 py-1"
       >
         <button
-          onClick={() =>
-            hasPrev &&
-            !isAnimating.current &&
-            onActiveIndexChange(activeIndex - 1)
-          }
+          onClick={() => {
+            if (hasPrev && !isAnimating.current) {
+              haptic.onClick();
+              onActiveIndexChange(activeIndex - 1);
+            }
+          }}
+          onMouseEnter={haptic.onMouseEnter}
           disabled={!hasPrev || isAnimatingState}
           className={cn(
             "flex items-center justify-center w-8 h-8 rounded-lg text-neutral-950 transition-all duration-200",
@@ -448,11 +545,13 @@ const ImagePopover = ({
         </span>
 
         <button
-          onClick={() =>
-            hasNext &&
-            !isAnimating.current &&
-            onActiveIndexChange(activeIndex + 1)
-          }
+          onClick={() => {
+            if (hasNext && !isAnimating.current) {
+              haptic.onClick();
+              onActiveIndexChange(activeIndex + 1);
+            }
+          }}
+          onMouseEnter={haptic.onMouseEnter}
           disabled={!hasNext || isAnimatingState}
           className={cn(
             "flex items-center justify-center w-8 h-8 rounded-lg text-neutral-950 transition-all duration-200",
@@ -469,7 +568,11 @@ const ImagePopover = ({
         <div className="w-px h-5 bg-neutral-950/10" />
 
         <button
-          onClick={animateClose}
+          onClick={() => {
+            haptic.onClick();
+            animateClose();
+          }}
+          onMouseEnter={haptic.onMouseEnter}
           className="flex items-center justify-center w-8 h-8 rounded-lg text-neutral-50 bg-primary-500 hover:bg-primary-500/75 transition-colors duration-200 cursor-pointer"
         >
           <X size={14} />

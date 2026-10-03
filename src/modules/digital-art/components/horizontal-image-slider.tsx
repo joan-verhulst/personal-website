@@ -1,16 +1,27 @@
 "use client";
 
-import { useRef, useEffect, useState, useCallback } from "react";
+import {
+  useRef,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+  useCallback,
+} from "react";
 import { gsap } from "gsap";
-import type { DigitalArtProject } from "~/data/digital-art-projects";
 import SlideCard from "./slider-card";
 import cn from "~/utils/cn";
+import { useAnimationPreference } from "~/modules/core/context/animation-preference-context";
+import {
+  type Artwork,
+  SLIDE_HEIGHT,
+} from "~/modules/digital-art/utils/slide-image";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const GAP = 20;
 const INACTIVE_SIZE = 128;
-const FIXED_HEIGHT = 384;
+const FIXED_HEIGHT = SLIDE_HEIGHT;
 const VERTICAL_PADDING = 48 * 2; // 3rem each side, matches `px-12`
 const MD_BREAKPOINT = 768;
 const CLICK_THRESHOLD = 5;
@@ -18,10 +29,11 @@ const FLICK_VELOCITY = 0.5; // px/ms
 
 // ─── Hooks ────────────────────────────────────────────────────────────────────
 
+// Layout effect, so the size is known before the slider is first painted
 function useViewportSize(): { width: number; height: number } {
   const [size, setSize] = useState({ width: 0, height: 0 });
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const update = () =>
       setSize({ width: window.innerWidth, height: window.innerHeight });
     update();
@@ -32,48 +44,10 @@ function useViewportSize(): { width: number; height: number } {
   return size;
 }
 
-function useSlideMainAxisSizes(
-  items: { image: string }[],
-  fixedCrossAxisSize: number,
-  isVertical: boolean,
-): { sizes: number[]; loaded: boolean } {
-  const [sizes, setSizes] = useState<number[]>([]);
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    if (fixedCrossAxisSize === 0) return;
-
-    setLoaded(false);
-    const promises = items.map(
-      (item) =>
-        new Promise<number>((resolve) => {
-          const img = new Image();
-          img.onload = () => {
-            const ratio = img.naturalWidth / img.naturalHeight;
-            resolve(
-              isVertical
-                ? Math.round(fixedCrossAxisSize / ratio)
-                : Math.round(fixedCrossAxisSize * ratio),
-            );
-          };
-          img.onerror = () => resolve(300);
-          img.src = item.image;
-        }),
-    );
-
-    Promise.all(promises).then((s) => {
-      setSizes(s);
-      setLoaded(true);
-    });
-  }, [items, fixedCrossAxisSize, isVertical]);
-
-  return { sizes, loaded };
-}
-
 // ─── Component ────────────────────────────────────────────────────────────────
 
 interface Props {
-  items: DigitalArtProject[];
+  items: Artwork[];
   activeIndex: number;
   onActiveIndexChange: (index: number) => void;
   pendingIndex: number | null;
@@ -96,6 +70,7 @@ const HorizontalImageSlider = ({
   const prevIsVertical = useRef<boolean | null>(null);
 
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const { animationsEnabled } = useAnimationPreference();
 
   const { width: viewportWidth, height: viewportHeight } = useViewportSize();
   const isVertical = viewportWidth > 0 && viewportWidth < MD_BREAKPOINT;
@@ -103,11 +78,19 @@ const HorizontalImageSlider = ({
   const crossAxisSize = isVertical
     ? viewportWidth - VERTICAL_PADDING
     : FIXED_HEIGHT;
-  const { sizes, loaded } = useSlideMainAxisSizes(
-    items,
-    crossAxisSize,
-    isVertical,
+  // The pieces come with their proportions, so the slides are laid out right
+  // away instead of after every image has loaded
+  const sizes = useMemo(
+    () =>
+      items.map(({ width, height }) =>
+        isVertical
+          ? Math.round((crossAxisSize * height) / width)
+          : Math.round((crossAxisSize * width) / height),
+      ),
+    [items, crossAxisSize, isVertical],
   );
+  // Only the viewport is missing on the first render, and on the server
+  const ready = viewportWidth > 0;
   const viewportCenter = isVertical ? viewportHeight / 2 : viewportWidth / 2;
 
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -132,7 +115,7 @@ const HorizontalImageSlider = ({
 
   const calculateCenterOffset = useCallback(
     (targetIndex: number): number => {
-      if (!loaded || sizes.length === 0) return 0;
+      if (!ready || sizes.length === 0) return 0;
       let pos = 0;
       for (let i = 0; i < items.length; i++) {
         const size = getSlideMainSize(i, targetIndex);
@@ -141,12 +124,12 @@ const HorizontalImageSlider = ({
       }
       return 0;
     },
-    [loaded, sizes, items.length, viewportCenter, getSlideMainSize],
+    [ready, sizes, items.length, viewportCenter, getSlideMainSize],
   );
 
   const findClosestIndex = useCallback(
     (sliderOffset: number): number => {
-      if (!loaded || sizes.length === 0) return 0;
+      if (!ready || sizes.length === 0) return 0;
       let pos = 0;
       let closestIndex = 0;
       let closestDist = Infinity;
@@ -162,7 +145,7 @@ const HorizontalImageSlider = ({
       return closestIndex;
     },
     [
-      loaded,
+      ready,
       sizes,
       items.length,
       viewportCenter,
@@ -171,18 +154,43 @@ const HorizontalImageSlider = ({
     ],
   );
 
-  // ── GSAP: animate slide sizes + slider position ──────────────────────────────
+  // ── Cleanup all GSAP animations on unmount ────────────────────────────────────
 
   useEffect(() => {
-    if (!loaded || !sliderRef.current) return;
+    return () => {
+      if (sliderRef.current) gsap.killTweensOf(sliderRef.current);
+      slideRefs.current.forEach((s) => s && gsap.killTweensOf(s));
+      imgRefs.current.forEach((i) => i && gsap.killTweensOf(i));
+    };
+  }, []);
+
+  // ── GSAP: animate slide sizes + slider position ──────────────────────────────
+
+  // Layout effect, so the slides are in place before the slider is first painted
+  useLayoutEffect(() => {
+    if (!ready || !sliderRef.current) return;
 
     const orientationFlipped =
       prevIsVertical.current !== null && prevIsVertical.current !== isVertical;
     prevIsVertical.current = isVertical;
 
     if (orientationFlipped) {
-      const staleAxis = isVertical ? "x" : "y";
-      gsap.set(sliderRef.current, { [staleAxis]: 0 });
+      // A tween started by the last resize would carry on and move the stale
+      // axis back, so it goes first
+      gsap.killTweensOf(sliderRef.current);
+      gsap.set(sliderRef.current, { clearProps: "x,y" });
+      // The slides outlive the flip, so drop the sizes of the old layout and
+      // let the classes size the cross axis again
+      slideRefs.current.forEach((slide) => {
+        if (!slide) return;
+        gsap.killTweensOf(slide);
+        gsap.set(slide, { clearProps: "width,height" });
+      });
+      imgRefs.current.forEach((img) => {
+        if (!img) return;
+        gsap.killTweensOf(img);
+        gsap.set(img, { clearProps: "x" });
+      });
       shouldSnapInstantly.current = true;
     }
 
@@ -218,7 +226,7 @@ const HorizontalImageSlider = ({
     }
   }, [
     activeIndex,
-    loaded,
+    ready,
     sizes,
     isVertical,
     calculateCenterOffset,
@@ -287,7 +295,7 @@ const HorizontalImageSlider = ({
 
       const parallaxX = Math.max(-20, Math.min(20, dragVelocity.current * -8));
       imgRefs.current.forEach((img, index) => {
-        if (isVertical) return;
+        if (isVertical || !animationsEnabled) return;
         else if (img && index !== activeIndex) {
           gsap.to(img, { x: parallaxX, duration: 0.6, ease: "power2.out" });
         }
@@ -301,7 +309,7 @@ const HorizontalImageSlider = ({
       const closest = findClosestIndex(newSliderPos);
       onPendingIndexChange(closest);
     },
-    [isVertical, findClosestIndex, onPendingIndexChange],
+    [isVertical, findClosestIndex, onPendingIndexChange, animationsEnabled],
   );
 
   const handleDragEnd = useCallback(() => {
@@ -412,24 +420,13 @@ const HorizontalImageSlider = ({
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
-  if (!loaded) {
-    return (
-      <div
-        className={cn(
-          "flex items-center justify-center",
-          isVertical ? "w-full h-screen" : "w-full h-96",
-        )}
-      >
-        <div className="w-8 h-8 border-2 border-neutral-300 border-t-neutral-600 rounded-full animate-spin" />
-      </div>
-    );
-  }
-
   return (
     <div
       className={cn(
         "overflow-visible cursor-grab select-none",
         isVertical ? "w-full h-screen px-12" : "w-full h-96",
+        // Server rendered without a viewport, so hidden until it's laid out
+        !ready && "invisible",
       )}
       onMouseDown={handleDragStart}
       onTouchStart={handleDragStart}

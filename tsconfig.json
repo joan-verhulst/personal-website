@@ -6,6 +6,8 @@
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
+    // The import script runs on Node, which needs the .ts extensions
+    "allowImportingTsExtensions": true,
     "incremental": true,
     "esModuleInterop": true,
     "module": "esnext",

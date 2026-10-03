@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import { getContent } from "~/modules/content/utils/get-content";
 import PhotoTable from "~/modules/photography/components/photo-table";
+import { sectionMetadata } from "~/utils/page-metadata";
 
-export const metadata: Metadata = {
-  title: "Photography",
-};
+export const metadata: Metadata = sectionMetadata("Photography", "/photography");
 
 const PhotographyPage = async () => {
   // Size and color are measured when a photo is uploaded

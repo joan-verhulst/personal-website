@@ -1,27 +1,3 @@
-export type FavoritesSection = "on-rotation" | "gear";
-
-export interface FavoritesSectionTab {
-  id: FavoritesSection;
-  label: string;
-  description: string;
-  // Square thumbnail. On rotation shows the first record's cover instead
-  image?: string;
-}
-
-export const favoritesSections: FavoritesSectionTab[] = [
-  {
-    id: "on-rotation",
-    label: "On rotation",
-    description: "Records I keep coming back to",
-  },
-  {
-    id: "gear",
-    label: "Gear",
-    description: "Cameras, guitars and the rest",
-    image: "/assets/images/gear/mamiya-rz67.png",
-  },
-];
-
 // A favorite song as Apple Music has it, served by /api/on-rotation
 export interface RotationTrack {
   title: string;

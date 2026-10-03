@@ -1,15 +1,17 @@
-// The home screen widgets. Their images come from the CMS: the about photo
-// and the photo and artwork marked as cover.
+// The home screen widgets. Most of their images come from the CMS: the about
+// photo and the photo and artwork marked as cover.
 export const widgets = {
   about: {
     label: "About",
     alt: "About thumbnail",
   },
-  favorites: {
-    label: "Favorites",
+  onRotation: {
+    label: "On Rotation",
   },
-  thoughts: {
-    label: "Thoughts",
+  gear: {
+    label: "Gear",
+    // A cut-out, shown whole on the widget's backdrop
+    image: "/assets/images/gear/mamiya-rz67.png",
   },
   uiux: {
     label: "UI/UX",

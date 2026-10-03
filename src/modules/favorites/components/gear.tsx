@@ -3,6 +3,7 @@
 import { gsap } from "gsap";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
+  type CSSProperties,
   type PointerEvent,
   useCallback,
   useEffect,
@@ -14,8 +15,8 @@ import { siteData } from "~/data/site";
 import { useAnimationPreference } from "~/modules/core/context/animation-preference-context";
 import { useHapticSound } from "~/modules/core/hooks/use-haptic-sound";
 import CataloguePage from "~/modules/favorites/components/catalogue-page";
-import InkTuner from "~/modules/favorites/components/ink-tuner";
 import {
+  COVER_FONT,
   departments,
   drawPage,
   pages,
@@ -30,8 +31,8 @@ import cn from "~/utils/cn";
 
 /**
  * How the sheets are inked. These are the Figma shader's own controls, tuned
- * by eye on the open spread with the sliders at the bottom. The ink weight
- * isn't here: every department has its own, see the brochure.
+ * by eye on the open spread. The ink weight isn't here: every department has
+ * its own, see the brochure.
  */
 const INK_SETTINGS: InkSettings = {
   // Blur amount, blur variation and patch size
@@ -55,8 +56,6 @@ const INK_SETTINGS: InkSettings = {
   paper: [0.973, 0.965, 0.945, 1],
 };
 
-const INK_WEIGHTS = departments.map(({ inkWeight }) => inkWeight);
-const TITLES = departments.map(({ title }) => title);
 
 // Typeset at no less than this many device pixels per CSS pixel. Small type
 // comes through the ink far better when it's printed large and shown small.
@@ -66,8 +65,15 @@ const MAX_SCALE = 3;
 const UPRIGHT_BELOW = 672;
 
 // A leaf is the sheet between two spreads: the right page of one, and on its
-// back the left page of the next
-const LEAVES = departments.length - 1;
+// back the left page of the next. The covers are leaves too, so the book
+// opens and closes
+const LEAVES = pages.length / 2;
+// What lies open, from the front cover to the back cover
+const SPREADS = [
+  "Cover",
+  ...departments.map(({ title }) => title),
+  "Back cover",
+];
 const LEAF_INDEXES = Array.from({ length: LEAVES }, (_, leaf) => leaf);
 
 // A whole turn in seconds. A leaf that's already part of the way takes less
@@ -101,6 +107,45 @@ interface Hold {
 
 const prefersReducedMotion = () =>
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// "#3a9bd8" as the shader takes it: red, green, blue and alpha from 0 to 1
+const toRgba = (hex: string): InkSettings["ink"] => [
+  Number.parseInt(hex.slice(1, 3), 16) / 255,
+  Number.parseInt(hex.slice(3, 5), 16) / 255,
+  Number.parseInt(hex.slice(5, 7), 16) / 255,
+  1,
+];
+
+// The pages print in black on paper, the covers in their own colors
+const inkFor = (page: (typeof pages)[number]): InkSettings =>
+  "colors" in page
+    ? {
+        ...INK_SETTINGS,
+        ink: toRgba(page.colors.ink),
+        paper: toRgba(page.colors.paper),
+      }
+    : INK_SETTINGS;
+
+// The cover's title face, loaded once however often the book opens. Without
+// it the cover falls back to the page's font
+let coverFont: Promise<void> | null = null;
+const loadCoverFont = () => {
+  coverFont ??= new FontFace(COVER_FONT.family, `url(${COVER_FONT.url})`, {
+    weight: "900",
+  })
+    .load()
+    .then((face) => {
+      document.fonts.add(face);
+    })
+    .catch(() => {});
+  return coverFont;
+};
+
+// What a page shows before it's printed
+const paperOf = (index: number) => {
+  const page = pages[index];
+  return page && "colors" in page ? page.colors.paper : undefined;
+};
 
 const loadImages = async () => {
   const images = new Map<string, HTMLImageElement>();
@@ -151,15 +196,11 @@ const pageInk = (
  * every piece in its own cell with a plate, a line of copy and its figures.
  * Each page is typeset on a canvas and printed through the ink shader. The
  * pages are bound into leaves that turn over the fold: by the pager under the
- * book, by clicking a page's outer edge, or by dragging that edge across.
+ * book, by clicking a page's outer edge, or by dragging that edge across. It
+ * starts shut on its front cover and closes again on the back one.
  */
 const Gear = () => {
   const [spread, setSpread] = useState(0);
-  // Adjustable while tuning the print, see the tuner at the bottom
-  const [settings, setSettings] = useState(INK_SETTINGS);
-  const [weights, setWeights] = useState(INK_WEIGHTS);
-  const inkRef = useRef({ settings, weights });
-  inkRef.current = { settings, weights };
 
   const bookRef = useRef<HTMLDivElement>(null);
   const leafRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -178,9 +219,10 @@ const Gear = () => {
   const { animationsEnabled } = useAnimationPreference();
   const haptic = useHapticSound();
 
-  const department = departments[spread];
-  const previous = departments[spread - 1];
-  const next = departments[spread + 1];
+  // The department open, none while the book is closed
+  const department = departments[spread - 1];
+  const previous = SPREADS[spread - 1];
+  const next = SPREADS[spread + 1];
 
   // Typesets every page and prints it. Without WebGPU a page is shown as
   // typeset, clean instead of inked.
@@ -201,7 +243,6 @@ const Gear = () => {
       MAX_SCALE,
       Math.max(MIN_SCALE, window.devicePixelRatio || 1),
     );
-    const { settings, weights } = inkRef.current;
 
     pages.forEach((page, index) => {
       const canvas = canvasRefs.current[index];
@@ -213,6 +254,7 @@ const Gear = () => {
       // One sheet to typeset on for all pages: sizing it also wipes it
       source.width = Math.round(width * scale);
       source.height = Math.round(height * scale);
+      const printer = printers[index];
       drawPage(
         ctx,
         width,
@@ -221,18 +263,19 @@ const Gear = () => {
         page,
         { owner: siteData.owner.name, images },
         family,
+        printer || !("colors" in page) ? undefined : page.colors,
       );
 
       canvas.width = source.width;
       canvas.height = source.height;
-      const printer = printers[index];
       if (printer) {
         printer.print(
           source,
           pageInk(
-            settings,
-            weights[Math.floor(index / 2)],
-            index % 2,
+            inkFor(page),
+            page.inkWeight,
+            // The front of a leaf lies on the right
+            (index + 1) % 2,
             width / height,
             isUpright,
           ),
@@ -262,6 +305,7 @@ const Gear = () => {
         }),
       ),
       document.fonts.ready,
+      loadCoverFont(),
     ]).then(([images, printers]) => {
       if (isCancelled) {
         for (const printer of printers) printer?.destroy();
@@ -290,11 +334,6 @@ const Gear = () => {
     };
   }, [print]);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: new settings are a new print
-  useEffect(() => {
-    print();
-  }, [settings, weights, print]);
-
   useEffect(() => {
     const all = turns.current;
     return () => gsap.killTweensOf(all);
@@ -311,6 +350,18 @@ const Gear = () => {
     // Either pile has the leaf nearest the open spread on top, and over the
     // fold a leaf changes pile
     element.style.zIndex = String(value < 0.5 ? LEAVES - leaf : leaf + 1);
+
+    // Shut, the book is one page wide. It slides over as a cover turns, so
+    // the closed book sits in the middle. Stacked, it's one page tall: it
+    // slides up to the top and the empty half folds away
+    if (leaf === 0 || leaf === LEAVES - 1) {
+      const front = turns.current[0].value;
+      const back = turns.current[LEAVES - 1].value;
+      const style = bookRef.current?.style;
+      style?.setProperty("--shift", ((back - (1 - front)) / 4).toFixed(4));
+      style?.setProperty("--lift", (-(1 - front) / 2).toFixed(4));
+      style?.setProperty("--shut", Math.max(1 - front, back).toFixed(4));
+    }
   }, []);
 
   const moveLeaf = (leaf: number, to: number, ease = "power2.inOut") => {
@@ -470,63 +521,73 @@ const Gear = () => {
         The book. Its two halves lie side by side, or one above the other
         where it's narrow, and the leaves turn over the fold between them
       */}
-      <div
-        ref={bookRef}
-        className="perspective-[1600cqw] @2xl:perspective-[400cqw] relative @2xl:aspect-100/46 aspect-100/210 rounded-[3px] bg-[#f8f6f1] shadow-[0_0_0_1px_rgb(15_15_15/0.08),0_18px_26px_-18px_rgb(0_0_0/0.45)]"
-      >
-        {/* The first and the last page lie flat under the leaves */}
-        <div className="absolute top-0 left-0 @2xl:h-full h-1/2 @2xl:w-1/2 w-full">
-          <CataloguePage side="left" canvasRef={canvasAt(0)} />
-        </div>
-        <div className="absolute right-0 bottom-0 @2xl:h-full h-1/2 @2xl:w-1/2 w-full">
-          <CataloguePage side="right" canvasRef={canvasAt(pages.length - 1)} />
-        </div>
+      {/*
+        Stacked, a page is never taller than the modal shows, so it's read
+        whole. The half that folds away while the book is shut is cut off here,
+        so it leaves nothing to scroll
+      */}
+      <div className="overflow-y-clip @2xl:overflow-y-visible">
+        <div
+          ref={bookRef}
+          // Starts shut on the front cover, see place()
+          style={
+            {
+              "--shift": "-0.25",
+              "--lift": "-0.5",
+              "--shut": "1",
+            } as CSSProperties
+          }
+          className="perspective-[1600cqw] @2xl:perspective-[400cqw] relative @2xl:mx-0 mx-auto @2xl:mb-0 mb-[calc(var(--shut)*-1*min(105cqw,100cqh))] @2xl:aspect-100/46 aspect-100/210 @2xl:w-full w-[min(100%,100cqh/1.05)] @2xl:translate-x-[calc(var(--shift)*100%)] @2xl:translate-y-0 translate-y-[calc(var(--lift)*100%)]"
+        >
 
-        {/* Hinged on the fold. Its back is the left page of the next spread */}
-        {LEAF_INDEXES.map((leaf) => (
-          <div
-            key={leaf}
-            ref={(element) => {
-              leafRefs.current[leaf] = element;
-            }}
-            style={{ zIndex: LEAVES - leaf }}
-            className="transform-3d transform-[rotateX(calc(var(--turn,0)*180deg))] @2xl:transform-[rotateY(calc(var(--turn,0)*-180deg))] absolute right-0 bottom-0 @2xl:h-full h-1/2 @2xl:w-1/2 w-full @2xl:origin-left origin-top"
-          >
-            <CataloguePage
-              side="right"
-              isLeaf
-              canvasRef={canvasAt(leaf * 2 + 1)}
-            />
-            <CataloguePage
-              side="left"
-              isLeaf
-              canvasRef={canvasAt(leaf * 2 + 2)}
-            />
-          </div>
-        ))}
+          {/* Hinged on the fold. Its back is the left page of the next spread */}
+          {LEAF_INDEXES.map((leaf) => (
+            <div
+              key={leaf}
+              ref={(element) => {
+                leafRefs.current[leaf] = element;
+              }}
+              style={{ zIndex: LEAVES - leaf }}
+              className="transform-3d transform-[rotateX(calc(var(--turn,0)*180deg))] @2xl:transform-[rotateY(calc(var(--turn,0)*-180deg))] absolute right-0 bottom-0 @2xl:h-full h-1/2 @2xl:w-1/2 w-full @2xl:origin-left origin-top"
+            >
+              <CataloguePage
+                side="right"
+                isLeaf
+                paper={paperOf(leaf * 2)}
+                canvasRef={canvasAt(leaf * 2)}
+              />
+              <CataloguePage
+                side="left"
+                isLeaf
+                paper={paperOf(leaf * 2 + 1)}
+                canvasRef={canvasAt(leaf * 2 + 1)}
+              />
+            </div>
+          ))}
 
-        {/*
-          The outer edge of either page takes hold of it: it lifts under the
-          pointer, a click turns it and a drag carries it over. The pager
-          below does the same for the keyboard
-        */}
-        {(["previous", "next"] as const).map((side) => (
-          <div
-            key={side}
-            aria-hidden
-            onPointerDown={(event) => press(event, side)}
-            onPointerMove={drag}
-            onPointerUp={(event) => release(event)}
-            onPointerCancel={(event) => release(event, true)}
-            onPointerEnter={(event) => hover(event, side, true)}
-            onPointerLeave={(event) => hover(event, side, false)}
-            className={cn(
-              "absolute z-20 @2xl:h-full h-[10%] @2xl:w-[9%] w-full touch-pan-y select-none",
-              side === "next" ? "right-0 bottom-0" : "top-0 left-0",
-              (side === "next" ? next : previous) && "cursor-pointer",
-            )}
-          />
-        ))}
+          {/*
+            The outer edge of either page takes hold of it: it lifts under the
+            pointer, a click turns it and a drag carries it over. The pager
+            below does the same for the keyboard
+          */}
+          {(["previous", "next"] as const).map((side) => (
+            <div
+              key={side}
+              aria-hidden
+              onPointerDown={(event) => press(event, side)}
+              onPointerMove={drag}
+              onPointerUp={(event) => release(event)}
+              onPointerCancel={(event) => release(event, true)}
+              onPointerEnter={(event) => hover(event, side, true)}
+              onPointerLeave={(event) => hover(event, side, false)}
+              className={cn(
+                "absolute z-20 @2xl:h-full h-[10%] @2xl:w-[9%] w-full touch-pan-y select-none",
+                side === "next" ? "right-0 bottom-0" : "top-0 left-0",
+                (side === "next" ? next : previous) && "cursor-pointer",
+              )}
+            />
+          ))}
+        </div>
       </div>
 
       {/*
@@ -538,7 +599,7 @@ const Gear = () => {
           <button
             type="button"
             aria-label={
-              previous ? `Previous pages: ${previous.title}` : "Previous pages"
+              previous ? `Previous pages: ${previous}` : "Previous pages"
             }
             disabled={!previous}
             onClick={() => turn("previous")}
@@ -548,14 +609,16 @@ const Gear = () => {
             <ChevronLeft className="size-3.5" />
           </button>
           <p className="min-w-40 px-1 text-center text-xs">
-            {department.title}
-            <span className="ml-2 text-neutral-50/50 tabular-nums">
-              {spread + 1} / {departments.length}
-            </span>
+            {SPREADS[spread]}
+            {department && (
+              <span className="ml-2 text-neutral-50/50 tabular-nums">
+                {spread} / {departments.length}
+              </span>
+            )}
           </p>
           <button
             type="button"
-            aria-label={next ? `Next pages: ${next.title}` : "Next pages"}
+            aria-label={next ? `Next pages: ${next}` : "Next pages"}
             disabled={!next}
             onClick={() => turn("next")}
             onMouseEnter={haptic.onMouseEnter}
@@ -568,32 +631,21 @@ const Gear = () => {
 
       {/* The pages are pictures, so what's printed on the open ones is repeated here to be read out */}
       <div className="sr-only" aria-live="polite">
-        <h3>{department.title}</h3>
-        <ul>
-          {department.items.map((item) => (
-            <li key={item.id}>
-              {item.name}. {item.blurb}.{" "}
-              {item.stats
-                .map((stat) => `${stat.label}: ${stat.value}`)
-                .join(", ")}
-              .
-            </li>
-          ))}
-        </ul>
+        <h3>{SPREADS[spread]}</h3>
+        {department && (
+          <ul>
+            {department.items.map((item) => (
+              <li key={item.id}>
+                {item.name}. {item.blurb}.{" "}
+                {item.stats
+                  .map((stat) => `${stat.label}: ${stat.value}`)
+                  .join(", ")}
+                .
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
-
-      {/* Sliders for the shader, in development only */}
-      {process.env.NODE_ENV === "development" && (
-        <InkTuner
-          settings={settings}
-          defaults={INK_SETTINGS}
-          weights={weights}
-          defaultWeights={INK_WEIGHTS}
-          departments={TITLES}
-          onChange={setSettings}
-          onWeightsChange={setWeights}
-        />
-      )}
     </div>
   );
 };

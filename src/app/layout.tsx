@@ -6,6 +6,7 @@ import "~styles/global.css";
 
 import { env } from "~/env";
 import { siteData } from "~/data/site";
+import { openGraph } from "~/utils/page-metadata";
 
 const GoogleSansFlexFont = Google_Sans_Flex({
   subsets: ["latin"],
@@ -26,11 +27,14 @@ export const metadata: Metadata = {
     default: siteData.metadata.title,
   },
   description: siteData.metadata.description,
+  // The image is the home screen, see (main)/opengraph-image.tsx
   openGraph: {
-    url: new URL(env.NEXT_PUBLIC_URL as string),
-    title: `${siteData.metadata.title} - ${siteData.metadata.description}`,
-    siteName: siteData.metadata.title,
-    locale: siteData.metadata.locale,
+    ...openGraph,
+    title: siteData.metadata.title,
+    url: "/",
+  },
+  twitter: {
+    card: "summary_large_image",
   },
 };
 

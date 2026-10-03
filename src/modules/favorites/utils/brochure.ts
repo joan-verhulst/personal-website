@@ -41,6 +41,14 @@ export const departments: Department[] = GROUPS.map(
 export const INK = "#161616";
 export const PAPER = "#f8f6f1";
 
+export interface PageColors {
+  ink: string;
+  paper: string;
+}
+
+// The covers print in white on the site's blue
+export const COVER_COLORS: PageColors = { ink: "#faf9f9", paper: "#3a9bd8" };
+
 interface Sheet {
   ctx: CanvasRenderingContext2D;
   family: string;
@@ -297,7 +305,7 @@ const typesetPage = (sheet: Sheet, page: Rect, content: PageContent) => {
   ctx.textAlign = "center";
   setFont(sheet, small, 500, "0.22em");
   ctx.fillText(
-    `${content.owner} & CO.  ·  ${content.department}`.toUpperCase(),
+    `${content.owner}  ·  ${content.department}`.toUpperCase(),
     page.x + page.width / 2,
     y,
   );
@@ -366,8 +374,9 @@ const typesetPage = (sheet: Sheet, page: Rect, content: PageContent) => {
   }
 };
 
-/** One page of the catalogue. */
-export interface CataloguePage {
+/** A page of a department, with its items. */
+interface ItemsPage {
+  kind: "items";
   department: Department;
   items: GearItem[];
   folio: number;
@@ -375,14 +384,27 @@ export interface CataloguePage {
   hasBanner: boolean;
   // Printed in the bottom corner, where the page is turned
   turn: { label: string; side: "left" | "right" } | null;
+  inkWeight: number;
 }
 
+/** One page of the catalogue: a cover, or a page of a department. */
+export type CataloguePage =
+  | ItemsPage
+  | { kind: "front"; inkWeight: number; colors: PageColors }
+  | { kind: "back"; inkWeight: number; colors: PageColors };
+
+// The covers are inked like the first department, where their plate comes from
+const COVER_INK = departments[0]?.inkWeight ?? 0.5;
+
 /**
- * The pages in reading order, two to a department. An even index is a left
- * page, the odd one after it is the right page it lies open with.
+ * Every page in reading order, the covers included. They're bound in pairs:
+ * an even index is the front of a leaf, which lies on the right while the
+ * leaf is unturned, and the odd one after it is its back. So the front cover
+ * comes first, its back is the first left page, and the back cover is last.
  */
-export const pages = departments.flatMap<CataloguePage>(
-  (department, index) => {
+export const pages: CataloguePage[] = [
+  { kind: "front", inkWeight: COVER_INK, colors: COVER_COLORS },
+  ...departments.flatMap<ItemsPage>((department, index) => {
     const previous = departments[index - 1];
     const next = departments[index + 1];
     // The first page takes the smaller half, so a lone item gets a page to itself
@@ -390,22 +412,148 @@ export const pages = departments.flatMap<CataloguePage>(
 
     return [
       {
+        kind: "items",
         department,
         items: department.items.slice(0, split),
         folio: index * 2 + 2,
         hasBanner: true,
         turn: previous ? { label: previous.title, side: "left" } : null,
+        inkWeight: department.inkWeight,
       },
       {
+        kind: "items",
         department,
         items: department.items.slice(split),
         folio: index * 2 + 3,
         hasBanner: false,
         turn: next ? { label: next.title, side: "right" } : null,
+        inkWeight: department.inkWeight,
       },
     ];
-  },
-);
+  }),
+  { kind: "back", inkWeight: COVER_INK, colors: COVER_COLORS },
+];
+
+/**
+ * The cover's title face: Google Sans Flex at its heaviest, a little wide,
+ * with rounded ends. A canvas can't reach the rounded axis, so this is an
+ * instance with it set, cut down to the letters of "gear". Remade with
+ * fonts.googleapis.com/css2?family=Google+Sans+Flex:slnt,wdth,wght,ROND@-10,112,900,100&text=gear
+ * (the semi-expanded face). The slant isn't in it, it's drawn.
+ */
+export const COVER_FONT = {
+  family: "Gear Display",
+  url: "/fonts/gear-display.ttf",
+};
+
+// How far the cover's type leans, like an italic
+const SLANT = Math.tan((10 * Math.PI) / 180);
+
+// Racing stripes, in shares of t: the inside one heaviest, thinning outwards
+const STRIPES = [1.4, 1.2, 1, 0.7, 0.4];
+
+/**
+ * Stripes along the foot of the page that round the corner and run up past
+ * its top. Mirrored, they start at the right edge instead.
+ */
+const drawStripes = (sheet: Sheet, page: Rect, isMirrored: boolean) => {
+  const { ctx, t } = sheet;
+  ctx.save();
+  if (isMirrored) {
+    ctx.translate(page.x * 2 + page.width, 0);
+    ctx.scale(-1, 1);
+  }
+  // The corner they round, set from the foot so a taller page only gains
+  // room above them
+  const bend = { x: page.x + 33 * t, y: page.y + page.height - 20 * t };
+  STRIPES.forEach((weight, index) => {
+    const radius = (4 + index * 2) * t;
+    ctx.lineWidth = weight * t;
+    ctx.beginPath();
+    ctx.moveTo(page.x, bend.y + radius);
+    ctx.lineTo(bend.x, bend.y + radius);
+    ctx.arc(bend.x, bend.y, radius, Math.PI / 2, 0, true);
+    ctx.lineTo(bend.x + radius, page.y - t);
+    ctx.stroke();
+  });
+  ctx.restore();
+};
+
+// Text that leans, from its baseline
+const fillSlanted = (
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+) => {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.transform(1, 0, -SLANT, 1, 0, 0);
+  ctx.fillText(text, 0, 0);
+  ctx.restore();
+};
+
+// The plate on the front cover: the camera on the home page's Gear widget
+const COVER_PLATE = "mamiya-rz67";
+
+// The departments by their first word: Cameras, Film, Guitars
+const SHORT_DEPARTMENTS = departments
+  .map(({ title }) => title.split(" ")[0].toUpperCase())
+  .join(" · ");
+
+/**
+ * A 1970s store catalogue: racing stripes, a fat rounded title that leans,
+ * and the camera parked on the stripes.
+ */
+const typesetFront = (
+  sheet: Sheet,
+  page: Rect,
+  owner: string,
+  images: Map<string, HTMLImageElement>,
+) => {
+  const { ctx, t } = sheet;
+  const left = page.x + 4 * t;
+  const right = page.x + page.width - 4 * t;
+  const foot = page.y + page.height - 3 * t;
+  drawStripes(sheet, page, false);
+
+  ctx.textAlign = "left";
+  const title = Math.max(12.8 * t, 48);
+  ctx.font = `900 ${title}px "${COVER_FONT.family}", ${sheet.family}`;
+  ctx.letterSpacing = `${-0.3 * t}px`;
+  fillSlanted(ctx, "gear", left, page.y + 12.6 * t);
+
+  setFont(sheet, Math.max(1.3 * t, 9.5), 500);
+  fillSlanted(
+    ctx,
+    "Cameras, film, guitars and the rest",
+    left + 0.6 * t,
+    page.y + 17.2 * t,
+  );
+
+  // Parked on the innermost stripe
+  const image = images.get(COVER_PLATE);
+  if (image) {
+    const bottom = page.y + page.height - 16 * t - 0.7 * t;
+    drawPlate(
+      sheet,
+      image,
+      { x: page.x + 17 * t, y: bottom - 14.4 * t, width: 16 * t, height: 14.4 * t },
+      false,
+    );
+  }
+
+  const small = Math.max(1.05 * t, 8);
+  setFont(sheet, small, 600, "0.16em");
+  ctx.fillText(`${owner} catalogue`.toUpperCase(), left, foot);
+  ctx.textAlign = "right";
+  ctx.fillText(SHORT_DEPARTMENTS, right, foot);
+};
+
+// The back cover: only the stripes again, coming in from the spine
+const typesetBack = (sheet: Sheet, page: Rect) => {
+  drawStripes(sheet, page, true);
+};
 
 export interface PrintRun {
   owner: string;
@@ -424,6 +572,9 @@ export const drawPage = (
   page: CataloguePage,
   { owner, images }: PrintRun,
   family: string,
+  // Black on paper, for the ink to pick up. Without WebGPU the page is shown
+  // as drawn, so a cover is drawn in its own colors
+  colors: PageColors = { ink: INK, paper: PAPER },
 ) => {
   const sheet: Sheet = {
     ctx,
@@ -433,23 +584,28 @@ export const drawPage = (
   };
 
   ctx.setTransform(scale, 0, 0, scale, 0, 0);
-  ctx.fillStyle = PAPER;
+  ctx.fillStyle = colors.paper;
   ctx.fillRect(0, 0, width, height);
-  ctx.fillStyle = INK;
-  ctx.strokeStyle = INK;
+  ctx.fillStyle = colors.ink;
+  ctx.strokeStyle = colors.ink;
   ctx.textBaseline = "alphabetic";
 
-  typesetPage(
-    sheet,
-    { x: 0, y: 0, width, height },
-    {
-      owner,
-      images,
-      department: page.department.title,
-      items: page.items,
-      folio: page.folio,
-      hasBanner: page.hasBanner,
-      turn: page.turn,
-    },
-  );
+  const area = { x: 0, y: 0, width, height };
+  if (page.kind === "front") {
+    typesetFront(sheet, area, owner, images);
+    return;
+  }
+  if (page.kind === "back") {
+    typesetBack(sheet, area);
+    return;
+  }
+  typesetPage(sheet, area, {
+    owner,
+    images,
+    department: page.department.title,
+    items: page.items,
+    folio: page.folio,
+    hasBanner: page.hasBanner,
+    turn: page.turn,
+  });
 };

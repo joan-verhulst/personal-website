@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import UiUxWall from "~/modules/ui-ux/components/ui-ux-wall";
+import { sectionMetadata } from "~/utils/page-metadata";
 
-export const metadata: Metadata = {
-  title: "UI/UX",
-};
+export const metadata: Metadata = sectionMetadata("UI/UX", "/ui-ux");
 
 const UiUxPage = () => {
   return (

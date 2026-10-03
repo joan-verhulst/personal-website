@@ -11,6 +11,8 @@ interface Props {
   // One of the two pages of a leaf that turns, instead of a page lying under them
   isLeaf?: boolean;
   canvasRef: (canvas: HTMLCanvasElement | null) => void;
+  // Shown until it's printed, if it isn't the usual paper
+  paper?: string;
 }
 
 /**
@@ -18,16 +20,26 @@ interface Props {
  * and the shade of the fold over it. Side by side the fold is at the inner
  * edge, stacked it runs between the upper and the lower page.
  */
-const CataloguePage = ({ side, isLeaf = false, canvasRef }: Props) => {
+const CataloguePage = ({
+  side,
+  isLeaf = false,
+  canvasRef,
+  paper,
+}: Props) => {
   return (
     <div
       className={cn(
-        "backface-hidden absolute inset-0 isolate overflow-hidden rounded-[3px] bg-[#f8f6f1]",
+        "backface-hidden absolute inset-0 isolate overflow-hidden bg-[#f8f6f1]",
+        // Rounded at the corners of the book, square along the fold
+        side === "left"
+          ? "rounded-t-xl @2xl:rounded-r-none @2xl:rounded-l-xl"
+          : "@2xl:rounded-r-xl rounded-b-xl @2xl:rounded-l-none",
         // The back of a leaf faces away, so it reads once the leaf is over
         isLeaf &&
           side === "left" &&
           "transform-[rotateX(180deg)] @2xl:transform-[rotateY(180deg)]",
       )}
+      style={paper ? { backgroundColor: paper } : undefined}
     >
       <canvas
         ref={canvasRef}

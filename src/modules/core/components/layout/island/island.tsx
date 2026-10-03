@@ -1,6 +1,7 @@
 "use client";
 
 import { Undo2 } from "lucide-react";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
   type FocusEvent as ReactFocusEvent,
@@ -33,6 +34,9 @@ import {
 } from "~/utils/island-controls";
 import { openWidget } from "~/utils/open-widget";
 
+// Made from the headshot by scripts/make-icons.mts, like the favicon
+const HEADSHOT = "/icons/icon-192.png";
+
 type Unfold = "widgets" | "dial";
 
 // What the island unfolds into when it's clicked. Both are built, to try
@@ -41,7 +45,8 @@ const UNFOLD = "widgets" as Unfold;
 
 // The island at rest, and unfolded, in pixels
 const SIZES = {
-  home: { width: 172, height: 36 },
+  // Fits the headshot, the light and the name
+  home: { width: 152, height: 36 },
   section: { width: 252, height: 36 },
   widgets: { width: 284, height: 244 },
   dial: { width: 480, height: 48 },
@@ -223,7 +228,7 @@ const Island = () => {
       aria-label="Site"
       className={cn(
         // Over the open section (z-5), under modals (z-50)
-        "fixed top-3 left-1/2 z-10 -translate-x-1/2 overflow-hidden rounded-[22px] bg-neutral-950 text-neutral-50 shadow-[0_8px_22px_rgb(15_15_15/0.22)]",
+        "fixed top-3 left-1/2 z-10 -translate-x-1/2 overflow-hidden rounded-[22px] bg-neutral-950 text-neutral-50",
         animationsEnabled &&
           "transition-[width,height] duration-[550ms] ease-[cubic-bezier(0.34,1.4,0.64,1)] motion-reduce:transition-none",
       )}
@@ -255,10 +260,20 @@ const Island = () => {
               isHome ? "justify-center" : "justify-between",
             )}
           >
-            {isHome && (
-              <span className="size-1.5 shrink-0 rounded-full bg-primary" />
-            )}
-            {controls?.labels ? (
+            {isHome ? (
+              <>
+                {/* The headshot, flush with the island's rounded end */}
+                <Image
+                  src={HEADSHOT}
+                  alt=""
+                  width={24}
+                  height={24}
+                  className="-ml-1.5 size-6 shrink-0 rounded-full"
+                />
+                <span className="size-1.5 shrink-0 rounded-full bg-primary" />
+                <span className="truncate">{label}</span>
+              </>
+            ) : controls?.labels ? (
               <IslandTicker
                 label={label}
                 labels={controls.labels}

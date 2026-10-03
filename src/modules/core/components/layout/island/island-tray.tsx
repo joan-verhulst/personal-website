@@ -24,7 +24,7 @@ interface Tile {
   style?: CSSProperties;
   image?: string;
   // Sits inside the tile instead of filling it
-  inset?: "screen" | "record";
+  inset?: "screen" | "record" | "cutout";
 }
 
 const getTiles = ({
@@ -48,19 +48,22 @@ const getTiles = ({
     image: about.image,
   },
   {
-    id: "favorites",
-    label: widgets.favorites.label,
+    id: "on-rotation",
+    label: widgets.onRotation.label,
     area: "2 / 1 / 3 / 2",
-    widget: "favorites",
-    className: "bg-linear-to-b from-[#626D77] to-[#1E2D3C]",
+    widget: "on-rotation",
+    className: "bg-linear-to-b from-[#EBCA10] to-[#EB7E10]",
     image: record?.cover,
     inset: "record",
   },
   {
-    id: "thoughts",
-    label: widgets.thoughts.label,
+    id: "gear",
+    label: widgets.gear.label,
     area: "2 / 2 / 3 / 3",
-    className: "bg-linear-to-b from-[#EBCA10] to-[#EB7E10]",
+    widget: "gear",
+    className: "bg-linear-to-b from-[#626D77] to-[#1E2D3C]",
+    image: widgets.gear.image,
+    inset: "cutout",
   },
   {
     id: "uiux",
@@ -98,6 +101,7 @@ const getTiles = ({
   {
     id: "contact",
     label: widgets.contact.label,
+    widget: "contact",
     area: "4 / 5 / 5 / 7",
     className: "bg-linear-to-b from-[#B1EB10] to-[#2FC72F]",
   },
@@ -177,6 +181,7 @@ const IslandTray = ({ pathname, isOpen, onVisit, onWidget, onClose }: Props) => 
                 tile.inset === "screen" &&
                   "inset-x-[14%] top-[18%] bottom-0 rounded-t-md",
                 tile.inset === "record" && "inset-[18%] rounded-full",
+                tile.inset === "cutout" && "inset-[14%]",
               )}
             >
               <Image
@@ -184,7 +189,12 @@ const IslandTray = ({ pathname, isOpen, onVisit, onWidget, onClose }: Props) => 
                 alt=""
                 fill
                 sizes="160px"
-                className="pointer-events-none object-cover object-top"
+                className={cn(
+                  "pointer-events-none",
+                  tile.inset === "cutout"
+                    ? "object-contain"
+                    : "object-cover object-top",
+                )}
               />
             </span>
           );

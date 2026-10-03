@@ -3,13 +3,18 @@
 import Image from "next/image";
 import TransitionLink from "~components/utils/TransitionLink";
 import WidgetCard from "~components/widget-card";
-import { Instagram, Linkedin, Mail, Dot } from "lucide-react";
+import { Dot } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { widgets } from "~/data/widgets";
 import AboutModal from "~/modules/about/components/about-modal";
+import ContactModal, {
+  getContactLinks,
+} from "~/modules/contact/components/contact-modal";
 import ExperimentsModal from "~/modules/experiments/components/experiments-modal";
 import FavoritesModal from "~/modules/favorites/components/favorites-modal";
+import Gear from "~/modules/favorites/components/gear";
+import OnRotation from "~/modules/favorites/components/on-rotation";
 import Vinyl from "~/modules/favorites/components/vinyl";
 import WallMedia from "~/modules/ui-ux/components/wall-media";
 import { getWallBackground } from "~/modules/ui-ux/utils/wall-backgrounds";
@@ -30,7 +35,9 @@ const Page = () => {
   const [activeSlide, setActiveSlide] = useState(0); // 0 for projects, 1 for snippets
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isExperimentsOpen, setIsExperimentsOpen] = useState(false);
-  const [isFavoritesOpen, setIsFavoritesOpen] = useState(false);
+  const [isOnRotationOpen, setIsOnRotationOpen] = useState(false);
+  const [isGearOpen, setIsGearOpen] = useState(false);
+  const [isContactOpen, setIsContactOpen] = useState(false);
 
   const { about, contact, covers, experiments, highlights, records } =
     useContent();
@@ -38,14 +45,16 @@ const Page = () => {
   const [firstHighlight, secondHighlight = firstHighlight] = highlights;
   // The shader fills the experiments widget, the nav reel peeks over it
   const [shaderExperiment, navExperiment] = experiments;
-  // The record that's on spins on the favorites widget
+  // The record that's on spins on the On Rotation widget
   const [currentRecord] = records;
 
   // The island can open these too, from any page
   useEffect(() => {
     const open: Record<string, () => void> = {
       about: () => setIsAboutOpen(true),
-      favorites: () => setIsFavoritesOpen(true),
+      "on-rotation": () => setIsOnRotationOpen(true),
+      gear: () => setIsGearOpen(true),
+      contact: () => setIsContactOpen(true),
       experiments: () => setIsExperimentsOpen(true),
     };
 
@@ -263,7 +272,7 @@ const Page = () => {
               className="grid grid-cols-1 md:grid-cols-3 md:h-full"
               style={{ gap: "2rem" }}
             >
-              {/* TOP ROW - Column 1: About + Toolkit/Thoughts subgrid */}
+              {/* TOP ROW - Column 1: About + On Rotation/Gear subgrid */}
               <div
                 className="grid grid-cols-1 w-full aspect-square "
                 style={{ gap: "2rem" }}
@@ -279,17 +288,17 @@ const Page = () => {
                   />
                 </div>
 
-                {/* Favorites + Thoughts in a row */}
+                {/* On Rotation + Gear in a row */}
                 <div
                   className="grid grid-cols-2 md:h-full"
                   style={{ gap: "2rem" }}
                 >
-                  {/* Favorites */}
+                  {/* On Rotation */}
                   <div className="aspect-square md:aspect-auto md:h-full">
                     <WidgetCard
-                      label={widgets.favorites.label}
-                      className="bg-linear-to-b from-[#626D77] to-[#1E2D3C] h-full"
-                      onClick={() => setIsFavoritesOpen(true)}
+                      label={widgets.onRotation.label}
+                      className="bg-linear-to-b from-[#EBCA10] to-[#EB7E10] h-full"
+                      onClick={() => setIsOnRotationOpen(true)}
                     >
                       <div className="flex h-full items-center justify-center pointer-events-none">
                         {currentRecord && (
@@ -311,12 +320,23 @@ const Page = () => {
                     </WidgetCard>
                   </div>
 
-                  {/* Thoughts */}
+                  {/* Gear: the camera is a cut-out, shown whole */}
                   <div className="aspect-square md:aspect-auto md:h-full">
                     <WidgetCard
-                      label={widgets.thoughts.label}
-                      className="bg-linear-to-b from-[#EBCA10] to-[#EB7E10] h-full"
-                    />
+                      label={widgets.gear.label}
+                      className="bg-linear-to-b from-[#626D77] to-[#1E2D3C] h-full"
+                      onClick={() => setIsGearOpen(true)}
+                    >
+                      <div className="relative h-full overflow-hidden rounded-4xl">
+                        <Image
+                          src={widgets.gear.image}
+                          alt=""
+                          fill
+                          sizes="96px"
+                          className="pointer-events-none object-contain p-[14%]"
+                        />
+                      </div>
+                    </WidgetCard>
                   </div>
                 </div>
               </div>
@@ -502,36 +522,20 @@ const Page = () => {
                   </WidgetCard>
                 </div>
 
-                {/* Contact */}
+                {/* Contact: the icons are a picture, the modal has the links */}
                 <div className="aspect-2/1 md:aspect-auto md:h-full">
                   <WidgetCard
                     label={widgets.contact.label}
                     className="bg-linear-to-b from-[#B1EB10] to-[#2FC72F] h-full"
+                    onClick={() => setIsContactOpen(true)}
                   >
-                    <div className="flex items-center justify-center gap-6 h-full">
-                      {contact.instagram && (
-                        <a
-                          href={contact.instagram}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <Instagram className="w-6 h-6 text-neutral-50" />
-                        </a>
-                      )}
-                      {contact.email && (
-                        <a href={`mailto:${contact.email}`}>
-                          <Mail className="w-6 h-6 text-neutral-50" />
-                        </a>
-                      )}
-                      {contact.linkedin && (
-                        <a
-                          href={contact.linkedin}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <Linkedin className="w-6 h-6 text-neutral-50" />
-                        </a>
-                      )}
+                    <div
+                      aria-hidden
+                      className="flex items-center justify-center gap-6 h-full pointer-events-none"
+                    >
+                      {getContactLinks(contact).map(({ id, icon: Icon }) => (
+                        <Icon key={id} className="w-6 h-6 text-neutral-50" />
+                      ))}
                     </div>
                   </WidgetCard>
                 </div>
@@ -542,8 +546,22 @@ const Page = () => {
       </div>
       <AboutModal isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
       <FavoritesModal
-        isOpen={isFavoritesOpen}
-        onClose={() => setIsFavoritesOpen(false)}
+        title={widgets.onRotation.label}
+        isOpen={isOnRotationOpen}
+        onClose={() => setIsOnRotationOpen(false)}
+      >
+        <OnRotation />
+      </FavoritesModal>
+      <FavoritesModal
+        title={widgets.gear.label}
+        isOpen={isGearOpen}
+        onClose={() => setIsGearOpen(false)}
+      >
+        <Gear />
+      </FavoritesModal>
+      <ContactModal
+        isOpen={isContactOpen}
+        onClose={() => setIsContactOpen(false)}
       />
       <ExperimentsModal
         isOpen={isExperimentsOpen}

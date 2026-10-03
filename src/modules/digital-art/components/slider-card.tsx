@@ -2,6 +2,7 @@
 
 import { Maximize } from "lucide-react";
 import Image from "next/image";
+import { memo } from "react";
 import cn from "~/utils/cn";
 import { useHapticSound } from "~/modules/core/hooks/use-haptic-sound";
 import {
@@ -16,11 +17,11 @@ interface SlideCardProps {
   isActive: boolean;
   isHovered: boolean;
   isVertical: boolean;
-  slideRef: (el: HTMLDivElement | null) => void;
-  imgRef: (el: HTMLImageElement | null) => void;
-  onClick: () => void;
-  onMouseEnter: () => void;
-  onMouseLeave: () => void;
+  // Take the index, so the slider can hand every card the same functions
+  slideRef: (index: number, el: HTMLDivElement | null) => void;
+  imgRef: (index: number, el: HTMLImageElement | null) => void;
+  onSelect: (index: number) => void;
+  onHover: (index: number | null) => void;
   onOpenPopover: () => void;
 }
 
@@ -32,16 +33,15 @@ const SlideCard = ({
   isVertical,
   slideRef,
   imgRef,
-  onClick,
-  onMouseEnter,
-  onMouseLeave,
+  onSelect,
+  onHover,
   onOpenPopover,
 }: SlideCardProps) => {
   const haptic = useHapticSound();
 
   return (
     <div
-      ref={slideRef}
+      ref={(el) => slideRef(index, el)}
       className={cn(
         // The background stands in until the picture has loaded
         "relative shrink-0 overflow-hidden rounded-2xl bg-neutral-200",
@@ -50,19 +50,19 @@ const SlideCard = ({
       )}
       onClick={() => {
         haptic.onClick();
-        onClick();
+        onSelect(index);
       }}
       onMouseEnter={() => {
         haptic.onMouseEnter();
-        onMouseEnter();
+        onHover(index);
       }}
-      onMouseLeave={onMouseLeave}
+      onMouseLeave={() => onHover(null)}
     >
       <div
         className={cn("h-full", !isActive ? "w-[130%] -ml-[15%]" : "w-full")}
       >
         <Image
-          ref={imgRef}
+          ref={(el) => imgRef(index, el)}
           src={item.image}
           alt={item.title}
           width={item.width}
@@ -103,4 +103,6 @@ const SlideCard = ({
   );
 };
 
-export default SlideCard;
+// Dragging re-renders the slider whenever the slide it's heading for changes.
+// Only the cards whose own state changed need to follow
+export default memo(SlideCard);

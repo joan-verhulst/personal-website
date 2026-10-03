@@ -50,24 +50,40 @@ const WallItemModal = ({ item, isOpen, onClose }: Props) => {
       isOpen={isOpen}
       onClose={onClose}
       title={
-        <WallTag
-          tag={item.tag}
-          className="text-neutral-50"
-          style={{ backgroundColor: item.tag.color }}
-        />
+        <AnimatedText ref={titleTextRef} trigger="manual">
+          {item.title}
+        </AnimatedText>
       }
       onOpenComplete={handleOpenComplete}
     >
-      {/* Title and link */}
-      <div className="mb-2 flex items-center justify-between gap-4">
-        <AnimatedText
-          ref={titleTextRef}
-          as="h2"
-          className="font-regular text-lg text-neutral-950"
-          trigger="manual"
-        >
-          {item.title}
-        </AnimatedText>
+      {/* Who it was for and what it is, read as one block */}
+      <div className="flex max-w-2xl flex-col gap-1">
+        <WallTag
+          tag={item.tag}
+          className="h-auto self-start px-0 text-lg text-neutral-950 leading-tight"
+        />
+        {item.description && (
+          <AnimatedText
+            ref={descriptionTextRef}
+            as="p"
+            className="font-light text-base text-neutral-950/66 leading-snug"
+            trigger="manual"
+          >
+            {item.description}
+          </AnimatedText>
+        )}
+      </div>
+
+      {/* Media, with the link to the live site over its bottom right corner */}
+      <div
+        ref={mediaRef}
+        className="relative inset-border mt-6 w-full overflow-hidden rounded-xl"
+        style={{
+          opacity: 0,
+          aspectRatio: item.media.width / item.media.height,
+        }}
+      >
+        <WallMedia item={item} sizes="(min-width: 896px) 848px, 100vw" />
         {item.link && (
           <a
             href={item.link.href}
@@ -75,36 +91,12 @@ const WallItemModal = ({ item, isOpen, onClose }: Props) => {
             rel="noopener noreferrer"
             onClick={haptic.onClick}
             onMouseEnter={haptic.onMouseEnter}
-            className="flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-primary-500 px-4 text-neutral-50 text-sm transition-colors duration-200 hover:bg-primary-500/75"
+            className="absolute right-3 bottom-3 z-10 flex h-9 items-center gap-1.5 rounded-full bg-primary-500 px-4 text-neutral-50 text-sm shadow-[0_4px_12px_-4px_rgb(0_0_0/0.35)] transition-colors duration-200 hover:bg-primary-500/75 focus-visible:outline-2 focus-visible:outline-primary-500 focus-visible:outline-offset-2"
           >
             {item.link.label}
             <ArrowUpRight className="size-4" />
           </a>
         )}
-      </div>
-
-      {/* Description */}
-      {item.description && (
-        <AnimatedText
-          ref={descriptionTextRef}
-          as="p"
-          className="max-w-2xl font-light text-base text-neutral-950/66"
-          trigger="manual"
-        >
-          {item.description}
-        </AnimatedText>
-      )}
-
-      {/* Media */}
-      <div
-        ref={mediaRef}
-        className="relative inset-border mt-8 w-full overflow-hidden rounded-xl"
-        style={{
-          opacity: 0,
-          aspectRatio: item.media.width / item.media.height,
-        }}
-      >
-        <WallMedia item={item} sizes="(min-width: 896px) 848px, 100vw" />
       </div>
     </Modal>
   );

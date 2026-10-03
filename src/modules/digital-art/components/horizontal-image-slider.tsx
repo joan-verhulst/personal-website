@@ -95,6 +95,35 @@ const HorizontalImageSlider = ({
 
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
+  // One tween per image, retargeted on every move. Starting a new one on every
+  // move piled up dozens per image, all writing the same transform
+  const parallax = useRef(new Map<HTMLImageElement, gsap.QuickToFunc>());
+  const shiftImage = useCallback((img: HTMLImageElement, x: number) => {
+    let to = parallax.current.get(img);
+    if (!to) {
+      to = gsap.quickTo(img, "x", { duration: 0.6, ease: "power2.out" });
+      parallax.current.set(img, to);
+    }
+    to(x);
+  }, []);
+
+  // The height each slide is heading for while dragging, so only the ones
+  // that change get a new tween
+  const previewHeights = useRef<number[]>([]);
+
+  const setSlideRef = useCallback(
+    (index: number, element: HTMLDivElement | null) => {
+      slideRefs.current[index] = element;
+    },
+    [],
+  );
+  const setImgRef = useCallback(
+    (index: number, element: HTMLImageElement | null) => {
+      imgRefs.current[index] = element;
+    },
+    [],
+  );
+
   // Drag state
   const isDragging = useRef(false);
   const dragStartPos = useRef(0);
@@ -191,6 +220,8 @@ const HorizontalImageSlider = ({
         gsap.killTweensOf(img);
         gsap.set(img, { clearProps: "x" });
       });
+      parallax.current.clear();
+      previewHeights.current = [];
       shouldSnapInstantly.current = true;
     }
 
@@ -247,6 +278,8 @@ const HorizontalImageSlider = ({
           height = FIXED_HEIGHT + 24;
         }
       }
+      if (previewHeights.current[index] === height) return;
+      previewHeights.current[index] = height;
       gsap.to(slide, { height, duration: 0.6, ease: "power2.out" });
     });
   }, [pendingIndex]);
@@ -294,12 +327,11 @@ const HorizontalImageSlider = ({
       dragLastTime.current = now;
 
       const parallaxX = Math.max(-20, Math.min(20, dragVelocity.current * -8));
-      imgRefs.current.forEach((img, index) => {
-        if (isVertical || !animationsEnabled) return;
-        else if (img && index !== activeIndex) {
-          gsap.to(img, { x: parallaxX, duration: 0.6, ease: "power2.out" });
-        }
-      });
+      if (!isVertical && animationsEnabled) {
+        imgRefs.current.forEach((img, index) => {
+          if (img && index !== activeIndex) shiftImage(img, parallaxX);
+        });
+      }
 
       const axis = isVertical ? "y" : "x";
       const newSliderPos =
@@ -309,7 +341,14 @@ const HorizontalImageSlider = ({
       const closest = findClosestIndex(newSliderPos);
       onPendingIndexChange(closest);
     },
-    [isVertical, findClosestIndex, onPendingIndexChange, animationsEnabled],
+    [
+      isVertical,
+      activeIndex,
+      findClosestIndex,
+      onPendingIndexChange,
+      animationsEnabled,
+      shiftImage,
+    ],
   );
 
   const handleDragEnd = useCallback(() => {
@@ -319,7 +358,7 @@ const HorizontalImageSlider = ({
     document.body.style.userSelect = "";
 
     imgRefs.current.forEach((img) => {
-      if (img) gsap.to(img, { x: 0, duration: 0.5, ease: "power2.out" });
+      if (img && parallax.current.has(img)) shiftImage(img, 0);
     });
     onPendingIndexChange(null);
 
@@ -358,6 +397,7 @@ const HorizontalImageSlider = ({
     onPendingIndexChange,
     calculateCenterOffset,
     findClosestIndex,
+    shiftImage,
   ]);
 
   // ── Wheel ───────────────────────────────────────────────────────────────────
@@ -448,18 +488,12 @@ const HorizontalImageSlider = ({
             isActive={index === activeIndex}
             isHovered={hoveredIndex === index}
             isVertical={isVertical}
-            slideRef={(el) => {
-              slideRefs.current[index] = el;
-            }}
-            imgRef={(el) => {
-              imgRefs.current[index] = el;
-            }}
-            onClick={() => handleSlideClick(index)}
-            onMouseEnter={() => setHoveredIndex(index)}
-            onMouseLeave={() => setHoveredIndex(null)}
-            onOpenPopover={() => {
-              onOpenPopover();
-            }}
+            // Stable, so a card only renders again when it changes itself
+            slideRef={setSlideRef}
+            imgRef={setImgRef}
+            onSelect={handleSlideClick}
+            onHover={setHoveredIndex}
+            onOpenPopover={onOpenPopover}
           />
         ))}
       </div>

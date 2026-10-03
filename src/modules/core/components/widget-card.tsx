@@ -133,7 +133,7 @@ const WidgetCard = ({
         </div>
       )}
       {children}
-      <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs">
+      <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs">
         {label}
       </span>
     </div>

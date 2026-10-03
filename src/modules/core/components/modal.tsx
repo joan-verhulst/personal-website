@@ -12,6 +12,7 @@ import {
 import { createPortal } from "react-dom";
 import { useAnimationPreference } from "~/modules/core/context/animation-preference-context";
 import { useHapticSound } from "~/modules/core/hooks/use-haptic-sound";
+import cn from "~/utils/cn";
 
 interface Props {
   isOpen: boolean;
@@ -148,7 +149,11 @@ const Modal = ({
     >
       <div
         ref={modalRef}
-        className={`relative flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border border-neutral-950/10 bg-neutral-50 ${className ?? ""}`}
+        // Merged, so a modal can be made narrower than max-w-4xl
+        className={cn(
+          "relative flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border border-neutral-950/10 bg-neutral-50",
+          className,
+        )}
         style={{ transform: "translateY(100dvh) scale(4)" }}
       >
         {/* Header */}

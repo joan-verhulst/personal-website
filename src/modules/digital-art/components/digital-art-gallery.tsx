@@ -22,6 +22,7 @@ const DigitalArtGallery = ({ artworks }: Props) => {
   const handleSlideChange = useCallback((index: number) => {
     setActiveIndex(index);
   }, []);
+  const openPopover = useCallback(() => setIsPopoverOpen(true), []);
 
   const shownIndex = pointedIndex ?? pendingIndex ?? activeIndex;
   const titles = useMemo(() => artworks.map(({ title }) => title), [artworks]);
@@ -50,9 +51,7 @@ const DigitalArtGallery = ({ artworks }: Props) => {
           items={artworks}
           activeIndex={activeIndex}
           onActiveIndexChange={handleSlideChange}
-          onOpenPopover={() => {
-            setIsPopoverOpen(true);
-          }}
+          onOpenPopover={openPopover}
           pendingIndex={pendingIndex}
           onPendingIndexChange={setPendingIndex}
         />

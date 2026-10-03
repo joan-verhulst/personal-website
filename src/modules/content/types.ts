@@ -59,22 +59,26 @@ export interface WallItem {
 /**
  * Blocks are split along the Fibonacci sequence on a 13 column grid. A unit
  * is 4:3, so every square renders as a 4:3 card. List items from big to
- * small; the layout mirrors on every other block.
+ * small; spirals and triples mirror on every other block.
  *
  * spiral  8×8 + 5×5 + 3×3 + 2×3 (near square)
  * triple  5×5 + 5×5 + 3×5 (near square)
+ * double  two equal 4:3 halves, never mirrored
  *
- * Keep videos in the first two slots, they should never be small.
+ * Keep videos out of the small slots (the last two of a spiral, the last of a
+ * triple), they'd be too small to follow.
  */
 export type WallBlock =
   | { layout: "spiral"; items: [WallItem, WallItem, WallItem, WallItem] }
-  | { layout: "triple"; items: [WallItem, WallItem, WallItem] };
+  | { layout: "triple"; items: [WallItem, WallItem, WallItem] }
+  | { layout: "double"; items: [WallItem, WallItem] };
 
 export type WallLayout = WallBlock["layout"];
 
 export const WALL_SLOTS: Record<WallLayout, number> = {
   spiral: 4,
   triple: 3,
+  double: 2,
 };
 
 // ── Photography ───────────────────────────────────────────────────────────────

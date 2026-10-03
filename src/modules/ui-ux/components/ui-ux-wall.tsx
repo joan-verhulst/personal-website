@@ -126,6 +126,24 @@ const UiUxWall = () => {
           </div>
         );
       }
+
+      // Two equal 4:3 halves, so there's nothing to mirror
+      case "double": {
+        const [first, second] = block.items;
+        const blockStyle = {
+          "--block-height": "calc((100cqw - 12px) / 2 * 0.75)",
+        } as CSSProperties;
+
+        return (
+          <div
+            className="flex flex-col gap-3 lg:grid lg:h-(--block-height) lg:grid-cols-2"
+            style={blockStyle}
+          >
+            {renderTile(first, 6.5, 6.5)}
+            {renderTile(second, 6.5, 6.5)}
+          </div>
+        );
+      }
     }
   };
 

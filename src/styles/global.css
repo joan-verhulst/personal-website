@@ -1,4 +1,11 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+
+/*
+ * dark: only applies under data-theme="dark", never from the OS setting. The
+ * CMS components come with dark styles, and the admin is light for now.
+ */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 @theme {
   /* Neutral colors */
@@ -29,6 +36,43 @@
   --color-primary-950: #05121a;
   --color-primary: #3a9bd8;
 
+  /* Feedback colors, for the CMS: errors, warnings and confirmations */
+  --color-error-50: hsl(0, 57%, 89%);
+  --color-error-100: hsl(0, 58%, 85%);
+  --color-error-200: hsl(0, 58%, 77%);
+  --color-error-300: hsl(0, 58%, 69%);
+  --color-error-400: hsl(0, 58%, 61%);
+  --color-error-500: hsl(0, 58%, 53%);
+  --color-error-600: hsl(0, 58%, 42%);
+  --color-error-700: hsl(0, 58%, 31%);
+  --color-error-800: hsl(0, 59%, 20%);
+  --color-error-900: hsl(0, 57%, 9%);
+  --color-error-950: hsl(0, 56%, 4%);
+
+  --color-warning-50: hsl(34, 100%, 95%);
+  --color-warning-100: hsl(33, 96%, 91%);
+  --color-warning-200: hsl(33, 98%, 83%);
+  --color-warning-300: hsl(33, 97%, 75%);
+  --color-warning-400: hsl(33, 98%, 67%);
+  --color-warning-500: hsl(33, 97%, 59%);
+  --color-warning-600: hsl(33, 97%, 46%);
+  --color-warning-700: hsl(33, 96%, 33%);
+  --color-warning-800: hsl(33, 96%, 20%);
+  --color-warning-900: hsl(34, 94%, 7%);
+  --color-warning-950: hsl(20, 100%, 1%);
+
+  --color-success-50: hsl(82, 73%, 97%);
+  --color-success-100: hsl(79, 70%, 91%);
+  --color-success-200: hsl(83, 68%, 79%);
+  --color-success-300: hsl(87, 68%, 67%);
+  --color-success-400: hsl(91, 68%, 55%);
+  --color-success-500: hsl(95, 68%, 43%);
+  --color-success-600: hsl(99, 68%, 33%);
+  --color-success-700: hsl(103, 68%, 23%);
+  --color-success-800: hsl(108, 67%, 13%);
+  --color-success-900: hsl(113, 67%, 7%);
+  --color-success-950: hsl(113, 67%, 2%);
+
   /* Font sizes */
   --font-size-sm: 0.75rem;
   --font-size-base: 1rem;
@@ -42,6 +86,21 @@
       transform: scaleY(0.3);
     }
   }
+}
+
+/*
+ * The admin's denser type scale, from the Spark dashboard design: 13px body,
+ * 14px for navigation and descriptions, 20px titles. Only under data-cms, so
+ * the site keeps Tailwind's sizes.
+ */
+[data-cms] {
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.25;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.25;
+  --text-xl: 1.25rem;
+  --text-xl--line-height: 1.25;
+  letter-spacing: 0.02em;
 }
 
 /*

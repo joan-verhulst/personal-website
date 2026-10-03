@@ -65,15 +65,24 @@ const useTextAnimation = ({
 
     if (words.length === 0) return;
 
-    // Temporarily wrap words to measure their positions
-    const tempWrapped = words.map(
-      (word) =>
-        `<span class="word-measure" style="display: inline">${word}</span>`,
+    // Temporarily wrap words to measure their positions. Built as elements,
+    // never as an HTML string: the text comes from the CMS and may hold a <
+    // or an &, which would otherwise be read as markup
+    const wordElements = words.map((word) => {
+      const span = document.createElement("span");
+      span.className = "word-measure";
+      span.style.display = "inline";
+      span.textContent = word;
+      return span;
+    });
+    // Spaces between the spans keep the line breaks where the text had them
+    element.replaceChildren(
+      ...wordElements.flatMap((span, index) =>
+        index === 0 ? [span] : [document.createTextNode(" "), span],
+      ),
     );
-    element.innerHTML = tempWrapped.join(" ");
 
     // Get the bounding rects to determine which words are on which line
-    const wordElements = element.querySelectorAll(".word-measure");
     const lines: string[][] = [];
     let currentLine: string[] = [];
     let currentTop: number | null = null;
@@ -95,16 +104,23 @@ const useTextAnimation = ({
     }
 
     // Now wrap each line in animatable spans
-    const wrappedLines = lines.map(
-      (lineWords) =>
-        `<span class="block overflow-hidden"><span class="animation-line block">${lineWords.join(" ")}</span></span>`,
+    const lineSpans = lines.map((lineWords) => {
+      const inner = document.createElement("span");
+      inner.className = "animation-line block";
+      inner.textContent = lineWords.join(" ");
+      return inner;
+    });
+    element.replaceChildren(
+      ...lineSpans.map((inner) => {
+        const outer = document.createElement("span");
+        outer.className = "block overflow-hidden";
+        outer.append(inner);
+        return outer;
+      }),
     );
-    element.innerHTML = wrappedLines.join("");
 
-    // Get all line spans and set initial state
-    lineSpansRef.current = Array.from(
-      element.querySelectorAll(".animation-line"),
-    );
+    // Set the initial state of all line spans
+    lineSpansRef.current = lineSpans;
     gsap.set(lineSpansRef.current, { yPercent: 100 });
 
     isSetup.current = true;

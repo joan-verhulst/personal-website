@@ -79,6 +79,8 @@ export interface WallItemRow {
 export interface WallBlockRow {
   id: string;
   layout: WallLayout;
+  // One item id per slot, big to small. An empty string is an empty slot: the
+  // row is saved but stays off the site until it's filled.
   items: string[];
   sort_order: number;
 }

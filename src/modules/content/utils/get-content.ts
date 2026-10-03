@@ -1,9 +1,10 @@
 import { cache } from "react";
-import type {
-  Content,
-  WallBlock,
-  WallItem,
-  WallTag,
+import {
+  type Content,
+  WALL_SLOTS,
+  type WallBlock,
+  type WallItem,
+  type WallTag,
 } from "~/modules/content/types";
 import type {
   ArtworkRow,
@@ -22,13 +23,34 @@ import { createPublicClient } from "~/modules/supabase/utils/public-client";
 // with holes in it
 const rowsOf = <Row>(
   table: string,
-  result: { data: unknown; error: { message: string } | null },
+  result: {
+    data: unknown;
+    error: { message: string } | null;
+    count: number | null;
+  },
 ): Row[] => {
   if (result.error) {
     throw new Error(`Couldn't read ${table}: ${result.error.message}`);
   }
-  return (result.data ?? []) as Row[];
+  const rows = (result.data ?? []) as Row[];
+  // The API cuts a long read off at its row limit without saying so
+  if (result.count !== null && result.count > rows.length) {
+    throw new Error(
+      `Couldn't read ${table}: got ${rows.length} of ${result.count} rows, the API row limit cut the read short`,
+    );
+  }
+  return rows;
 };
+
+/**
+ * A width and height that are safe to divide by. A row saved without a size,
+ * which older uploads of an SVG were, is shown at 4:3 instead of breaking
+ * the layout around it.
+ */
+const sizeOf = (row: { width: number; height: number }) =>
+  row.width >= 1 && row.height >= 1
+    ? { width: row.width, height: row.height }
+    : { width: 4, height: 3 };
 
 const toWallItem = (
   row: WallItemRow,
@@ -40,8 +62,7 @@ const toWallItem = (
   media: {
     type: row.media_type,
     src: mediaUrl(row.media),
-    width: row.width,
-    height: row.height,
+    ...sizeOf(row),
   },
   background: row.background,
   bare: row.bare || undefined,
@@ -60,17 +81,22 @@ const toWallItem = (
  */
 export const getContent = cache(async (): Promise<Content> => {
   const supabase = createPublicClient();
+  // Counted, so rowsOf can tell a whole table from one that was cut short
+  const list = (table: string) =>
+    supabase.from(table).select("*", { count: "exact" });
 
   const [site, photos, artworks, records, tags, items, blocks, lists] =
     await Promise.all([
       supabase.from("site").select("*").eq("id", 1).maybeSingle(),
-      supabase.from("photos").select("*").order("sort_order"),
-      supabase.from("artworks").select("*").order("sort_order"),
-      supabase.from("records").select("*").order("sort_order"),
-      supabase.from("wall_tags").select("*"),
-      supabase.from("wall_items").select("*"),
-      supabase.from("wall_blocks").select("*").order("sort_order"),
-      supabase.from("wall_lists").select("*"),
+      // The id breaks ties, so rows with the same sort order stay put and
+      // match the order the CMS shows
+      list("photos").order("sort_order").order("id"),
+      list("artworks").order("sort_order").order("id"),
+      list("records").order("sort_order").order("id"),
+      list("wall_tags"),
+      list("wall_items"),
+      list("wall_blocks").order("sort_order").order("id"),
+      list("wall_lists"),
     ]);
 
   if (site.error) throw new Error(`Couldn't read site: ${site.error.message}`);
@@ -98,9 +124,11 @@ export const getContent = cache(async (): Promise<Content> => {
   const pick = (ids: string[]) =>
     ids.flatMap((id) => itemsById.get(id) ?? []);
 
-  // A block with a missing item would break the grid, so it's left out
+  // A block with an empty slot or a missing item would break the grid, so it
+  // stays off the site until it's complete
   const wall = rowsOf<WallBlockRow>("wall_blocks", blocks).flatMap(
     (block): WallBlock[] => {
+      if (block.items.length !== WALL_SLOTS[block.layout]) return [];
       const blockItems = pick(block.items);
       if (blockItems.length !== block.items.length) return [];
       return [{ layout: block.layout, items: blockItems } as WallBlock];
@@ -143,8 +171,7 @@ export const getContent = cache(async (): Promise<Content> => {
       title: row.title,
       description: row.description ?? undefined,
       image: mediaUrl(row.image),
-      width: row.width,
-      height: row.height,
+      ...sizeOf(row),
       hue: row.hue,
       chroma: row.chroma,
     })),
@@ -153,8 +180,7 @@ export const getContent = cache(async (): Promise<Content> => {
       title: row.title,
       description: row.description ?? undefined,
       image: mediaUrl(row.image),
-      width: row.width,
-      height: row.height,
+      ...sizeOf(row),
     })),
     records: rowsOf<RecordRow>("records", records).map((row) => ({
       id: row.id,

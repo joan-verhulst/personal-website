@@ -1,4 +1,3 @@
-import { slugify } from "~/modules/cms/utils/slugify";
 import { measureColor } from "~/modules/content/utils/measure-color";
 import { createBrowserSupabase } from "~/modules/supabase/utils/browser-client";
 import { MEDIA_BUCKET, mediaUrl } from "~/modules/supabase/utils/media";
@@ -42,8 +41,12 @@ const MAX_BYTES = 40 * 1024 * 1024;
 
 const isAllowed = (type: string) => Object.hasOwn(ALLOWED_TYPES, type);
 
-const fileStem = (name: string) =>
-  slugify(name.replace(/\.[^.]+$/, ""), { max: 50, fallback: "file" });
+// The stored name is random, never the original: the bucket is public, so a
+// file's name shows in its URL to every visitor
+const randomName = () =>
+  Array.from(crypto.getRandomValues(new Uint8Array(12)), (byte) =>
+    byte.toString(36).padStart(2, "0"),
+  ).join("");
 
 const toBlob = (canvas: HTMLCanvasElement, type: string, quality?: number) =>
   new Promise<Blob>((resolve, reject) =>
@@ -238,7 +241,7 @@ export const uploadMedia = async (
     throw new Error(`Couldn't read the size of ${file.name}.`);
   }
 
-  const path = `${folder}/${fileStem(file.name)}-${Date.now().toString(36)}.${ALLOWED_TYPES[prepared.type]}`;
+  const path = `${folder}/${randomName()}.${ALLOWED_TYPES[prepared.type]}`;
 
   const { error } = await createBrowserSupabase()
     .storage.from(MEDIA_BUCKET)

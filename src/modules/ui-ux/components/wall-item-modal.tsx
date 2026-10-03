@@ -58,10 +58,12 @@ const WallItemModal = ({ item, isOpen, onClose }: Props) => {
     >
       {/* Who it was for and what it is, read as one block */}
       <div className="flex max-w-2xl flex-col gap-1">
-        <WallTag
-          tag={item.tag}
-          className="h-auto self-start px-0 text-lg text-neutral-950 leading-tight"
-        />
+        {item.tag && (
+          <WallTag
+            tag={item.tag}
+            className="h-auto self-start px-0 text-lg text-neutral-950 leading-tight"
+          />
+        )}
         {item.description && (
           <AnimatedText
             ref={descriptionTextRef}

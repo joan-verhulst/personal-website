@@ -38,7 +38,8 @@ export interface WallMedia {
 export interface WallItem {
   id: string;
   title: string;
-  tag: WallTag;
+  // Who it was for. Optional: an item without one shows only its title
+  tag?: WallTag;
   media: WallMedia;
   background: WallBackground;
   // Fills the whole card with no frame, for reels that bring their own

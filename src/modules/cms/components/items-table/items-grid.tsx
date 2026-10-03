@@ -45,7 +45,7 @@ const ItemsGrid = ({ items, total, tags, kind, newItem }: Props) => {
               key={item.id}
               href={hrefOf(item.id)}
               title={item.title}
-              meta={<TagLabel tag={tagById.get(item.tag_id)} />}
+              meta={<TagLabel tag={tagById.get(item.tag_id ?? "")} />}
               // The tab already says whether it's in Experiments
               badge={
                 (item.isOnWall || item.isHighlight) && (

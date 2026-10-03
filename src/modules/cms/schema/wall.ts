@@ -19,7 +19,8 @@ const POSITION =
 
 export const wallItemSchema = v.object({
   title: requiredText("Give the item a title."),
-  tagId: v.pipe(v.string("Pick a tag."), v.nonEmpty("Pick a tag.")),
+  // Empty for no tag
+  tagId: v.string(),
   mediaType: v.picklist(["image", "video"]),
   media: v.pipe(
     v.string(),

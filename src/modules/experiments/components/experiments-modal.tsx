@@ -94,15 +94,17 @@ const ExperimentsModal = ({ isOpen, onClose }: Props) => {
                   >
                     {item.title}
                   </h3>
-                  <WallTag
-                    tag={item.tag}
-                    className={isNeutral ? "text-neutral-50" : "bg-neutral-50"}
-                    style={
-                      isNeutral
-                        ? { backgroundColor: item.tag.color }
-                        : { color: item.tag.color }
-                    }
-                  />
+                  {item.tag && (
+                    <WallTag
+                      tag={item.tag}
+                      className={isNeutral ? "text-neutral-50" : "bg-neutral-50"}
+                      style={
+                        isNeutral
+                          ? { backgroundColor: item.tag.color }
+                          : { color: item.tag.color }
+                      }
+                    />
+                  )}
                 </div>
                 {item.description && (
                   <p

@@ -58,7 +58,9 @@ const toWallItem = (
 ): WallItem => ({
   id: row.id,
   title: row.title,
-  tag: tags.get(row.tag_id) ?? { label: row.tag_id, color: "#525252" },
+  tag: row.tag_id
+    ? (tags.get(row.tag_id) ?? { label: row.tag_id, color: "#525252" })
+    : undefined,
   media: {
     type: row.media_type,
     src: mediaUrl(row.media),

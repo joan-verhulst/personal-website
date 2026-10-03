@@ -242,7 +242,7 @@ const WallEditor = ({ items, tags, blocks, lists }: Props) => {
 
       return {
         item,
-        tag: item ? tagsById.get(item.tag_id) : undefined,
+        tag: item ? tagsById.get(item.tag_id ?? "") : undefined,
         // Fits here, and whatever it swaps with fits where it came from
         accepts: (candidate) => {
           if (!fits(candidate, row.layout, slot, isVideo)) return false;
@@ -559,7 +559,7 @@ const WallEditor = ({ items, tags, blocks, lists }: Props) => {
         open={isViewOpen && Boolean(viewedRow)}
         onOpenChange={setIsViewOpen}
         item={viewedItem}
-        tag={viewedItem ? tagsById.get(viewedItem.tag_id) : undefined}
+        tag={viewedItem ? tagsById.get(viewedItem.tag_id ?? "") : undefined}
         place={viewing && viewedRow ? slotName(viewedIndex, viewing.slot) : ""}
         isRowHidden={viewedRow ? !isComplete(viewedRow) : false}
         // The lists only: the wall is the slot itself

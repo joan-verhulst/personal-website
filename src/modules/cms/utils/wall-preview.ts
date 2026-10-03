@@ -7,14 +7,14 @@ export const toPreviewItem = (
   row: WallItemRow,
   tags: WallTagRow[],
 ): WallItem => {
-  const tag = tags.find(({ id }) => id === row.tag_id);
+  const tag = row.tag_id && tags.find(({ id }) => id === row.tag_id);
 
   return {
     id: row.id,
     title: row.title || "Untitled",
     tag: tag
       ? { label: tag.label, color: tag.color, logo: optionalMediaUrl(tag.logo) }
-      : { label: "No tag", color: "#525252" },
+      : undefined,
     media: {
       type: row.media_type,
       src: row.media ? mediaUrl(row.media) : "",

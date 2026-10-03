@@ -403,14 +403,14 @@ const Page = () => {
                         ref={projectsTextRef}
                         className="text-sm text-neutral-50"
                       >
-                        {firstHighlight?.tag.label}
+                        {firstHighlight?.tag?.label}
                       </span>
                       <Dot className="w-4 h-4 text-neutral-50" />
                       <span
                         ref={snippetsTextRef}
                         className="text-sm text-neutral-50 opacity-66"
                       >
-                        {secondHighlight?.tag.label}
+                        {secondHighlight?.tag?.label}
                       </span>
                     </div>
                   </div>

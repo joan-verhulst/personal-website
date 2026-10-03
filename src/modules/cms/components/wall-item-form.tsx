@@ -63,10 +63,12 @@ import type { WallItemRow, WallTagRow } from "~/modules/content/utils/rows";
 import { wallBackgrounds } from "~/modules/ui-ux/utils/wall-backgrounds";
 
 const FORM_ID = "wall-item-form";
+// The select's value for an item without a tag
+const NO_TAG = "none";
 
 const fromRow = (row: WallItemRow): WallItemValues => ({
   title: row.title,
-  tagId: row.tag_id,
+  tagId: row.tag_id ?? "",
   mediaType: row.media_type,
   media: row.media,
   width: row.width,
@@ -81,9 +83,9 @@ const fromRow = (row: WallItemRow): WallItemValues => ({
 });
 
 /** What the new item page starts with. */
-const emptyWallItem = (tags: WallTagRow[]): WallItemValues => ({
+const emptyWallItem = (): WallItemValues => ({
   title: "",
-  tagId: tags[0]?.id ?? "",
+  tagId: "",
   mediaType: "image",
   media: "",
   width: 0,
@@ -184,17 +186,17 @@ const TagSelect = ({ control, tags, error, id }: TagSelectProps) => (
       render={({ field }) => (
         <Select
           name={field.name}
-          // An empty value would throw, undefined shows the placeholder
-          value={field.value || undefined}
-          onValueChange={field.onChange}
-          disabled={tags.length === 0}
+          // A select item can't have an empty value, so no tag has its own
+          value={field.value || NO_TAG}
+          onValueChange={(value) =>
+            field.onChange(value === NO_TAG ? "" : value)
+          }
         >
           <Input.SelectField id={id} ref={field.ref} onBlur={field.onBlur}>
-            <SelectValue
-              placeholder={tags.length ? "Pick a tag" : "Add a tag first"}
-            />
+            <SelectValue />
           </Input.SelectField>
           <SelectContent>
+            <SelectItem value={NO_TAG}>No tag</SelectItem>
             {tags.map((tag) => (
               <SelectItem key={tag.id} value={tag.id}>
                 <span
@@ -322,7 +324,7 @@ const WallItemForm = ({ item, tags, usage = [], list }: Props) => {
     formState: { isDirty, dirtyFields },
   } = useForm({
     schema: wallItemSchema,
-    defaultValues: item ? fromRow(item) : emptyWallItem(tags),
+    defaultValues: item ? fromRow(item) : emptyWallItem(),
   });
 
   // The upload this form holds that no save has kept yet
@@ -360,7 +362,7 @@ const WallItemForm = ({ item, tags, usage = [], list }: Props) => {
     {
       id: item?.id ?? "new",
       title: values.title,
-      tag_id: values.tagId,
+      tag_id: values.tagId || null,
       media_type: values.mediaType,
       media: values.media,
       width: values.width,
@@ -375,7 +377,7 @@ const WallItemForm = ({ item, tags, usage = [], list }: Props) => {
     },
     tags,
   );
-  const tag = tags.find(({ id }) => id === item?.tag_id);
+  const tag = item?.tag_id ? tags.find(({ id }) => id === item.tag_id) : undefined;
 
   const onSubmit = handleSubmit(
     async (input) => {

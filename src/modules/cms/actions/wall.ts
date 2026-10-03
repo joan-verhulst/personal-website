@@ -40,7 +40,7 @@ const TAG_FOLDER = "icons";
 
 const itemColumns = (item: v.InferOutput<typeof wallItemSchema>) => ({
   title: item.title,
-  tag_id: item.tagId,
+  tag_id: item.tagId || null,
   media_type: item.mediaType,
   media: item.media,
   width: item.width,

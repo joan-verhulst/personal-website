@@ -29,6 +29,8 @@ const toTab = (value: string | null): ItemsTab =>
 // Tag ids are slugs of letters, digits and dashes, so "*" can't clash with
 // one. A select item can't have an empty value
 const ALL_TAGS = "*";
+// The filter for items without a tag
+const NO_TAG = "none";
 
 const NEW_ITEM = "/admin/ui-ux/items/new";
 
@@ -61,9 +63,10 @@ const ItemsView = ({ items, tags, experimentIds }: Props) => {
   const tagById = new Map(tags.map((tag) => [tag.id, tag]));
   const needle = query.trim().toLowerCase();
   const visible = lists[tab].filter((item) => {
-    if (tagId !== ALL_TAGS && item.tag_id !== tagId) return false;
+    if (tagId === NO_TAG ? item.tag_id : tagId !== ALL_TAGS && item.tag_id !== tagId)
+      return false;
     if (!needle) return true;
-    const tagLabel = tagById.get(item.tag_id)?.label ?? "";
+    const tagLabel = tagById.get(item.tag_id ?? "")?.label ?? "";
     return `${item.title} ${tagLabel}`.toLowerCase().includes(needle);
   });
 
@@ -148,6 +151,7 @@ const ItemsView = ({ items, tags, experimentIds }: Props) => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={ALL_TAGS}>All tags</SelectItem>
+                <SelectItem value={NO_TAG}>No tag</SelectItem>
                 {tags.map((tag) => (
                   <SelectItem key={tag.id} value={tag.id}>
                     <span

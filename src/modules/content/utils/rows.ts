@@ -62,7 +62,7 @@ export interface WallTagRow {
 export interface WallItemRow {
   id: string;
   title: string;
-  tag_id: string;
+  tag_id: string | null;
   media_type: "image" | "video";
   media: string;
   width: number;

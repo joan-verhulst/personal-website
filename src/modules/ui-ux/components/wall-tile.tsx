@@ -62,15 +62,17 @@ const WallTile = ({ item, sizes, className, isLarge, onOpen }: Props) => {
         >
           {item.title}
         </span>
-        <WallTag
-          tag={item.tag}
-          className={isNeutral ? "text-neutral-50" : "bg-neutral-50"}
-          style={
-            isNeutral
-              ? { backgroundColor: item.tag.color }
-              : { color: item.tag.color }
-          }
-        />
+        {item.tag && (
+          <WallTag
+            tag={item.tag}
+            className={isNeutral ? "text-neutral-50" : "bg-neutral-50"}
+            style={
+              isNeutral
+                ? { backgroundColor: item.tag.color }
+                : { color: item.tag.color }
+            }
+          />
+        )}
       </span>
       {isClickable && (
         <span

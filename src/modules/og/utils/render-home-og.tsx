@@ -39,7 +39,7 @@ export const renderHomeOg = async (active?: OgTile) => {
   const [firstHighlight, secondHighlight = firstHighlight] = highlights;
   const [shaderExperiment, navExperiment] = experiments;
   const experimentLabel = `${experiments.length} pieces`;
-  const tags = [firstHighlight?.tag.label, secondHighlight?.tag.label].filter(
+  const tags = [firstHighlight?.tag?.label, secondHighlight?.tag?.label].filter(
     (tag): tag is string => Boolean(tag),
   );
 

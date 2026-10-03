@@ -6,25 +6,60 @@ import WidgetCard from "~components/widget-card";
 import { Instagram, Linkedin, Mail, Dot } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
-import { siteData } from "~/data/site";
 import { widgets } from "~/data/widgets";
-import { uiUxProjects, uiUxSnippets } from "~/data/ui-ux-projects";
+import AboutModal from "~/modules/about/components/about-modal";
+import ExperimentsModal from "~/modules/experiments/components/experiments-modal";
+import FavoritesModal from "~/modules/favorites/components/favorites-modal";
+import Vinyl from "~/modules/favorites/components/vinyl";
+import WallMedia from "~/modules/ui-ux/components/wall-media";
+import { getWallBackground } from "~/modules/ui-ux/utils/wall-backgrounds";
+import { useContent } from "~/modules/content/components/content-provider";
+import { useAnimationPreference } from "~/modules/core/context/animation-preference-context";
+import { OPEN_WIDGET_EVENT } from "~/utils/open-widget";
 
 const Page = () => {
   const gridRef = useRef<HTMLDivElement>(null);
+  const { animationsEnabled } = useAnimationPreference();
   const projectsSlideRef = useRef<HTMLDivElement>(null);
   const snippetsSlideRef = useRef<HTMLDivElement>(null);
   const indicator1Ref = useRef<HTMLDivElement>(null);
   const indicator2Ref = useRef<HTMLDivElement>(null);
   const projectsTextRef = useRef<HTMLSpanElement>(null);
   const snippetsTextRef = useRef<HTMLSpanElement>(null);
+  const slideTimelineRef = useRef<gsap.core.Timeline | null>(null);
   const [activeSlide, setActiveSlide] = useState(0); // 0 for projects, 1 for snippets
-  const projectCount = uiUxProjects.length;
-  const snippetCount = uiUxSnippets.length;
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
+  const [isExperimentsOpen, setIsExperimentsOpen] = useState(false);
+  const [isFavoritesOpen, setIsFavoritesOpen] = useState(false);
 
-  // Get first project and snippet for display
-  const firstProject = uiUxProjects[0];
-  const firstSnippet = uiUxSnippets[0];
+  const { about, contact, covers, experiments, highlights, records } =
+    useContent();
+  // Two pieces from the UI/UX wall rotate in the widget
+  const [firstHighlight, secondHighlight = firstHighlight] = highlights;
+  // The shader fills the experiments widget, the nav reel peeks over it
+  const [shaderExperiment, navExperiment] = experiments;
+  // The record that's on spins on the favorites widget
+  const [currentRecord] = records;
+
+  // The island can open these too, from any page
+  useEffect(() => {
+    const open: Record<string, () => void> = {
+      about: () => setIsAboutOpen(true),
+      favorites: () => setIsFavoritesOpen(true),
+      experiments: () => setIsExperimentsOpen(true),
+    };
+
+    const handleOpen = (event: Event) => {
+      const widget = (event as CustomEvent<string>).detail;
+      if (!open[widget]) return;
+      // Tells the island it was taken care of
+      event.preventDefault();
+      open[widget]();
+    };
+
+    window.addEventListener(OPEN_WIDGET_EVENT, handleOpen);
+    return () => window.removeEventListener(OPEN_WIDGET_EVENT, handleOpen);
+  }, []);
 
   // Initial grid animation - only on first site load, not when navigating back
   useEffect(() => {
@@ -34,39 +69,54 @@ const Page = () => {
     const hasSeenIntro = sessionStorage.getItem("has-seen-intro") === "true";
     if (hasSeenIntro) return;
 
+    // Respect reduced motion preference or disabled animations
+    if (
+      !animationsEnabled ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      sessionStorage.setItem("has-seen-intro", "true");
+      return;
+    }
+
     // Mark as seen for this session
     sessionStorage.setItem("has-seen-intro", "true");
 
-    const cards = gridRef.current.querySelectorAll(":scope > *");
+    const ctx = gsap.context(() => {
+      const cards = gridRef.current!.querySelectorAll(":scope > *");
 
-    gsap.set(gridRef.current, {
-      scale: 16,
-      gap: "8rem",
+      gsap.set(gridRef.current!, {
+        scale: 16,
+        gap: "8rem",
+      });
+
+      gsap.to(gridRef.current!, {
+        scale: 1,
+        gap: "3rem",
+        duration: 0.8,
+        ease: "back.out(1)",
+      });
+
+      gsap.set(cards, {
+        scale: 0.85,
+      });
+
+      gsap.to(cards, {
+        scale: 1,
+        duration: 0.4,
+        stagger: 0.2,
+        ease: "back.out(1)",
+        delay: 0.2,
+      });
     });
 
-    gsap.to(gridRef.current, {
-      scale: 1,
-      gap: "3rem",
-      duration: 0.8,
-      ease: "back.out(1)",
-    });
-
-    gsap.set(cards, {
-      scale: 0.85,
-    });
-
-    gsap.to(cards, {
-      scale: 1,
-      duration: 0.4,
-      stagger: 0.2,
-      ease: "back.out(1)",
-      delay: 0.2,
-    });
+    return () => ctx.revert();
   }, []);
 
   // Function to animate to a specific slide
   const animateToSlide = (targetSlide: number) => {
     if (targetSlide === activeSlide) return;
+
+    slideTimelineRef.current?.kill();
 
     const currentSlide =
       activeSlide === 0 ? projectsSlideRef.current : snippetsSlideRef.current;
@@ -96,6 +146,7 @@ const Page = () => {
         setActiveSlide(targetSlide);
       },
     });
+    slideTimelineRef.current = timeline;
 
     // Step 1: Scale down the active slide
     timeline.to(currentSlide, {
@@ -191,7 +242,10 @@ const Page = () => {
       animateToSlide(nextSlide);
     }, 5000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      slideTimelineRef.current?.kill();
+    };
   }, [activeSlide]);
 
   return (
@@ -218,26 +272,43 @@ const Page = () => {
                 <div className="aspect-2/1 md:h-full">
                   <WidgetCard
                     label={widgets.about.label}
-                    src={widgets.about.image}
+                    src={about.image}
                     alt={widgets.about.alt}
                     className="bg-neutral-400 h-full"
+                    onClick={() => setIsAboutOpen(true)}
                   />
                 </div>
 
-                {/* Toolkit + Thoughts in a row */}
+                {/* Favorites + Thoughts in a row */}
                 <div
                   className="grid grid-cols-2 md:h-full"
                   style={{ gap: "2rem" }}
                 >
-                  {/* Toolkit */}
+                  {/* Favorites */}
                   <div className="aspect-square md:aspect-auto md:h-full">
                     <WidgetCard
-                      label={widgets.toolkit.label}
-                      src={widgets.toolkit.image}
-                      alt={widgets.toolkit.alt}
+                      label={widgets.favorites.label}
                       className="bg-linear-to-b from-[#626D77] to-[#1E2D3C] h-full"
-                      imgClassName="object-contain"
-                    />
+                      onClick={() => setIsFavoritesOpen(true)}
+                    >
+                      <div className="flex h-full items-center justify-center pointer-events-none">
+                        {currentRecord && (
+                          <Vinyl
+                            covers={[
+                              {
+                                id: currentRecord.id,
+                                src: currentRecord.cover,
+                                alt: `${currentRecord.title} by ${currentRecord.artist}`,
+                              },
+                            ]}
+                            activeId={currentRecord.id}
+                            sizes="48px"
+                            speed={6}
+                            className="h-[78%]"
+                          />
+                        )}
+                      </div>
+                    </WidgetCard>
                   </div>
 
                   {/* Thoughts */}
@@ -261,50 +332,48 @@ const Page = () => {
                 >
                   {/* Slides wrapper with overflow hidden */}
                   <div className="relative w-full h-full overflow-hidden rounded-2xl">
-                    {/* Projects Slide */}
+                    {/* First highlight slide */}
                     <div
                       ref={projectsSlideRef}
                       className="absolute inset-0 rounded-4xl"
                       style={{
-                        backgroundColor:
-                          firstProject?.primaryColor ?? "#3A9BD8",
+                        background: firstHighlight && getWallBackground(firstHighlight),
                       }}
                     >
                       <div className="absolute pt-8 px-12 inset-0">
-                        <div className="relative border border-neutral-950/10 overflow-hidden rounded-t-2xl h-full">
-                          <Image
-                            src={
-                              firstProject?.image ??
-                              "/assets/images/design_thumbnail.png"
-                            }
-                            alt={firstProject?.title ?? "UI/UX project"}
-                            fill
-                            className="object-cover pointer-events-none"
-                          />
+                        <div className="relative inset-border overflow-hidden rounded-t-2xl h-full">
+                          {firstHighlight && (
+                            <Image
+                              src={firstHighlight.media.src}
+                              alt={firstHighlight.title}
+                              fill
+                              sizes="(min-width: 768px) 512px, 100vw"
+                              className="object-cover object-top pointer-events-none"
+                            />
+                          )}
                         </div>
                       </div>
                     </div>
 
-                    {/* Snippets Slide */}
+                    {/* Second highlight slide */}
                     <div
                       ref={snippetsSlideRef}
                       className="absolute inset-0 -translate-y-full rounded-4xl"
                       style={{
-                        backgroundColor:
-                          firstSnippet?.primaryColor ?? "#8B5CF6",
+                        background: secondHighlight && getWallBackground(secondHighlight),
                       }}
                     >
                       <div className="absolute pt-8 px-12 inset-0">
-                        <div className="relative border border-neutral-950/10 overflow-hidden rounded-t-2xl h-full">
-                          <Image
-                            src={
-                              firstSnippet?.image ??
-                              "/assets/images/design_thumbnail.png"
-                            }
-                            alt={firstSnippet?.title ?? "UI/UX snippet"}
-                            fill
-                            className="object-cover pointer-events-none"
-                          />
+                        <div className="relative inset-border overflow-hidden rounded-t-2xl h-full">
+                          {secondHighlight && (
+                            <Image
+                              src={secondHighlight.media.src}
+                              alt={secondHighlight.title}
+                              fill
+                              sizes="(min-width: 768px) 512px, 100vw"
+                              className="object-cover object-top pointer-events-none"
+                            />
+                          )}
                         </div>
                       </div>
                     </div>
@@ -316,14 +385,14 @@ const Page = () => {
                         ref={projectsTextRef}
                         className="text-sm text-neutral-50"
                       >
-                        {projectCount} projects
+                        {firstHighlight?.tag.label}
                       </span>
                       <Dot className="w-4 h-4 text-neutral-50" />
                       <span
                         ref={snippetsTextRef}
                         className="text-sm text-neutral-50 opacity-66"
                       >
-                        {snippetCount} snippets
+                        {secondHighlight?.tag.label}
                       </span>
                     </div>
                   </div>
@@ -365,7 +434,7 @@ const Page = () => {
               >
                 <WidgetCard
                   label={widgets.digitalArt.label}
-                  src={widgets.digitalArt.image}
+                  src={covers.digitalArt}
                   alt={widgets.digitalArt.alt}
                   className="bg-neutral-400 h-full"
                 />
@@ -378,7 +447,7 @@ const Page = () => {
               >
                 <WidgetCard
                   label={widgets.photography.label}
-                  src={widgets.photography.image}
+                  src={covers.photography}
                   alt={widgets.photography.alt}
                   className="bg-neutral-500 "
                 />
@@ -393,8 +462,44 @@ const Page = () => {
                 <div className="aspect-2/1 md:aspect-auto md:h-full">
                   <WidgetCard
                     label={widgets.experiments.label}
-                    className="bg-neutral-600 h-full"
-                  />
+                    className="bg-neutral-50 h-full"
+                    onClick={() => setIsExperimentsOpen(true)}
+                  >
+                    <div className="relative w-full h-full overflow-hidden rounded-4xl">
+                      {shaderExperiment && (
+                        <Image
+                          src={shaderExperiment.media.src}
+                          alt={shaderExperiment.title}
+                          fill
+                          sizes="(min-width: 768px) 256px, 100vw"
+                          className="object-cover scale-125 pointer-events-none"
+                        />
+                      )}
+
+                      {/* Tilted reel peeking up from the bottom edge */}
+                      {navExperiment && (
+                      <div
+                        className="absolute right-[8%] bottom-0 w-[44%] translate-y-[28%] rotate-[-6deg] overflow-hidden rounded-xl border-4 border-neutral-50 bg-neutral-50 shadow-lg pointer-events-none"
+                        style={{
+                          aspectRatio:
+                            navExperiment.media.width /
+                            navExperiment.media.height,
+                        }}
+                      >
+                        <WallMedia
+                          item={navExperiment}
+                          sizes="(min-width: 768px) 128px, 50vw"
+                        />
+                      </div>
+                      )}
+
+                      <div className="absolute left-4 bottom-4 h-6 px-2 flex items-center rounded-[0.625rem] backdrop-blur-lg bg-neutral-950/33 pointer-events-none">
+                        <span className="text-sm text-neutral-50">
+                          {experiments.length} pieces
+                        </span>
+                      </div>
+                    </div>
+                  </WidgetCard>
                 </div>
 
                 {/* Contact */}
@@ -404,23 +509,29 @@ const Page = () => {
                     className="bg-linear-to-b from-[#B1EB10] to-[#2FC72F] h-full"
                   >
                     <div className="flex items-center justify-center gap-6 h-full">
-                      <a
-                        href={siteData.social.instagram}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <Instagram className="w-6 h-6 text-neutral-50" />
-                      </a>
-                      <a href={siteData.social.email}>
-                        <Mail className="w-6 h-6 text-neutral-50" />
-                      </a>
-                      <a
-                        href={siteData.social.linkedin}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <Linkedin className="w-6 h-6 text-neutral-50" />
-                      </a>
+                      {contact.instagram && (
+                        <a
+                          href={contact.instagram}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <Instagram className="w-6 h-6 text-neutral-50" />
+                        </a>
+                      )}
+                      {contact.email && (
+                        <a href={`mailto:${contact.email}`}>
+                          <Mail className="w-6 h-6 text-neutral-50" />
+                        </a>
+                      )}
+                      {contact.linkedin && (
+                        <a
+                          href={contact.linkedin}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <Linkedin className="w-6 h-6 text-neutral-50" />
+                        </a>
+                      )}
                     </div>
                   </WidgetCard>
                 </div>
@@ -429,6 +540,15 @@ const Page = () => {
           </div>
         </div>
       </div>
+      <AboutModal isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
+      <FavoritesModal
+        isOpen={isFavoritesOpen}
+        onClose={() => setIsFavoritesOpen(false)}
+      />
+      <ExperimentsModal
+        isOpen={isExperimentsOpen}
+        onClose={() => setIsExperimentsOpen(false)}
+      />
     </main>
   );
 };

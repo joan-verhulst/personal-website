@@ -7,6 +7,7 @@ import {
   useImperativeHandle,
 } from "react";
 import useTextAnimation from "~/modules/core/hooks/use-text-animation";
+import { useAnimationPreference } from "~/modules/core/context/animation-preference-context";
 
 type TriggerMode = "load" | "hover" | "manual";
 
@@ -59,6 +60,7 @@ const AnimatedText = forwardRef<AnimatedTextHandle, AnimatedTextProps>(
     },
     forwardedRef,
   ) => {
+    const { animationsEnabled } = useAnimationPreference();
     const { ref, triggerAnimation, resetAnimation, resplit } = useTextAnimation(
       {
         trigger,
@@ -66,6 +68,7 @@ const AnimatedText = forwardRef<AnimatedTextHandle, AnimatedTextProps>(
         duration,
         stagger,
         hoverRef,
+        animationsEnabled,
       },
     );
 

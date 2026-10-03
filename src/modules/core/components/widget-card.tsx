@@ -3,6 +3,8 @@ import Image from "next/image";
 import { useRef, useEffect } from "react";
 import { gsap } from "gsap";
 import cn from "~utils/cn";
+import { useHapticSound } from "~/modules/core/hooks/use-haptic-sound";
+import { useAnimationPreference } from "~/modules/core/context/animation-preference-context";
 
 type WidgetCardProps = {
   label: string;
@@ -11,6 +13,7 @@ type WidgetCardProps = {
   className?: string;
   imgClassName?: string;
   children?: React.ReactNode;
+  onClick?: () => void;
 };
 
 const WidgetCard = ({
@@ -20,23 +23,28 @@ const WidgetCard = ({
   className = "",
   imgClassName = "object-cover",
   children,
+  onClick,
 }: WidgetCardProps) => {
   const cardRef = useRef<HTMLDivElement>(null);
   const wiggleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const haptic = useHapticSound();
   const wiggleAnimationRef = useRef<gsap.core.Tween | null>(null);
+  const { animationsEnabled } = useAnimationPreference();
 
   useEffect(() => {
     const card = cardRef.current;
     if (!card) return;
 
     const handleMouseEnter = () => {
+      if (!animationsEnabled) return;
+
       gsap.to(card, {
         scale: 0.9,
         duration: 0.4,
         ease: "back.out(1.7)",
       });
 
-      // Start wiggle after 1 second of hovering
+      // Start wiggle after 400ms of hovering
       wiggleTimeoutRef.current = setTimeout(() => {
         wiggleAnimationRef.current = gsap.to(card, {
           rotation: 2,
@@ -50,7 +58,9 @@ const WidgetCard = ({
     };
 
     const handleMouseLeave = () => {
-      // Clear the timeout if mouse leaves before 1 second
+      if (!animationsEnabled) return;
+
+      // Clear the timeout if mouse leaves before 400ms
       if (wiggleTimeoutRef.current) {
         clearTimeout(wiggleTimeoutRef.current);
         wiggleTimeoutRef.current = null;
@@ -71,12 +81,21 @@ const WidgetCard = ({
       });
     };
 
-    card.addEventListener("mouseenter", handleMouseEnter);
-    card.addEventListener("mouseleave", handleMouseLeave);
+    const handleMouseEnterWithSound = () => {
+      handleMouseEnter();
+      haptic.onMouseEnter();
+    };
+    const handleMouseLeaveWithSound = () => {
+      handleMouseLeave();
+      haptic.onMouseLeave();
+    };
+
+    card.addEventListener("mouseenter", handleMouseEnterWithSound);
+    card.addEventListener("mouseleave", handleMouseLeaveWithSound);
 
     return () => {
-      card.removeEventListener("mouseenter", handleMouseEnter);
-      card.removeEventListener("mouseleave", handleMouseLeave);
+      card.removeEventListener("mouseenter", handleMouseEnterWithSound);
+      card.removeEventListener("mouseleave", handleMouseLeaveWithSound);
       if (wiggleTimeoutRef.current) {
         clearTimeout(wiggleTimeoutRef.current);
       }
@@ -84,13 +103,22 @@ const WidgetCard = ({
         wiggleAnimationRef.current.kill();
       }
     };
-  }, []);
+  }, [animationsEnabled]);
 
   return (
     <div
       ref={cardRef}
+      // The part of a section link that the section opens out of
+      data-tile
+      onClick={() => {
+        haptic.onClick();
+        onClick?.();
+      }}
       className={cn(
-        "relative w-full aspect-square rounded-4xl border border-neutral-950/10 select-none cursor-pointer",
+        // inset-border sits over the image, so it reaches the rounded edge
+        "relative w-full aspect-square rounded-4xl inset-border select-none cursor-pointer",
+        !animationsEnabled &&
+          "hover:scale-90 transition-transform duration-300",
         className,
       )}
     >

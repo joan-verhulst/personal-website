@@ -12,6 +12,8 @@ interface Options {
   trigger?: TriggerMode;
   /** For hover mode: optionally provide a parent element ref to listen for hover */
   hoverRef?: React.RefObject<HTMLElement | null>;
+  /** Whether animations are enabled. When false, text is shown without animation. */
+  animationsEnabled?: boolean;
 }
 
 interface UseTextAnimationReturn {
@@ -39,6 +41,7 @@ const useTextAnimation = ({
   stagger = 0.08,
   trigger = "load",
   hoverRef,
+  animationsEnabled = true,
 }: Options = {}): UseTextAnimationReturn => {
   const ref = useRef<HTMLElement | null>(null);
   const hasAnimated = useRef(false);
@@ -49,12 +52,12 @@ const useTextAnimation = ({
     const element = ref.current;
     if (!element || isSetup.current) return;
 
-    // Check if user has preference for reduced motion
+    // Check if user has preference for reduced motion or animations are disabled
     const prefersReducedMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     ).matches;
 
-    if (prefersReducedMotion) return;
+    if (prefersReducedMotion || !animationsEnabled) return;
 
     // First, wrap each word in a span to measure positions
     const text = element.textContent || "";
@@ -163,7 +166,10 @@ const useTextAnimation = ({
       }
     }, 10);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      lineSpansRef.current.forEach((span) => gsap.killTweensOf(span));
+    };
   }, [setupAnimation, triggerAnimation, trigger]);
 
   // Handle hover trigger - replay animation on hover

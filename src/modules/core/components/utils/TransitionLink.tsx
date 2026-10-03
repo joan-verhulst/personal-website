@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ComponentProps, MouseEvent } from "react";
-import { navigateWithTransition } from "~/utils/page-transition";
+import { openApp } from "~/utils/app-layer";
 
 type TransitionLinkProps = ComponentProps<typeof Link>;
 
 /**
- * A wrapper around Next.js Link that triggers page transitions.
- * Uses View Transitions API for smooth animated navigation.
+ * A link to a section, which opens out of this link like an app out of its
+ * icon. The part that grows is the element marked `data-tile` inside, or the
+ * link itself.
  */
 const TransitionLink = ({
   href,
@@ -20,18 +21,27 @@ const TransitionLink = ({
   const router = useRouter();
 
   const handleClick = (e: MouseEvent<HTMLAnchorElement>) => {
-    e.preventDefault();
-
     // Call original onClick if provided
     onClick?.(e);
 
-    // Navigate with transition
+    // New tabs and windows are left to the browser
+    if (
+      e.defaultPrevented ||
+      e.button !== 0 ||
+      e.metaKey ||
+      e.ctrlKey ||
+      e.shiftKey ||
+      e.altKey
+    )
+      return;
+
+    e.preventDefault();
     const hrefString = typeof href === "string" ? href : (href.pathname ?? "/");
-    navigateWithTransition(hrefString, router);
+    openApp(hrefString, router, e.currentTarget);
   };
 
   return (
-    <Link href={href} onClick={handleClick} {...props}>
+    <Link href={href} onClick={handleClick} scroll={false} {...props}>
       {children}
     </Link>
   );

@@ -70,6 +70,8 @@ const OnRotation = () => {
   const applyVolume = () => {
     if (!audioRef.current) return;
     audioRef.current.volume = levelRef.current ** 2 * fadeRef.current.amount;
+    // iOS ignores volume and always plays at full, so silence is a mute
+    audioRef.current.muted = levelRef.current === 0;
   };
 
   const fadeTo = (
@@ -186,7 +188,10 @@ const OnRotation = () => {
   // Follows the site's sound setting: off means muted, until the visitor
   // turns the volume up here themselves
   useEffect(() => {
-    if (!isSoundEnabled()) setLevel(0);
+    // Phones start silent too: a song playing out loud on open is unwelcome
+    // there, and the fader is a small target to find in a hurry
+    const isPhone = window.matchMedia("(pointer: coarse)").matches;
+    if (!isSoundEnabled() || isPhone) setLevel(0);
 
     const handleChange = (event: Event) => {
       if (!(event as CustomEvent<boolean>).detail) setLevel(0);

@@ -12,9 +12,25 @@ const GoogleSansFlexFont = Google_Sans_Flex({
   subsets: ["latin"],
 });
 
+// Runs before the first paint: when the home intro is about to play, it marks
+// the page so the widgets start hidden instead of showing in place and then
+// jumping into the animation. The home page plays it and clears the mark. If
+// the page never gets to it, the mark goes after a while and the widgets just
+// show, without an intro
+const INTRO_SCRIPT = `try{var d=document.documentElement;if(location.pathname==="/"&&sessionStorage.getItem("has-seen-intro")!=="true"&&localStorage.getItem("animations-enabled")!=="false"&&!matchMedia("(prefers-reduced-motion: reduce)").matches){d.dataset.intro="pending";setTimeout(function(){if(d.dataset.intro==="pending")delete d.dataset.intro},6000)}}catch(e){}`;
+
 const RootLayout = ({ children }: PropsWithChildren) => {
   return (
-    <html className={GoogleSansFlexFont.className} lang="en">
+    // The intro script may set data-intro before React takes over
+    <html
+      className={GoogleSansFlexFont.className}
+      lang="en"
+      suppressHydrationWarning
+    >
+      <head>
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: a fixed string, it has to run before the page paints */}
+        <script dangerouslySetInnerHTML={{ __html: INTRO_SCRIPT }} />
+      </head>
       <body>{children}</body>
     </html>
   );

@@ -25,7 +25,14 @@ const FIXED_HEIGHT = SLIDE_HEIGHT;
 const VERTICAL_PADDING = 48 * 2; // 3rem each side, matches `px-12`
 const MD_BREAKPOINT = 768;
 const CLICK_THRESHOLD = 5;
-const FLICK_VELOCITY = 0.5; // px/ms
+// How far a flick carries on after the finger lets go, in ms of its speed. A
+// fast flick passes several slides, a slow one settles on the nearest
+const MOMENTUM = 220;
+// Past the first or last slide a drag only follows at this share, so it
+// stretches a little and springs back instead of running off
+const OVERDRAG = 0.25;
+// The settle after a drag or flick: long and soft, so it glides into place
+const SETTLE = { duration: 0.7, ease: "power3.out" };
 
 // ─── Hooks ────────────────────────────────────────────────────────────────────
 
@@ -183,6 +190,19 @@ const HorizontalImageSlider = ({
     ],
   );
 
+  // The offsets with the first and the last slide centred. Dragging past them
+  // only stretches
+  const clampWithResistance = useCallback(
+    (offset: number): number => {
+      const max = calculateCenterOffset(0);
+      const min = calculateCenterOffset(items.length - 1);
+      if (offset > max) return max + (offset - max) * OVERDRAG;
+      if (offset < min) return min + (offset - min) * OVERDRAG;
+      return offset;
+    },
+    [calculateCenterOffset, items.length],
+  );
+
   // ── Cleanup all GSAP animations on unmount ────────────────────────────────────
 
   useEffect(() => {
@@ -238,22 +258,14 @@ const HorizontalImageSlider = ({
       if (instant) {
         gsap.set(slide, { [sizeProp]: targetSize });
       } else {
-        gsap.to(slide, {
-          [sizeProp]: targetSize,
-          duration: 0.5,
-          ease: "power2.out",
-        });
+        gsap.to(slide, { [sizeProp]: targetSize, ...SETTLE });
       }
     });
 
     if (instant) {
       gsap.set(sliderRef.current, { [axis]: targetOffset });
     } else {
-      gsap.to(sliderRef.current, {
-        [axis]: targetOffset,
-        duration: 0.5,
-        ease: "power2.out",
-      });
+      gsap.to(sliderRef.current, { [axis]: targetOffset, ...SETTLE });
     }
   }, [
     activeIndex,
@@ -306,6 +318,7 @@ const HorizontalImageSlider = ({
       dragVelocity.current = 0;
 
       const axis = isVertical ? "y" : "x";
+      gsap.killTweensOf(sliderRef.current, axis);
       dragStartSliderPos.current =
         (gsap.getProperty(sliderRef.current, axis) as number) || 0;
 
@@ -318,6 +331,8 @@ const HorizontalImageSlider = ({
   const handleDragMove = useCallback(
     (e: MouseEvent | TouchEvent) => {
       if (!isDragging.current || !sliderRef.current) return;
+      // Otherwise the page scrolls along under the finger
+      if (e.cancelable) e.preventDefault();
 
       const pos = getEventPos(e);
       const now = performance.now();
@@ -334,8 +349,9 @@ const HorizontalImageSlider = ({
       }
 
       const axis = isVertical ? "y" : "x";
-      const newSliderPos =
-        dragStartSliderPos.current + (pos - dragStartPos.current);
+      const newSliderPos = clampWithResistance(
+        dragStartSliderPos.current + (pos - dragStartPos.current),
+      );
       gsap.set(sliderRef.current, { [axis]: newSliderPos });
 
       const closest = findClosestIndex(newSliderPos);
@@ -348,6 +364,7 @@ const HorizontalImageSlider = ({
       onPendingIndexChange,
       animationsEnabled,
       shiftImage,
+      clampWithResistance,
     ],
   );
 
@@ -367,32 +384,30 @@ const HorizontalImageSlider = ({
       (gsap.getProperty(sliderRef.current, axis) as number) || 0;
     const dragDelta = currentPos - dragStartSliderPos.current;
 
-    if (Math.abs(dragDelta) < CLICK_THRESHOLD) return;
-
-    if (Math.abs(dragVelocity.current) > FLICK_VELOCITY) {
-      const direction = dragVelocity.current > 0 ? -1 : 1;
-      const target = Math.max(
-        0,
-        Math.min(items.length - 1, activeIndex + direction),
-      );
-      onActiveIndexChange(target);
+    if (Math.abs(dragDelta) < CLICK_THRESHOLD) {
+      // A tap past the end still springs back
+      gsap.to(sliderRef.current, {
+        [axis]: calculateCenterOffset(activeIndex),
+        ...SETTLE,
+      });
       return;
     }
 
-    const closestIndex = findClosestIndex(currentPos);
+    // A finger that stopped before letting go doesn't flick
+    const isStill = performance.now() - dragLastTime.current > 80;
+    const momentum = isStill ? 0 : dragVelocity.current * MOMENTUM;
+    const closestIndex = findClosestIndex(currentPos + momentum);
     if (closestIndex !== activeIndex) {
       onActiveIndexChange(closestIndex);
     } else {
       gsap.to(sliderRef.current, {
         [axis]: calculateCenterOffset(activeIndex),
-        duration: 0.35,
-        ease: "power2.out",
+        ...SETTLE,
       });
     }
   }, [
     isVertical,
     activeIndex,
-    items.length,
     onActiveIndexChange,
     onPendingIndexChange,
     calculateCenterOffset,
@@ -463,8 +478,10 @@ const HorizontalImageSlider = ({
   return (
     <div
       className={cn(
-        "overflow-visible cursor-grab select-none",
-        isVertical ? "w-full h-screen px-12" : "w-full h-96",
+        "cursor-grab select-none overflow-visible",
+        isVertical ? "h-screen w-full px-12" : "h-96 w-full",
+        // The slider moves itself, so touches on it never scroll the page
+        "touch-none",
         // Server rendered without a viewport, so hidden until it's laid out
         !ready && "invisible",
       )}
@@ -476,8 +493,8 @@ const HorizontalImageSlider = ({
         ref={sliderRef}
         className={cn(
           isVertical
-            ? "flex flex-col w-full gap-5"
-            : "flex flex-row h-full gap-5 items-center ",
+            ? "flex w-full flex-col gap-5"
+            : "flex h-full flex-row items-center gap-5",
         )}
       >
         {items.map((item, index) => (

@@ -516,7 +516,9 @@ const Gear = () => {
   };
 
   return (
-    <div className="@container w-full">
+    // Fills the modal's height, so on small screens the book sits in the
+    // middle with the pager at the bottom
+    <div className="@container flex w-full flex-1 flex-col">
       {/*
         The book. Its two halves lie side by side, or one above the other
         where it's narrow, and the leaves turn over the fold between them
@@ -526,7 +528,7 @@ const Gear = () => {
         whole. The half that folds away while the book is shut is cut off here,
         so it leaves nothing to scroll
       */}
-      <div className="overflow-y-clip @2xl:overflow-y-visible">
+      <div className="flex @2xl:flex-none flex-1 flex-col justify-center overflow-y-clip @2xl:overflow-y-visible">
         <div
           ref={bookRef}
           // Starts shut on the front cover, see place()
@@ -594,7 +596,7 @@ const Gear = () => {
         The pager hangs off the bottom edge at the fold, like a ribbon. Where
         the pages are stacked and scroll, it stays in view at the bottom
       */}
-      <div className="pointer-events-none @2xl:relative sticky @2xl:bottom-auto bottom-3 z-10 -mt-4 flex justify-center">
+      <div className="pointer-events-none @2xl:relative sticky @2xl:bottom-auto bottom-0 z-10 @2xl:-mt-4 mt-4 flex justify-center">
         <div className="pointer-events-auto flex h-8 items-center gap-1 rounded-full bg-neutral-950 p-1 text-neutral-50 shadow-[0_8px_16px_-8px_rgb(0_0_0/0.5)]">
           <button
             type="button"

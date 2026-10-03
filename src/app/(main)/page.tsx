@@ -4,7 +4,7 @@ import Image from "next/image";
 import TransitionLink from "~components/utils/TransitionLink";
 import WidgetCard from "~components/widget-card";
 import { Dot } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { widgets } from "~/data/widgets";
 import AboutModal from "~/modules/about/components/about-modal";
@@ -70,55 +70,52 @@ const Page = () => {
     return () => window.removeEventListener(OPEN_WIDGET_EVENT, handleOpen);
   }, []);
 
-  // Initial grid animation - only on first site load, not when navigating back
-  useEffect(() => {
-    if (!gridRef.current) return;
-
-    // Skip animation if user has already seen it this session
-    const hasSeenIntro = sessionStorage.getItem("has-seen-intro") === "true";
-    if (hasSeenIntro) return;
-
-    // Respect reduced motion preference or disabled animations
-    if (
-      !animationsEnabled ||
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    ) {
-      sessionStorage.setItem("has-seen-intro", "true");
-      return;
-    }
-
-    // Mark as seen for this session
+  // The intro, once per visit: the grid zooms out into place while the
+  // widgets come in one by one. The script in the root layout decides whether
+  // it plays and hides them before the first paint, see INTRO_SCRIPT, so
+  // they're never seen in place first
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    const grid = gridRef.current;
+    if (!grid || root.dataset.intro !== "pending") return;
     sessionStorage.setItem("has-seen-intro", "true");
 
-    const ctx = gsap.context(() => {
-      const cards = gridRef.current!.querySelectorAll(":scope > *");
+    const tiles = grid.querySelectorAll<HTMLElement>("[data-tile]");
+    // Hidden inline from here on, so the stylesheet can let go
+    gsap.set(tiles, { opacity: 0, scale: 0.9 });
+    delete root.dataset.intro;
 
-      gsap.set(gridRef.current!, {
-        scale: 16,
-        gap: "8rem",
-      });
+    // Only transforms move, never the layout, and nothing overshoots: the
+    // grid slows into its place instead of bouncing past it
+    const timeline = gsap
+      .timeline({ defaults: { ease: "power3.out" } })
+      .fromTo(
+        grid,
+        { scale: 2.5 },
+        { scale: 1, duration: 1, clearProps: "transform" },
+      )
+      .to(
+        tiles,
+        {
+          opacity: 1,
+          scale: 1,
+          duration: 0.6,
+          stagger: 0.06,
+          clearProps: "opacity,transform",
+        },
+        0.1,
+      );
 
-      gsap.to(gridRef.current!, {
-        scale: 1,
-        gap: "3rem",
-        duration: 0.8,
-        ease: "back.out(1)",
-      });
-
-      gsap.set(cards, {
-        scale: 0.85,
-      });
-
-      gsap.to(cards, {
-        scale: 1,
-        duration: 0.4,
-        stagger: 0.2,
-        ease: "back.out(1)",
-        delay: 0.2,
-      });
-    });
-
-    return () => ctx.revert();
+    return () => {
+      // Interrupted before it finished, as React does once in development:
+      // hand the intro back, so the next mount plays it from the start
+      if (timeline.progress() < 1) {
+        root.dataset.intro = "pending";
+        sessionStorage.removeItem("has-seen-intro");
+      }
+      timeline.kill();
+      gsap.set([grid, ...tiles], { clearProps: "opacity,transform" });
+    };
   }, []);
 
   // Function to animate to a specific slide
@@ -264,6 +261,7 @@ const Page = () => {
           {/* Main grid - mobile: single column, desktop: 2 equal-height rows */}
           <div
             ref={gridRef}
+            data-intro-grid
             className="grid grid-cols-1 md:grid-rows-2 md:h-full"
             style={{ gap: "3rem" }}
           >

@@ -63,7 +63,10 @@ const FavoritesModal = ({ isOpen, onClose, title, children }: Props) => {
           scroll box. Neither scrolls on large screens: both fit the width above
         */}
         <div className="-mx-4 -my-6 h-[calc(100%+3rem)] overflow-y-auto px-4 py-6 md:overflow-hidden">
-          <div className="mx-auto w-full max-w-(--stage)">{children}</div>
+          {/* A column the height of the modal, so a section can centre itself in it */}
+          <div className="mx-auto flex min-h-full w-full max-w-(--stage) flex-col">
+            {children}
+          </div>
         </div>
       </div>
     </Modal>

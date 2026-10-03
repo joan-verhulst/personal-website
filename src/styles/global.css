@@ -89,6 +89,14 @@
 }
 
 /*
+ * The home widgets wait hidden while their intro is about to play, see
+ * INTRO_SCRIPT in app/layout.tsx
+ */
+[data-intro="pending"] [data-intro-grid] [data-tile] {
+  opacity: 0;
+}
+
+/*
  * The admin's denser type scale, from the Spark dashboard design: 13px body,
  * 14px for navigation and descriptions, 20px titles. Only under data-cms, so
  * the site keeps Tailwind's sizes.

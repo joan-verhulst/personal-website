@@ -80,7 +80,7 @@ const Turntable = ({
   return (
     <div className="@container w-full">
       <div
-        className="relative aspect-[100/90] rounded-[5.5cqw] shadow-[inset_0_1px_0_rgb(255_255_255/0.14),inset_0_-2px_0_rgb(0_0_0/0.5),0_18px_26px_-18px_rgb(0_0_0/0.6)]"
+        className="relative aspect-[100/90] rounded-[5.5cqw] shadow-[inset_0_1px_0_rgb(255_255_255/0.14),inset_0_-2px_0_rgb(0_0_0/0.5),0_18px_26px_-18px_rgb(0_0_0/0.6)] max-md:aspect-square"
         style={{ background: PLINTH }}
       >
         <div
@@ -177,7 +177,9 @@ const Turntable = ({
         </div>
 
         {/* Controls, along the front edge */}
-        <div className="absolute inset-x-[5cqw] bottom-[3.2cqw] flex h-[10cqw] items-center gap-[2.4cqw]">
+        {/* The buttons keep a minimum size on small decks, so the row grows with
+            them and keeps its distance from the trim instead of running into it */}
+        <div className="absolute inset-x-[max(5cqw,1.25rem)] bottom-[max(3.2cqw,1.25rem)] flex h-[max(10cqw,2.5rem)] items-center gap-[max(2.4cqw,0.5rem)]">
           <button
             type="button"
             aria-label={isPlaying ? "Pause" : "Play"}

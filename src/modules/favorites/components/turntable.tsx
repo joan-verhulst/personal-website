@@ -228,11 +228,12 @@ const Turntable = ({
             <SkipForward className={ICON} fill="currentColor" />
           </button>
 
+          {/* Where the fader is, as it moves. Fixed width, so the row holds still */}
           <span
             aria-hidden
-            className="ml-auto @sm:block hidden text-[#d7b97a]/70 text-[max(2.1cqw,0.625rem)] uppercase tracking-[0.2em]"
+            className="ml-auto @sm:block hidden w-[4ch] text-right text-[#d7b97a]/70 text-[max(2.1cqw,0.625rem)] tabular-nums tracking-[0.05em]"
           >
-            33⅓
+            {Math.round(level * 100)}%
           </span>
 
           <button

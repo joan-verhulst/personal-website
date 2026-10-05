@@ -1,3 +1,4 @@
+import { withEyes } from "eyes-next/config";
 import type { NextConfig } from "next";
 
 const config: NextConfig = {
@@ -15,4 +16,6 @@ const config: NextConfig = {
   },
 };
 
-export default config;
+// Serves the Eyes analytics script and its events from /api/eyes on the
+// site's own host, so ad blockers leave them alone
+export default withEyes(config);

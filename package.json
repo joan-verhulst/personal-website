@@ -22,6 +22,7 @@
         "@tanstack/react-table": "^8.21.3",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
+        "eyes-next": "^0.3.0",
         "gsap": "^3.14.2",
         "lucide-react": "^0.563.0",
         "next": "16.1.6",

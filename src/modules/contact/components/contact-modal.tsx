@@ -12,6 +12,7 @@ import { useContent } from "~/modules/content/components/content-provider";
 import type { Contact } from "~/modules/content/types";
 import Modal from "~/modules/core/components/modal";
 import { useHapticSound } from "~/modules/core/hooks/use-haptic-sound";
+import { track } from "~/utils/eyes";
 
 interface ContactLink {
   id: string;
@@ -103,7 +104,10 @@ const ContactModal = ({ isOpen, onClose }: Props) => {
               {...(isExternal
                 ? { target: "_blank", rel: "noopener noreferrer" }
                 : {})}
-              onClick={haptic.onClick}
+              onClick={() => {
+                haptic.onClick();
+                track("Contact Clicked", { service });
+              }}
               onMouseEnter={haptic.onMouseEnter}
               className="group flex items-center gap-3 rounded-2xl border border-neutral-950/10 p-2 pr-3 transition-colors duration-200 hover:bg-neutral-950/5 focus-visible:outline-2 focus-visible:outline-primary-500"
             >

@@ -1,3 +1,4 @@
+import { EyesNextProvider } from "eyes-next";
 import type { ReactNode } from "react";
 import AppLayer from "~components/layout/app-layer";
 import Island from "~components/layout/island/island";
@@ -21,21 +22,26 @@ const MainLayout = async ({ children, app }: Props) => {
   const content = await getContent();
 
   return (
-    <ContentProvider content={content}>
-      <AnimationPreferenceProvider>
-        <HeaderColorProvider>
-          <Island />
-          <AppLayer slot={app}>{children}</AppLayer>
-          <SlideWarmer artworks={content.artworks.slice(0, FIRST_SLIDES)} />
+    // Analytics for the public site only, so visits to the CMS stay out of
+    // the numbers. The script and events go through /api/eyes, see
+    // next.config.ts
+    <EyesNextProvider siteId="330264404">
+      <ContentProvider content={content}>
+        <AnimationPreferenceProvider>
+          <HeaderColorProvider>
+            <Island />
+            <AppLayer slot={app}>{children}</AppLayer>
+            <SlideWarmer artworks={content.artworks.slice(0, FIRST_SLIDES)} />
 
-          {/* Global settings controls — fixed bottom-right */}
-          <div className="pointer-events-none fixed right-8 bottom-8 z-50 flex flex-col items-end gap-2">
-            <SoundToast />
-            <SettingsFab />
-          </div>
-        </HeaderColorProvider>
-      </AnimationPreferenceProvider>
-    </ContentProvider>
+            {/* Global settings controls — fixed bottom-right */}
+            <div className="pointer-events-none fixed right-8 bottom-8 z-50 flex flex-col items-end gap-2">
+              <SoundToast />
+              <SettingsFab />
+            </div>
+          </HeaderColorProvider>
+        </AnimationPreferenceProvider>
+      </ContentProvider>
+    </EyesNextProvider>
   );
 };
 

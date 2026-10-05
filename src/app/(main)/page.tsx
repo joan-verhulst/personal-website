@@ -4,7 +4,13 @@ import Image from "next/image";
 import TransitionLink from "~components/utils/TransitionLink";
 import WidgetCard from "~components/widget-card";
 import { Dot } from "lucide-react";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { gsap } from "gsap";
 import { widgets } from "~/data/widgets";
 import AboutModal from "~/modules/about/components/about-modal";
@@ -20,6 +26,7 @@ import WallMedia from "~/modules/ui-ux/components/wall-media";
 import { getWallBackground } from "~/modules/ui-ux/utils/wall-backgrounds";
 import { useContent } from "~/modules/content/components/content-provider";
 import { useAnimationPreference } from "~/modules/core/context/animation-preference-context";
+import { track } from "~/utils/eyes";
 import { OPEN_WIDGET_EVENT } from "~/utils/open-widget";
 
 const Page = () => {
@@ -48,27 +55,34 @@ const Page = () => {
   // The record that's on spins on the On Rotation widget
   const [currentRecord] = records;
 
+  // Opens a widget, from its card or from the island, and tells Eyes which
+  // one. Returns whether there's a widget by that name
+  const showWidget = useCallback((widget: string) => {
+    const open: Record<string, (isOpen: boolean) => void> = {
+      about: setIsAboutOpen,
+      "on-rotation": setIsOnRotationOpen,
+      gear: setIsGearOpen,
+      contact: setIsContactOpen,
+      experiments: setIsExperimentsOpen,
+    };
+    if (!open[widget]) return false;
+    track("Widget Opened", { widget });
+    open[widget](true);
+    return true;
+  }, []);
+
   // The island can open these too, from any page
   useEffect(() => {
-    const open: Record<string, () => void> = {
-      about: () => setIsAboutOpen(true),
-      "on-rotation": () => setIsOnRotationOpen(true),
-      gear: () => setIsGearOpen(true),
-      contact: () => setIsContactOpen(true),
-      experiments: () => setIsExperimentsOpen(true),
-    };
-
     const handleOpen = (event: Event) => {
-      const widget = (event as CustomEvent<string>).detail;
-      if (!open[widget]) return;
       // Tells the island it was taken care of
-      event.preventDefault();
-      open[widget]();
+      if (showWidget((event as CustomEvent<string>).detail)) {
+        event.preventDefault();
+      }
     };
 
     window.addEventListener(OPEN_WIDGET_EVENT, handleOpen);
     return () => window.removeEventListener(OPEN_WIDGET_EVENT, handleOpen);
-  }, []);
+  }, [showWidget]);
 
   // The intro, once per visit: the grid zooms out into place while the
   // widgets come in one by one. The script in the root layout decides whether
@@ -282,7 +296,7 @@ const Page = () => {
                     src={about.image}
                     alt={widgets.about.alt}
                     className="bg-neutral-400 h-full"
-                    onClick={() => setIsAboutOpen(true)}
+                    onClick={() => showWidget("about")}
                   />
                 </div>
 
@@ -296,7 +310,7 @@ const Page = () => {
                     <WidgetCard
                       label={widgets.onRotation.label}
                       className="bg-linear-to-b from-[#EBCA10] to-[#EB7E10] h-full"
-                      onClick={() => setIsOnRotationOpen(true)}
+                      onClick={() => showWidget("on-rotation")}
                     >
                       <div className="flex h-full items-center justify-center pointer-events-none">
                         {currentRecord && (
@@ -323,7 +337,7 @@ const Page = () => {
                     <WidgetCard
                       label={widgets.gear.label}
                       className="bg-linear-to-b from-[#626D77] to-[#1E2D3C] h-full"
-                      onClick={() => setIsGearOpen(true)}
+                      onClick={() => showWidget("gear")}
                     >
                       <div className="relative h-full overflow-hidden rounded-4xl">
                         <Image
@@ -481,7 +495,7 @@ const Page = () => {
                   <WidgetCard
                     label={widgets.experiments.label}
                     className="bg-neutral-50 h-full"
-                    onClick={() => setIsExperimentsOpen(true)}
+                    onClick={() => showWidget("experiments")}
                   >
                     <div className="relative w-full h-full overflow-hidden rounded-4xl">
                       {shaderExperiment && (
@@ -525,7 +539,7 @@ const Page = () => {
                   <WidgetCard
                     label={widgets.contact.label}
                     className="bg-linear-to-b from-[#B1EB10] to-[#2FC72F] h-full"
-                    onClick={() => setIsContactOpen(true)}
+                    onClick={() => showWidget("contact")}
                   >
                     <div
                       aria-hidden

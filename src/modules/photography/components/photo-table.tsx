@@ -29,6 +29,7 @@ import {
   scatterLayout,
 } from "~/modules/photography/utils/print-layouts";
 import cn from "~/utils/cn";
+import { track } from "~/utils/eyes";
 
 gsap.registerPlugin(Draggable, Flip, InertiaPlugin);
 
@@ -290,6 +291,7 @@ const PhotoTable = ({ prints }: Props) => {
     if (next === view) return;
     captureForFlip();
     setView(next);
+    track("Photo View Changed", { view: next });
     try {
       localStorage.setItem(VIEW_STORAGE_KEY, next);
     } catch {}
@@ -307,6 +309,7 @@ const PhotoTable = ({ prints }: Props) => {
     haptic.onClick();
     setActiveIndex(index);
     setIsPopoverOpen(true);
+    track("Photo Opened", { photo: prints[index].title });
   };
 
   // Keyboard focus pans a print hidden past the frame's edge into view

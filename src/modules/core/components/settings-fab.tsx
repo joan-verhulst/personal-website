@@ -18,6 +18,7 @@ import {
   useAnimationPreference,
   ANIMATION_PREFERENCE_EVENT,
 } from "~/modules/core/context/animation-preference-context";
+import { track } from "~/utils/eyes";
 
 const SettingsFab = () => {
   const [expanded, setExpanded] = useState(false);
@@ -84,6 +85,15 @@ const SettingsFab = () => {
 
   const handleSoundToggle = () => {
     setSoundEnabled(muted);
+    track("Setting Changed", { setting: "sound", enabled: muted });
+  };
+
+  const handleAnimationsToggle = () => {
+    setAnimationsEnabled(!animationsEnabled);
+    track("Setting Changed", {
+      setting: "animations",
+      enabled: !animationsEnabled,
+    });
   };
 
   return (
@@ -100,7 +110,7 @@ const SettingsFab = () => {
         <div className="flex items-center gap-2 pl-2">
           {/* Animation toggle */}
           <button
-            onClick={() => setAnimationsEnabled(!animationsEnabled)}
+            onClick={handleAnimationsToggle}
             className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-primary-500 text-neutral-50 cursor-pointer transition-opacity whitespace-nowrap"
           >
             {animationsEnabled ? (

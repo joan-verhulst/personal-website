@@ -8,6 +8,7 @@ import {
   FIRST_PLAY_EVENT,
   setSoundEnabled,
 } from "~/modules/core/hooks/use-haptic-sound";
+import { track } from "~/utils/eyes";
 
 const DISMISS_AFTER_MS = 10_000;
 
@@ -65,6 +66,7 @@ const SoundToast = () => {
   const handleDisable = () => {
     if (timerRef.current) clearTimeout(timerRef.current);
     setSoundEnabled(false);
+    track("Setting Changed", { setting: "sound", enabled: false });
     animateOut();
   };
 

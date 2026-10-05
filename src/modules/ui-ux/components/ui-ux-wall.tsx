@@ -6,6 +6,7 @@ import type { WallBlock, WallItem } from "~/modules/content/types";
 import WallItemModal from "~/modules/ui-ux/components/wall-item-modal";
 import WallTile from "~/modules/ui-ux/components/wall-tile";
 import cn from "~/utils/cn";
+import { track } from "~/utils/eyes";
 
 // Fibonacci blocks on a 13 column grid, with 4:3 units so squares are 4:3 cards
 const GRID_COLUMNS = 13;
@@ -53,6 +54,7 @@ const UiUxWall = () => {
           ? () => {
               setSelectedItem(item);
               setIsModalOpen(true);
+              track("UI/UX Item Opened", { item: item.title });
             }
           : undefined
       }

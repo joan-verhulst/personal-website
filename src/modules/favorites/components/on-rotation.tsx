@@ -15,6 +15,7 @@ import {
 import Turntable, { ARM } from "~/modules/favorites/components/turntable";
 import Vinyl from "~/modules/favorites/components/vinyl";
 import cn from "~/utils/cn";
+import { track as trackEvent } from "~/utils/eyes";
 
 // How long a record plays before the next one goes on
 const PLAY_SECONDS = 15;
@@ -105,7 +106,12 @@ const OnRotation = () => {
   // Lifts the record off, swaps it while it's up and sets the next one down
   const play = (index: number, { silent = false } = {}) => {
     if (index === activeIndex) return;
-    if (!silent) haptic.onClick();
+    // Silent is the next record coming up by itself, which isn't a pick
+    if (!silent) {
+      haptic.onClick();
+      const { title, artist } = onRotation[index];
+      trackEvent("Record Played", { record: title, artist });
+    }
     setIsPlaying(true);
     timelineRef.current?.kill();
     fadeTo(0, 0.2);

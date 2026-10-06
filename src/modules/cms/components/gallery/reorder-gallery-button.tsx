@@ -9,7 +9,7 @@ import {
 import type { GalleryRow } from "~/modules/cms/components/gallery/gallery-grid";
 import ReorderButton from "~/modules/cms/components/reorder-button";
 import { useAction } from "~/modules/cms/hooks/use-action";
-import { mediaUrl } from "~/modules/media/utils/media-url";
+import { displayUrl } from "~/modules/media/utils/media-url";
 
 interface Props {
   kind: GalleryKind;
@@ -29,7 +29,13 @@ const ReorderGalleryButton = ({ kind, rows }: Props) => {
         title: row.title,
         // A piece whose image was deleted from Media shows the empty box
         thumbnail: row.image && (
-          <Image src={mediaUrl(row.image)} alt="" fill sizes="48px" />
+          <Image
+            src={displayUrl(row.image)}
+            alt=""
+            fill
+            sizes="48px"
+            unoptimized
+          />
         ),
       }))}
       onSave={async (ids) => {

@@ -15,6 +15,7 @@ import { AwsClient } from "aws4fetch";
 import sharp from "sharp";
 import { measureColor } from "../src/modules/content/utils/measure-color.ts";
 import type { WallItem } from "../src/modules/content/types.ts";
+import { makeDisplayCopy } from "../src/modules/media/utils/display-copy.ts";
 import { digitalArtProjects } from "./content/digital-art.ts";
 import { onRotation } from "./content/on-rotation.ts";
 import { photographyProjects } from "./content/photography.ts";
@@ -119,6 +120,13 @@ const upload = async (publicPath: string) => {
   fail(
     `Uploading ${publicPath}`,
     response.ok ? null : { message: `R2 answered ${response.status}` },
+  );
+
+  // The site shows the smaller display copy, like the CMS makes on upload
+  const copy = await makeDisplayCopy(storagePath, file);
+  fail(
+    `Making the display copy of ${publicPath}`,
+    copy.error ? { message: String(copy.error) } : null,
   );
 
   console.log(`  ↑ ${storagePath} (${(file.length / 1e6).toFixed(1)} MB)`);

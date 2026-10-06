@@ -26,6 +26,7 @@ import {
   updateOne,
 } from "~/modules/cms/utils/shared";
 import { slugify } from "~/modules/cms/utils/slugify";
+import { makeDisplayCopy } from "~/modules/media/utils/display-copy";
 import { measureImage } from "~/modules/media/utils/measure-image";
 import { putMedia } from "~/modules/media/utils/storage";
 
@@ -203,6 +204,12 @@ export async function addRecord(
   const cover = `${FOLDER}/${slugify(parsed.output.title)}-${Date.now().toString(36)}.${COVER_TYPES[contentType]}`;
   const upload = await putMedia(cover, body, contentType);
   if (upload.error) return dbFailed(upload.error, "Couldn't save the artwork.");
+  // The site shows the display copy, so the cover isn't usable without one
+  const copy = await makeDisplayCopy(cover, body);
+  if (copy.error) {
+    await removeMedia(supabase, [cover]);
+    return dbFailed(copy.error, "Couldn't save the artwork.");
+  }
 
   const result = await insertWithId(
     supabase,

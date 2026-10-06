@@ -8,6 +8,7 @@ import { widgets } from "~/data/widgets";
 import { useContent } from "~/modules/content/components/content-provider";
 import type { Content } from "~/modules/content/types";
 import { useHapticSound } from "~/modules/core/hooks/use-haptic-sound";
+import { isMediaUrl } from "~/modules/media/utils/media-url";
 import { getWallBackground } from "~/modules/ui-ux/utils/wall-backgrounds";
 import cn from "~/utils/cn";
 
@@ -71,7 +72,7 @@ const getTiles = ({
     area: "1 / 3 / 3 / 7",
     href: "/ui-ux",
     style: highlight ? { background: getWallBackground(highlight) } : undefined,
-    image: highlight?.media.src,
+    image: highlight?.media.preview ?? highlight?.media.src,
     inset: "screen",
   },
   {
@@ -186,6 +187,7 @@ const IslandTray = ({ pathname, isOpen, onVisit, onWidget, onClose }: Props) => 
             >
               <Image
                 src={tile.image}
+                unoptimized={isMediaUrl(tile.image)}
                 alt=""
                 fill
                 sizes="160px"

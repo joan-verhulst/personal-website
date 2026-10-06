@@ -91,6 +91,7 @@ const AboutModal = ({ isOpen, onClose }: Props) => {
         >
           <Image
             src={about.image}
+            unoptimized
             alt={siteData.owner.name}
             fill
             className="object-cover"

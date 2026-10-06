@@ -14,6 +14,28 @@ export const MEDIA_TYPES: Record<string, string> = {
 
 export const MAX_MEDIA_BYTES = 40 * 1024 * 1024;
 
+// Every photo-like image gets a smaller copy next to it when it's uploaded:
+// WebP, at most this many pixels on its long side. The site shows and
+// preloads that copy, and keeps the original for viewing a piece large. The
+// browser loads both straight from R2, so nothing is resized on request
+export const DISPLAY_SIZE = 1600;
+
+const DISPLAY_SUFFIX = ".display.webp";
+
+/**
+ * Whether a file has a display copy. SVGs scale on their own, a GIF would
+ * lose its frames and a video isn't an image.
+ */
+export const hasDisplayCopy = (path: string) =>
+  /\.(jpe?g|png|webp|avif)$/i.test(path) && !isDisplayCopy(path);
+
+/** The display copy of a file, like photography/abc.jpg → photography/abc.display.webp. */
+export const displayPath = (path: string) =>
+  `${path.replace(/\.[^./]+$/, "")}${DISPLAY_SUFFIX}`;
+
+/** Whether a path in the bucket is a display copy, not a file of its own. */
+export const isDisplayCopy = (path: string) => path.endsWith(DISPLAY_SUFFIX);
+
 // Where files uploaded on the Media page go. Uploads from a page go to that
 // page's folder, which only says where a file came from: any page can use a
 // file from any folder

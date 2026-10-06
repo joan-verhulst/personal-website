@@ -102,6 +102,7 @@ const Vinyl = ({
             <Image
               key={cover.id}
               src={cover.src}
+              unoptimized
               alt={cover.alt}
               fill
               sizes={sizes}

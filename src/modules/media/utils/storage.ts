@@ -69,7 +69,11 @@ export const signUpload = async (path: string, type: string, size: number) => {
 };
 
 /** Stores a file the server has in hand, like a record's cover. */
-export const putMedia = async (path: string, body: ArrayBuffer, type: string) => {
+export const putMedia = async (
+  path: string,
+  body: ArrayBuffer | Uint8Array<ArrayBuffer>,
+  type: string,
+) => {
   try {
     const { client, endpoint } = getBucket();
     const response = await client.fetch(objectUrl(endpoint, path), {
@@ -80,6 +84,18 @@ export const putMedia = async (path: string, body: ArrayBuffer, type: string) =>
     return { error: response.ok ? null : await refused(response) };
   } catch (error) {
     return { error };
+  }
+};
+
+/** A file's bytes, or the error when R2 didn't hand them over. */
+export const getMedia = async (path: string) => {
+  try {
+    const { client, endpoint } = getBucket();
+    const response = await client.fetch(objectUrl(endpoint, path));
+    if (!response.ok) return { body: null, error: await refused(response) };
+    return { body: await response.arrayBuffer(), error: null };
+  } catch (error) {
+    return { body: null, error };
   }
 };
 

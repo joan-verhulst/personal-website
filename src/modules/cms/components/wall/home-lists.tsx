@@ -12,7 +12,7 @@ import Panel from "~/modules/cms/components/panel";
 import ReorderButton from "~/modules/cms/components/reorder-button";
 import ItemPickerDialog from "~/modules/cms/components/wall/item-picker-dialog";
 import type { WallItemRow, WallTagRow } from "~/modules/content/utils/rows";
-import { mediaUrl } from "~/modules/media/utils/media-url";
+import { displayUrl, mediaUrl } from "~/modules/media/utils/media-url";
 
 interface ListEditorProps {
   items: WallItemRow[];
@@ -96,7 +96,8 @@ export const ExperimentsEditor = ({
                 thumbnail: !item?.media ? undefined : item.media_type ===
                   "image" ? (
                   <Image
-                    src={mediaUrl(item.media)}
+                    src={displayUrl(item.media)}
+                    unoptimized
                     alt=""
                     fill
                     sizes="48px"

@@ -1,4 +1,4 @@
-import { createUpload, saveMediaDetails } from "~/modules/cms/actions/media";
+import { createUpload, finishUpload } from "~/modules/cms/actions/media";
 import { measureColor } from "~/modules/content/utils/measure-color";
 import {
   isMediaType,
@@ -259,10 +259,10 @@ export const uploadMedia = async (
     chroma: prepared.chroma,
   };
 
-  // Media remembers the name, size and color, so the file can be picked for
-  // something else later. The upload worked either way, so a failure here
-  // only means Media shows the file without them
-  saveMediaDetails({
+  // The server makes the display copy the site shows, and Media remembers
+  // the name, size and color, so the file can be picked elsewhere later. The
+  // file isn't usable without its copy, so this is part of the upload
+  const finished = await finishUpload({
     path,
     name: media.name,
     kind: media.type,
@@ -270,11 +270,10 @@ export const uploadMedia = async (
     height: media.height,
     hue: media.hue,
     chroma: media.chroma,
-  })
-    .then((result) => {
-      if (result.error) console.error(result.error);
-    })
-    .catch((error: unknown) => console.error(error));
+  });
+  if (finished.error) {
+    throw new Error(`Couldn't upload ${file.name}: ${finished.error}`);
+  }
 
   return media;
 };

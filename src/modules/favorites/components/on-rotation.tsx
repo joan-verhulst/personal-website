@@ -390,6 +390,7 @@ const OnRotation = () => {
                       <span className="relative inset-border block size-12 overflow-hidden rounded-md shadow-[2px_0_6px_-2px_rgb(0_0_0/0.35)]">
                         <Image
                           src={record.cover}
+                          unoptimized
                           alt=""
                           fill
                           sizes="48px"

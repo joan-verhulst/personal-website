@@ -105,11 +105,12 @@ const FileButton = ({ file, isPicked, onToggle, onPick }: FileButtonProps) => {
           />
         ) : (
           <Image
-            src={file.url}
+            // The display copy, straight from R2
+            src={file.thumbUrl}
             alt=""
             fill
             sizes="160px"
-            unoptimized={isSvg(file)}
+            unoptimized
             className={isSvg(file) ? "object-contain p-4" : "object-cover"}
           />
         )}

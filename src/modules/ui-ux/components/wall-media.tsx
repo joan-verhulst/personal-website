@@ -28,6 +28,7 @@ const WallMedia = ({ item, sizes, className }: Props) => {
   return (
     <Image
       src={item.media.src}
+      unoptimized
       alt={item.title}
       fill
       sizes={sizes}

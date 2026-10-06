@@ -8,7 +8,7 @@ import {
   type SlotSize,
 } from "~/modules/cms/components/wall/wall-layouts";
 import type { WallItemRow, WallTagRow } from "~/modules/content/utils/rows";
-import { mediaUrl } from "~/modules/media/utils/media-url";
+import { displayUrl, mediaUrl } from "~/modules/media/utils/media-url";
 import { wallBackgrounds } from "~/modules/ui-ux/utils/wall-backgrounds";
 import cn from "~/utils/cn";
 
@@ -59,7 +59,8 @@ const WallMedia = ({ item, sizes }: MediaProps) => {
       />
     ) : (
       <Image
-        src={mediaUrl(item.media)}
+        src={displayUrl(item.media)}
+        unoptimized
         alt=""
         fill
         sizes={sizes}

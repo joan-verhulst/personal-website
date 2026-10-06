@@ -25,7 +25,7 @@ import { useAction } from "~/modules/cms/hooks/use-action";
 import { useUnsavedWarning } from "~/modules/cms/hooks/use-unsaved-warning";
 import type { UploadedMedia } from "~/modules/cms/utils/upload-media";
 import type { RecordRow } from "~/modules/content/utils/rows";
-import { mediaUrl } from "~/modules/media/utils/media-url";
+import { displayUrl } from "~/modules/media/utils/media-url";
 
 interface Props {
   row: RecordRow;
@@ -127,7 +127,8 @@ const EditRecordDialog = ({ row, isFirst, open, onOpenChange }: Props) => {
             {/* Without one, its cover was deleted from Media */}
             {row.cover && (
               <Image
-                src={mediaUrl(row.cover)}
+                src={displayUrl(row.cover)}
+                unoptimized
                 alt={`Cover of ${row.title}`}
                 fill
                 sizes="112px"

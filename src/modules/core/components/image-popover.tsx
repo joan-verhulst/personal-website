@@ -15,6 +15,9 @@ import { useAnimationPreference } from "~/modules/core/context/animation-prefere
 // Width and height are optional, without them the size is known once the image has preloaded
 type PopoverItem = DigitalArtProject & { width?: number; height?: number };
 
+// The large view shows the file itself, not the smaller copy the page shows
+const fullSource = (item: PopoverItem) => item.full ?? item.image;
+
 interface Props {
   isOpen: boolean;
   onClose: () => void;
@@ -99,7 +102,7 @@ const ImagePopover = ({
           // Decoding ahead keeps the slide smooth, a failed decode just happens on show instead
           img.decode().catch(() => {});
         };
-        img.src = items[i].image;
+        img.src = fullSource(items[i]);
       }
     },
     [items],
@@ -149,7 +152,7 @@ const ImagePopover = ({
     gsap.set(overlayRef.current, { display: "flex", opacity: 1 });
 
     if (imgARef.current) {
-      imgARef.current.src = items[activeIndexRef.current].image;
+      imgARef.current.src = fullSource(items[activeIndexRef.current]);
       imgARef.current.alt = items[activeIndexRef.current].title;
       gsap.set(imgARef.current, { x: 0, opacity: 1 });
     }
@@ -300,8 +303,8 @@ const ImagePopover = ({
 
     gsap.killTweensOf([containerRef.current, outgoingImg, incomingImg]);
 
-    if (incomingImg.src !== items[toIndex].image)
-      incomingImg.src = items[toIndex].image;
+    if (incomingImg.src !== fullSource(items[toIndex]))
+      incomingImg.src = fullSource(items[toIndex]);
     gsap.set(incomingImg, {
       x: direction * containerRef.current.offsetWidth,
       opacity: 1,

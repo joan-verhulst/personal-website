@@ -231,11 +231,12 @@ const FileCard = ({ file }: { file: MediaFile }) => {
         />
       ) : (
         <Image
-          src={file.url}
+          // The display copy, straight from R2
+          src={file.thumbUrl}
           alt=""
           fill
           sizes={CARD_SIZES}
-          unoptimized={/\.svg$/i.test(file.path)}
+          unoptimized
           // A logo shows whole, not cropped like the card's photos
           className={/\.svg$/i.test(file.path) ? "object-contain! p-6" : undefined}
         />
@@ -246,6 +247,8 @@ const FileCard = ({ file }: { file: MediaFile }) => {
 
 interface Props {
   files: MediaFile[];
+  /** Everything in the bucket, display copies included. */
+  usedBytes: number;
   /** Whether the media table exists, see 0006_media_library.sql. */
   hasDetails: boolean;
   /** When the page was read, so the server and browser agree on what's new. */
@@ -257,7 +260,7 @@ interface Props {
  * how much of R2's free storage they take together, and delete what's no
  * longer needed. The pages pick their files from here, or upload their own.
  */
-const MediaLibrary = ({ files, hasDetails, now }: Props) => {
+const MediaLibrary = ({ files, usedBytes, hasDetails, now }: Props) => {
   const router = useRouter();
   const [folder, setFolder] = useState(ALL_FOLDERS);
   const [show, setShow] = useState<Show>("all");
@@ -355,7 +358,7 @@ const MediaLibrary = ({ files, hasDetails, now }: Props) => {
       )}
 
       <Storage
-        used={totalSize(files)}
+        used={usedBytes}
         removable={removable}
         onRemove={removeUnused}
         isPending={isPending}

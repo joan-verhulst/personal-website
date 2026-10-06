@@ -31,6 +31,8 @@ export const warmSlides = (artworks: Artwork[]) => {
       width: artwork.width,
       height: artwork.height,
       sizes: getSlideSizes(artwork),
+      // Like the slide: the display copy comes straight from R2
+      unoptimized: true,
     });
 
     const image = new Image();

@@ -376,7 +376,8 @@ const Page = () => {
                         <div className="relative inset-border overflow-hidden rounded-t-2xl h-full">
                           {firstHighlight && (
                             <Image
-                              src={firstHighlight.media.src}
+                              src={firstHighlight.media.preview ?? firstHighlight.media.src}
+                              unoptimized
                               alt={firstHighlight.title}
                               fill
                               sizes="(min-width: 768px) 512px, 100vw"
@@ -399,7 +400,8 @@ const Page = () => {
                         <div className="relative inset-border overflow-hidden rounded-t-2xl h-full">
                           {secondHighlight && (
                             <Image
-                              src={secondHighlight.media.src}
+                              src={secondHighlight.media.preview ?? secondHighlight.media.src}
+                              unoptimized
                               alt={secondHighlight.title}
                               fill
                               sizes="(min-width: 768px) 512px, 100vw"
@@ -500,7 +502,8 @@ const Page = () => {
                     <div className="relative w-full h-full overflow-hidden rounded-4xl">
                       {shaderExperiment && (
                         <Image
-                          src={shaderExperiment.media.src}
+                          src={shaderExperiment.media.preview ?? shaderExperiment.media.src}
+                          unoptimized
                           alt={shaderExperiment.title}
                           fill
                           sizes="(min-width: 768px) 256px, 100vw"

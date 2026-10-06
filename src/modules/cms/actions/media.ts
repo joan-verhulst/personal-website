@@ -21,7 +21,9 @@ import {
   rememberMedia,
   removeMedia,
 } from "~/modules/cms/utils/shared";
+import { makeDisplayCopy } from "~/modules/media/utils/display-copy";
 import {
+  isDisplayCopy,
   isMediaType,
   MAX_MEDIA_BYTES,
   MEDIA_TYPES,
@@ -98,24 +100,36 @@ const detailsSchema = v.object({
 });
 
 /**
- * Remembers what the upload button measured about a file it just put in the
- * bucket: the name it had, its size and its color. The picker fills a form
- * with them later, like the upload did. Only a file that's really in the
- * bucket gets a row.
+ * The last step of an upload, once the browser has put the file in the
+ * bucket. Makes its display copy, which the site shows instead of the file
+ * itself, and remembers what the upload button measured: the name it had,
+ * its size and its color. The picker fills a form with those later, like the
+ * upload did.
+ *
+ * Without its display copy the file can't be used, so it's removed again and
+ * the upload fails. Only a file that's really in the bucket gets anywhere.
  */
-export async function saveMediaDetails(
+export async function finishUpload(
   details: MediaDetails,
 ): Promise<ActionResult> {
   const admin = await requireAdmin();
   if (admin.error) return failed(admin.error);
+  const { supabase } = admin;
 
   const parsed = parseArgument(detailsSchema, details);
   if (!parsed.success) return parsed.failure;
+  const { path } = parsed.output;
 
-  const exists = await mediaExists(parsed.output.path);
+  const exists = await mediaExists(path);
   if (!exists) return failed("That file isn't in the bucket.");
 
-  await rememberMedia(admin.supabase, parsed.output);
+  const copy = await makeDisplayCopy(path);
+  if (copy.error) {
+    await removeMedia(supabase, [path]);
+    return dbFailed(copy.error, "Couldn't prepare the image. Try again.");
+  }
+
+  await rememberMedia(supabase, parsed.output);
   return {};
 }
 
@@ -203,9 +217,15 @@ const findUnused = async (supabase: SupabaseClient) => {
   ]);
   if (!files || !used) return null;
 
+  // A display copy belongs to its file and goes along with it
   const oldEnough = Date.now() - UNSAVED_GRACE_MS;
   return files
-    .filter((file) => !used.has(file.path) && file.createdAt < oldEnough)
+    .filter(
+      (file) =>
+        !isDisplayCopy(file.path) &&
+        !used.has(file.path) &&
+        file.createdAt < oldEnough,
+    )
     .map((file) => file.path);
 };
 

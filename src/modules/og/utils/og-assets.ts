@@ -1,8 +1,13 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import sharp from "sharp";
 
-// What the OG renderer can draw. Anything else, a video or a WebP, is left out
+// What the OG renderer can draw. Anything else, like a video, is left out
 const DRAWABLE = ["image/png", "image/jpeg", "image/gif"];
+
+// The renderer can't read WebP, which every display copy is, so those are
+// turned into PNG first
+const CONVERTIBLE = ["image/webp", "image/avif"];
 
 const toDataUri = (type: string, data: Buffer) =>
   `data:${type};base64,${data.toString("base64")}`;
@@ -16,8 +21,11 @@ export const loadImage = async (url: string | undefined) => {
   try {
     const response = await fetch(url);
     const type = response.headers.get("content-type")?.split(";")[0] ?? "";
-    if (!response.ok || !DRAWABLE.includes(type)) return undefined;
-    return toDataUri(type, Buffer.from(await response.arrayBuffer()));
+    if (!response.ok) return undefined;
+    const data = Buffer.from(await response.arrayBuffer());
+    if (DRAWABLE.includes(type)) return toDataUri(type, data);
+    if (!CONVERTIBLE.includes(type)) return undefined;
+    return toDataUri("image/png", await sharp(data).png().toBuffer());
   } catch {
     return undefined;
   }

@@ -20,7 +20,7 @@ import { useForm } from "~/modules/cms/hooks/use-form";
 import { useUnsavedWarning } from "~/modules/cms/hooks/use-unsaved-warning";
 import { aboutSchema } from "~/modules/cms/schema/site";
 import type { SiteRow } from "~/modules/content/utils/rows";
-import { optionalMediaUrl } from "~/modules/media/utils/media-url";
+import { optionalDisplayUrl } from "~/modules/media/utils/media-url";
 
 const FORM_ID = "about-form";
 
@@ -53,7 +53,8 @@ const AboutForm = ({ site }: { site: SiteRow }) => {
 
   // The photo has no input of its own: uploads and Remove set it directly
   const image = useWatch({ control, name: "image" });
-  const imageUrl = optionalMediaUrl(image);
+  // The display copy, straight from R2, like the site shows it
+  const imageUrl = optionalDisplayUrl(image);
   const setImage = (path: string | null) =>
     setValue("image", path, { shouldDirty: true, shouldValidate: true });
 
@@ -140,6 +141,7 @@ const AboutForm = ({ site }: { site: SiteRow }) => {
               <div className="relative aspect-video w-full max-w-md overflow-hidden rounded-xl border border-neutral-950/10 bg-neutral-100">
                 <Image
                   src={imageUrl}
+                  unoptimized
                   alt="The about photo"
                   fill
                   sizes="(min-width: 640px) 448px, 100vw"

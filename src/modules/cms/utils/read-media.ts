@@ -1,5 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { MEDIA_COLUMNS } from "~/modules/cms/utils/shared";
+import {
+  displayPath,
+  hasDisplayCopy,
+  isDisplayCopy,
+} from "~/modules/media/utils/media-types";
 import { mediaUrl } from "~/modules/media/utils/media-url";
 import { listMedia } from "~/modules/media/utils/storage";
 
@@ -47,6 +52,8 @@ export interface MediaOwner {
 export interface MediaFile {
   path: string;
   url: string;
+  /** The display copy when it has one, light enough for a thumbnail. */
+  thumbUrl: string;
   /** The first part of the path, like "photography". Empty at the top. */
   folder: string;
   /** In bytes. */
@@ -141,22 +148,30 @@ const fileName = (path: string) =>
 /**
  * Every file in the media bucket, with its details and what shows it. Throws
  * when the bucket or a table can't be read, so the page says so instead of
- * showing half a library. hasDetails is false until the media table exists.
+ * showing half a library. Display copies aren't files of their own: they're
+ * left out, but usedBytes counts them. hasDetails is false until the media
+ * table exists.
  */
 export const readMediaLibrary = async (supabase: SupabaseClient) => {
-  const [files, owners, { details, hasTable }] = await Promise.all([
+  const [objects, owners, { details, hasTable }] = await Promise.all([
     listMedia(),
     readOwners(supabase),
     readDetails(supabase),
   ]);
-  if (!files) throw new Error("Couldn't list the media bucket");
+  if (!objects) throw new Error("Couldn't list the media bucket");
+
+  const stored = new Set(objects.map((object) => object.path));
+  const files = objects.filter((object) => !isDisplayCopy(object.path));
 
   const library = files.map((file): MediaFile => {
     const known = details.get(file.path);
     const usedBy = owners.get(file.path) ?? [];
+    const hasCopy =
+      hasDisplayCopy(file.path) && stored.has(displayPath(file.path));
     return {
       path: file.path,
       url: mediaUrl(file.path),
+      thumbUrl: mediaUrl(hasCopy ? displayPath(file.path) : file.path),
       folder: file.path.includes("/") ? file.path.split("/")[0] : "",
       size: file.size,
       createdAt: file.createdAt,
@@ -173,5 +188,9 @@ export const readMediaLibrary = async (supabase: SupabaseClient) => {
     };
   });
 
-  return { files: library, hasDetails: hasTable };
+  return {
+    files: library,
+    hasDetails: hasTable,
+    usedBytes: objects.reduce((total, object) => total + object.size, 0),
+  };
 };

@@ -5,6 +5,7 @@ import Island from "~components/layout/island/island";
 import SettingsFab from "~components/settings-fab";
 import SoundToast from "~components/sound-toast";
 import ContentProvider from "~/modules/content/components/content-provider";
+import MediaPreloader from "~/modules/content/components/media-preloader";
 import { getContent } from "~/modules/content/utils/get-content";
 import { AnimationPreferenceProvider } from "~/modules/core/context/animation-preference-context";
 import { HeaderColorProvider } from "~/modules/core/context/header-color-context";
@@ -32,6 +33,8 @@ const MainLayout = async ({ children, app }: Props) => {
             <Island />
             <AppLayer slot={app}>{children}</AppLayer>
             <SlideWarmer artworks={content.artworks.slice(0, FIRST_SLIDES)} />
+            {/* Every section's images, in the background after the intro */}
+            <MediaPreloader />
 
             {/* Global settings controls — fixed bottom-right */}
             <div className="pointer-events-none fixed right-8 bottom-8 z-50 flex flex-col items-end gap-2">

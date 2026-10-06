@@ -5,7 +5,7 @@ import { reorderRecords } from "~/modules/cms/actions/records";
 import ReorderButton from "~/modules/cms/components/reorder-button";
 import { useAction } from "~/modules/cms/hooks/use-action";
 import type { RecordRow } from "~/modules/content/utils/rows";
-import { mediaUrl } from "~/modules/media/utils/media-url";
+import { displayUrl } from "~/modules/media/utils/media-url";
 
 /** The "Reorder" button and its dialog, for the order the modal shows. */
 const ReorderRecordsButton = ({ rows }: { rows: RecordRow[] }) => {
@@ -24,7 +24,13 @@ const ReorderRecordsButton = ({ rows }: { rows: RecordRow[] }) => {
           <span className="block bg-white">
             <span className="relative mx-auto block aspect-square h-full overflow-hidden rounded-md">
               {row.cover && (
-                <Image src={mediaUrl(row.cover)} alt="" fill sizes="36px" />
+                <Image
+                  src={displayUrl(row.cover)}
+                  alt=""
+                  fill
+                  sizes="36px"
+                  unoptimized
+                />
               )}
             </span>
           </span>

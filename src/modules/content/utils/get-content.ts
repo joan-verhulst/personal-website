@@ -16,7 +16,12 @@ import type {
   WallListRow,
   WallTagRow,
 } from "~/modules/content/utils/rows";
-import { mediaUrl, optionalMediaUrl } from "~/modules/media/utils/media-url";
+import {
+  displayUrl,
+  mediaUrl,
+  optionalDisplayUrl,
+  optionalMediaUrl,
+} from "~/modules/media/utils/media-url";
 import { createPublicClient } from "~/modules/supabase/utils/public-client";
 
 // A failed read should fail the build or request loudly, not render a site
@@ -70,6 +75,7 @@ const toWallItem = (
   media: {
     type: row.media_type,
     src: mediaUrl(row.media),
+    preview: displayUrl(row.media),
     ...sizeOf(row),
   },
   background: row.background,
@@ -155,14 +161,14 @@ export const getContent = cache(async (): Promise<Content> => {
 
   const coverOf = (rows: ((PhotoRow | ArtworkRow) & { image: string })[]) => {
     const cover = rows.find((row) => row.is_cover) ?? rows[0];
-    return cover ? mediaUrl(cover.image) : undefined;
+    return cover ? displayUrl(cover.image) : undefined;
   };
 
   return {
     about: {
       headline: siteRow?.about_headline ?? "",
       intro: siteRow?.about_intro ?? "",
-      image: optionalMediaUrl(siteRow?.about_image),
+      image: optionalDisplayUrl(siteRow?.about_image),
       currently: siteRow?.currently_name
         ? {
             name: siteRow.currently_name,
@@ -181,7 +187,9 @@ export const getContent = cache(async (): Promise<Content> => {
       id: row.id,
       title: row.title,
       description: row.description ?? undefined,
-      image: mediaUrl(row.image),
+      // The display copy shows, the file itself opens large
+      image: displayUrl(row.image),
+      full: mediaUrl(row.image),
       ...sizeOf(row),
       hue: row.hue,
       chroma: row.chroma,
@@ -190,7 +198,9 @@ export const getContent = cache(async (): Promise<Content> => {
       id: row.id,
       title: row.title,
       description: row.description ?? undefined,
-      image: mediaUrl(row.image),
+      // The display copy shows, the file itself opens large
+      image: displayUrl(row.image),
+      full: mediaUrl(row.image),
       ...sizeOf(row),
     })),
     records: rowsOf<RecordRow>("records", records).flatMap((row) =>
@@ -202,7 +212,7 @@ export const getContent = cache(async (): Promise<Content> => {
               type: row.type,
               title: row.title,
               artist: row.artist,
-              cover: mediaUrl(row.cover),
+              cover: displayUrl(row.cover),
               favoriteSong: {
                 appleId: Number(row.apple_id),
                 title: row.favorite_title,

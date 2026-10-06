@@ -64,6 +64,7 @@ const SlideCard = ({
         <Image
           ref={(el) => imgRef(index, el)}
           src={item.image}
+          unoptimized
           alt={item.title}
           width={item.width}
           height={item.height}

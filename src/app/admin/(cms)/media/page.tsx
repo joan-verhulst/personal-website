@@ -7,12 +7,17 @@ export const metadata: Metadata = { title: "Media" };
 
 const MediaAdmin = async () => {
   const supabase = await adminClient();
-  const { files, hasDetails } = await readMediaLibrary(supabase);
+  const { files, hasDetails, usedBytes } = await readMediaLibrary(supabase);
 
   // Read once here, so the server and the browser agree on which unused
   // files are too new to remove
   return (
-    <MediaLibrary files={files} hasDetails={hasDetails} now={Date.now()} />
+    <MediaLibrary
+      files={files}
+      usedBytes={usedBytes}
+      hasDetails={hasDetails}
+      now={Date.now()}
+    />
   );
 };
 

@@ -92,6 +92,7 @@ const PrintCard = ({
         >
           <Image
             src={print.image}
+            unoptimized
             alt={print.title}
             fill
             sizes={sizes}

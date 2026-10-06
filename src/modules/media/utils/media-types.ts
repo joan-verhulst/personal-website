@@ -14,27 +14,33 @@ export const MEDIA_TYPES: Record<string, string> = {
 
 export const MAX_MEDIA_BYTES = 40 * 1024 * 1024;
 
-// Every photo-like image gets a smaller copy next to it when it's uploaded:
-// WebP, at most this many pixels on its long side. The site shows and
-// preloads that copy, and keeps the original for viewing a piece large. The
-// browser loads both straight from R2, so nothing is resized on request
-export const DISPLAY_SIZE = 1600;
+// Every photo-like image is also stored at these widths, as WebP next to the
+// file, made when it's uploaded. The browser picks the one that fits its
+// screen, the way it would from Vercel's image optimization, but loads it
+// straight from R2: nothing is resized on request, so nothing is ever slow
+// the first time. Large views use the file itself. Also next.config.ts's
+// deviceSizes, so the widths a page offers are the ones that exist
+export const IMAGE_WIDTHS = [640, 1080, 1600] as const;
 
-const DISPLAY_SUFFIX = ".display.webp";
+const SIZED_COPY = /\.w\d+\.webp$/;
+
+/** Whether a path in the bucket is a sized copy, not a file of its own. */
+export const isSizedCopy = (path: string) => SIZED_COPY.test(path);
 
 /**
- * Whether a file has a display copy. SVGs scale on their own, a GIF would
- * lose its frames and a video isn't an image.
+ * Whether a file has sized copies. SVGs scale on their own, a GIF would lose
+ * its frames and a video isn't an image. Works on paths and URLs alike.
  */
-export const hasDisplayCopy = (path: string) =>
-  /\.(jpe?g|png|webp|avif)$/i.test(path) && !isDisplayCopy(path);
+export const hasSizes = (path: string) =>
+  /\.(jpe?g|png|webp|avif)$/i.test(path) && !isSizedCopy(path);
 
-/** The display copy of a file, like photography/abc.jpg → photography/abc.display.webp. */
-export const displayPath = (path: string) =>
-  `${path.replace(/\.[^./]+$/, "")}${DISPLAY_SUFFIX}`;
+/** A file's copy at one width: photography/abc.jpg → photography/abc.w640.webp. */
+export const sizedPath = (path: string, width: number) =>
+  `${path.replace(/\.[^./]+$/, "")}.w${width}.webp`;
 
-/** Whether a path in the bucket is a display copy, not a file of its own. */
-export const isDisplayCopy = (path: string) => path.endsWith(DISPLAY_SUFFIX);
+/** Every sized copy of a file, none for one that has no sizes. */
+export const sizedPaths = (path: string) =>
+  hasSizes(path) ? IMAGE_WIDTHS.map((width) => sizedPath(path, width)) : [];
 
 // Where files uploaded on the Media page go. Uploads from a page go to that
 // page's folder, which only says where a file came from: any page can use a

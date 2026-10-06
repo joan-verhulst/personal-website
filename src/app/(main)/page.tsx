@@ -22,6 +22,7 @@ import FavoritesModal from "~/modules/favorites/components/favorites-modal";
 import Gear from "~/modules/favorites/components/gear";
 import OnRotation from "~/modules/favorites/components/on-rotation";
 import Vinyl from "~/modules/favorites/components/vinyl";
+import { mediaImageProps } from "~/modules/media/utils/media-url";
 import WallMedia from "~/modules/ui-ux/components/wall-media";
 import { getWallBackground } from "~/modules/ui-ux/utils/wall-backgrounds";
 import { useContent } from "~/modules/content/components/content-provider";
@@ -376,8 +377,8 @@ const Page = () => {
                         <div className="relative inset-border overflow-hidden rounded-t-2xl h-full">
                           {firstHighlight && (
                             <Image
-                              src={firstHighlight.media.preview ?? firstHighlight.media.src}
-                              unoptimized
+                              src={firstHighlight.media.src}
+                              {...mediaImageProps(firstHighlight.media.src)}
                               alt={firstHighlight.title}
                               fill
                               sizes="(min-width: 768px) 512px, 100vw"
@@ -400,8 +401,8 @@ const Page = () => {
                         <div className="relative inset-border overflow-hidden rounded-t-2xl h-full">
                           {secondHighlight && (
                             <Image
-                              src={secondHighlight.media.preview ?? secondHighlight.media.src}
-                              unoptimized
+                              src={secondHighlight.media.src}
+                              {...mediaImageProps(secondHighlight.media.src)}
                               alt={secondHighlight.title}
                               fill
                               sizes="(min-width: 768px) 512px, 100vw"
@@ -502,8 +503,8 @@ const Page = () => {
                     <div className="relative w-full h-full overflow-hidden rounded-4xl">
                       {shaderExperiment && (
                         <Image
-                          src={shaderExperiment.media.preview ?? shaderExperiment.media.src}
-                          unoptimized
+                          src={shaderExperiment.media.src}
+                          {...mediaImageProps(shaderExperiment.media.src)}
                           alt={shaderExperiment.title}
                           fill
                           sizes="(min-width: 768px) 256px, 100vw"

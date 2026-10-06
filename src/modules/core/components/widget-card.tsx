@@ -5,7 +5,7 @@ import { gsap } from "gsap";
 import cn from "~utils/cn";
 import { useHapticSound } from "~/modules/core/hooks/use-haptic-sound";
 import { useAnimationPreference } from "~/modules/core/context/animation-preference-context";
-import { isMediaUrl } from "~/modules/media/utils/media-url";
+import { mediaImageProps } from "~/modules/media/utils/media-url";
 
 type WidgetCardProps = {
   label: string;
@@ -127,7 +127,7 @@ const WidgetCard = ({
         <div className="relative w-full h-full overflow-hidden rounded-4xl">
           <Image
             src={src}
-            unoptimized={isMediaUrl(src)}
+            {...mediaImageProps(src)}
             alt={alt}
             fill
             className={cn(imgClassName, "pointer-events-none rounded-4xl")}

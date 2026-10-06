@@ -14,6 +14,7 @@ import {
 } from "~/modules/core/hooks/use-haptic-sound";
 import Turntable, { ARM } from "~/modules/favorites/components/turntable";
 import Vinyl from "~/modules/favorites/components/vinyl";
+import { mediaImageProps } from "~/modules/media/utils/media-url";
 import cn from "~/utils/cn";
 import { track as trackEvent } from "~/utils/eyes";
 
@@ -390,7 +391,7 @@ const OnRotation = () => {
                       <span className="relative inset-border block size-12 overflow-hidden rounded-md shadow-[2px_0_6px_-2px_rgb(0_0_0/0.35)]">
                         <Image
                           src={record.cover}
-                          unoptimized
+                          {...mediaImageProps(record.cover)}
                           alt=""
                           fill
                           sizes="48px"

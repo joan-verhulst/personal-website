@@ -1,6 +1,6 @@
 import Image from "next/image";
 import type { WallItemRow } from "~/modules/content/utils/rows";
-import { displayUrl, mediaUrl } from "~/modules/media/utils/media-url";
+import { mediaImage, mediaUrl } from "~/modules/media/utils/media-url";
 import { wallBackgrounds } from "~/modules/ui-ux/utils/wall-backgrounds";
 import cn from "~/utils/cn";
 
@@ -41,8 +41,7 @@ const MediaThumb = ({ item, sizes = "320px", className }: MediaThumbProps) => (
     {/* An item whose file was deleted from Media shows its background only */}
     {item?.media && item.media_type === "image" && (
       <Image
-        src={displayUrl(item.media)}
-        unoptimized
+        {...mediaImage(item.media)}
         alt=""
         fill
         sizes={sizes}

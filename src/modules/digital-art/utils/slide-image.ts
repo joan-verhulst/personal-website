@@ -1,5 +1,6 @@
 import { getImageProps } from "next/image";
 import type { Artwork } from "~/modules/content/types";
+import { mediaImageProps } from "~/modules/media/utils/media-url";
 
 export type { Artwork };
 
@@ -31,8 +32,8 @@ export const warmSlides = (artworks: Artwork[]) => {
       width: artwork.width,
       height: artwork.height,
       sizes: getSlideSizes(artwork),
-      // Like the slide: the display copy comes straight from R2
-      unoptimized: true,
+      // Like the slide: the stored size that fits, straight from R2
+      ...mediaImageProps(artwork.image),
     });
 
     const image = new Image();

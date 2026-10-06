@@ -4,6 +4,7 @@ import Image from "next/image";
 import type { CSSProperties, FocusEvent } from "react";
 import { useAnimationPreference } from "~/modules/core/context/animation-preference-context";
 import type { useHapticSound } from "~/modules/core/hooks/use-haptic-sound";
+import { mediaImageProps } from "~/modules/media/utils/media-url";
 import {
   getPrintTint,
   PAPER_BORDER,
@@ -92,7 +93,7 @@ const PrintCard = ({
         >
           <Image
             src={print.image}
-            unoptimized
+            {...mediaImageProps(print.image)}
             alt={print.title}
             fill
             sizes={sizes}

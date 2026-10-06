@@ -3,6 +3,7 @@
 import { Maximize } from "lucide-react";
 import Image from "next/image";
 import { memo } from "react";
+import { mediaImageProps } from "~/modules/media/utils/media-url";
 import cn from "~/utils/cn";
 import { useHapticSound } from "~/modules/core/hooks/use-haptic-sound";
 import {
@@ -64,7 +65,7 @@ const SlideCard = ({
         <Image
           ref={(el) => imgRef(index, el)}
           src={item.image}
-          unoptimized
+          {...mediaImageProps(item.image)}
           alt={item.title}
           width={item.width}
           height={item.height}

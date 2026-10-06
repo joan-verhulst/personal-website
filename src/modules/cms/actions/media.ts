@@ -21,10 +21,10 @@ import {
   rememberMedia,
   removeMedia,
 } from "~/modules/cms/utils/shared";
-import { makeDisplayCopy } from "~/modules/media/utils/display-copy";
+import { makeImageSizes } from "~/modules/media/utils/image-sizes";
 import {
-  isDisplayCopy,
   isMediaType,
+  isSizedCopy,
   MAX_MEDIA_BYTES,
   MEDIA_TYPES,
   UNSAVED_GRACE_MS,
@@ -101,13 +101,13 @@ const detailsSchema = v.object({
 
 /**
  * The last step of an upload, once the browser has put the file in the
- * bucket. Makes its display copy, which the site shows instead of the file
+ * bucket. Makes its sized copies, which the site shows instead of the file
  * itself, and remembers what the upload button measured: the name it had,
  * its size and its color. The picker fills a form with those later, like the
  * upload did.
  *
- * Without its display copy the file can't be used, so it's removed again and
- * the upload fails. Only a file that's really in the bucket gets anywhere.
+ * Without its copies the file can't be used, so it's removed again and the
+ * upload fails. Only a file that's really in the bucket gets anywhere.
  */
 export async function finishUpload(
   details: MediaDetails,
@@ -123,7 +123,7 @@ export async function finishUpload(
   const exists = await mediaExists(path);
   if (!exists) return failed("That file isn't in the bucket.");
 
-  const copy = await makeDisplayCopy(path);
+  const copy = await makeImageSizes(path);
   if (copy.error) {
     await removeMedia(supabase, [path]);
     return dbFailed(copy.error, "Couldn't prepare the image. Try again.");
@@ -217,12 +217,12 @@ const findUnused = async (supabase: SupabaseClient) => {
   ]);
   if (!files || !used) return null;
 
-  // A display copy belongs to its file and goes along with it
+  // A sized copy belongs to its file and goes along with it
   const oldEnough = Date.now() - UNSAVED_GRACE_MS;
   return files
     .filter(
       (file) =>
-        !isDisplayCopy(file.path) &&
+        !isSizedCopy(file.path) &&
         !used.has(file.path) &&
         file.createdAt < oldEnough,
     )

@@ -1,6 +1,6 @@
 import Image from "next/image";
 import type { ReactNode } from "react";
-import { displayUrl } from "~/modules/media/utils/media-url";
+import { mediaImage } from "~/modules/media/utils/media-url";
 import cn from "~/utils/cn";
 
 interface Props {
@@ -30,8 +30,7 @@ const GalleryImage = ({
 }: Props) => (
   <div className={cn("relative aspect-4/3 w-full overflow-hidden", className)}>
     <Image
-      src={displayUrl(image)}
-      unoptimized
+      {...mediaImage(image)}
       alt={alt}
       fill
       sizes={sizes}

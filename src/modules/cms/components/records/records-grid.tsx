@@ -21,7 +21,7 @@ import {
 } from "~/modules/cms/components/records/new-record-dialog";
 import { useAction } from "~/modules/cms/hooks/use-action";
 import type { RecordRow } from "~/modules/content/utils/rows";
-import { displayUrl } from "~/modules/media/utils/media-url";
+import { mediaImage } from "~/modules/media/utils/media-url";
 
 // Two columns on a phone, and from there a card never gets wider than this
 const CARD_SIZES = "(min-width: 640px) 300px, 50vw";
@@ -101,11 +101,10 @@ const RecordCard = ({ row, isFirst, onEdit }: CardProps) => {
       {/* Left out, the card shows its grey box: the cover was deleted from Media */}
       {row.cover && (
         <Image
-          src={displayUrl(row.cover)}
+          {...mediaImage(row.cover)}
           alt=""
           fill
           sizes={CARD_SIZES}
-          unoptimized
         />
       )}
     </MediaCard>

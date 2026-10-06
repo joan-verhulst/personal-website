@@ -29,11 +29,7 @@ export interface WallTag {
 
 export interface WallMedia {
   type: "image" | "video";
-  // The file itself, sharp enough for screenshots at any size
   src: string;
-  // Its display copy, for small places like the home widgets. Left out, or
-  // for a video, the file itself
-  preview?: string;
   // Source dimensions, used to keep the aspect ratio without cropping
   width: number;
   height: number;
@@ -91,10 +87,7 @@ export const WALL_SLOTS: Record<WallLayout, number> = {
 export interface PhotographyProject {
   id: string;
   title: string;
-  // The display copy, what the table, the grid and the widgets show
   image: string;
-  // The file itself, for the large view. Left out, the image is the file
-  full?: string;
   description?: string;
 }
 
@@ -112,10 +105,7 @@ export interface DigitalArtProject {
   id: string;
   title: string;
   description?: string;
-  // The display copy, what the slides and the widgets show
   image: string;
-  // The file itself, for the large view. Left out, the image is the file
-  full?: string;
 }
 
 export interface Artwork extends DigitalArtProject {

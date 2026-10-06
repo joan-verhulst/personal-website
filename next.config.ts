@@ -1,18 +1,19 @@
 import { withEyes } from "eyes-next/config";
 import type { NextConfig } from "next";
+import { IMAGE_WIDTHS } from "./src/modules/media/utils/media-types";
 
 const config: NextConfig = {
   images: {
     // 90 keeps text in UI screenshots sharp
     qualities: [75, 90],
-    // Media from the CMS lives in the media bucket on R2, on its own domain
-    remotePatterns: process.env.NEXT_PUBLIC_MEDIA_URL
-      ? [
-          new URL(
-            `${process.env.NEXT_PUBLIC_MEDIA_URL.replace(/\/+$/, "")}/**`,
-          ),
-        ]
-      : [],
+    // The widths a page offers the browser. They're the widths media is
+    // stored at on R2, so every one of them exists, see mediaImageProps
+    deviceSizes: [...IMAGE_WIDTHS],
+    // Media from the CMS is never resized here: it loads straight from R2 in
+    // the size that fits. So its domain isn't listed, and an <Image> that
+    // would have Vercel resize it fails in development instead of quietly
+    // costing Vercel's limits
+    remotePatterns: [],
   },
 };
 

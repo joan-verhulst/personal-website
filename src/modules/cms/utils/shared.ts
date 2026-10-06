@@ -3,10 +3,9 @@ import { updateTag } from "next/cache";
 import * as v from "valibot";
 import { slugify } from "~/modules/cms/utils/slugify";
 import {
-  displayPath,
   formatBytes,
-  hasDisplayCopy,
   STORAGE_LIMIT_BYTES,
+  sizedPaths,
 } from "~/modules/media/utils/media-types";
 import {
   deleteMedia,
@@ -261,8 +260,8 @@ export const removeMedia = async (
   if (!existing.length) return [];
 
   const removed = await deleteMedia(existing);
-  // A display copy goes with its file. A failure only leaves clutter
-  const copies = removed.filter(hasDisplayCopy).map(displayPath);
+  // The sized copies go with their file. A failure only leaves clutter
+  const copies = removed.flatMap(sizedPaths);
   if (copies.length) await deleteMedia(copies);
   if (removed.length < existing.length) {
     console.warn(

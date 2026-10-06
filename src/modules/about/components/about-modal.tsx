@@ -11,6 +11,7 @@ import AnimatedText, {
 } from "~/modules/core/components/utils/AnimatedText";
 import { useAnimationPreference } from "~/modules/core/context/animation-preference-context";
 import { siteData } from "~/data/site";
+import { mediaImageProps } from "~/modules/media/utils/media-url";
 
 interface Props {
   isOpen: boolean;
@@ -91,9 +92,11 @@ const AboutModal = ({ isOpen, onClose }: Props) => {
         >
           <Image
             src={about.image}
-            unoptimized
+            {...mediaImageProps(about.image)}
             alt={siteData.owner.name}
             fill
+            // As wide as the modal's content
+            sizes="(min-width: 896px) 848px, 100vw"
             className="object-cover"
           />
         </div>

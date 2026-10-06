@@ -4,6 +4,7 @@ import { gsap } from "gsap";
 import Image from "next/image";
 import { useEffect, useRef } from "react";
 import { useAnimationPreference } from "~/modules/core/context/animation-preference-context";
+import { mediaImageProps } from "~/modules/media/utils/media-url";
 import cn from "~/utils/cn";
 
 interface Props {
@@ -102,7 +103,7 @@ const Vinyl = ({
             <Image
               key={cover.id}
               src={cover.src}
-              unoptimized
+              {...mediaImageProps(cover.src)}
               alt={cover.alt}
               fill
               sizes={sizes}

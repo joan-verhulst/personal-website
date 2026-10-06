@@ -1,6 +1,6 @@
 import Image from "next/image";
 import type { ReactNode } from "react";
-import { mediaUrl } from "~/modules/supabase/utils/media";
+import { mediaUrl } from "~/modules/media/utils/media-url";
 import cn from "~/utils/cn";
 
 interface Props {

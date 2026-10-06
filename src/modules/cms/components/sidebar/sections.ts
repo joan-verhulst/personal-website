@@ -2,6 +2,7 @@ import {
   BrickWall,
   Camera,
   Disc3,
+  HardDrive,
   Images,
   LayoutDashboard,
   LayoutGrid,
@@ -76,6 +77,7 @@ export const sidebarSections: SidebarSection[] = [
     items: [
       { label: "About", url: "/admin/about", icon: UserRound },
       { label: "Contact", url: "/admin/contact", icon: Mail },
+      { label: "Media", url: "/admin/media", icon: HardDrive },
       { label: "Security", url: "/admin/security", icon: ShieldCheck },
     ],
   },

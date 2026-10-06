@@ -20,6 +20,7 @@ const descriptions: Record<string, string> = {
   "/admin/on-rotation": "Records on the favorites shelf.",
   "/admin/about": "Headline, intro, photo and the Currently card.",
   "/admin/contact": "The Instagram, LinkedIn and email links.",
+  "/admin/media": "Every image and video, its size, and the free storage left.",
   "/admin/security": "The authenticator apps that sign you in.",
 };
 

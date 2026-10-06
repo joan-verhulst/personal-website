@@ -18,20 +18,15 @@ import { requireAdmin } from "~/modules/cms/utils/require-admin";
 import {
   type ActionResult,
   dbFailed,
-  discardFailedUpload,
-  discardUnused,
   failed,
-  GONE,
   idSchema,
   idsSchema,
   insertWithId,
-  isInFolder,
+  missingMedia,
   nextSortOrder,
   parse,
   parseArgument,
   published,
-  removeReplaced,
-  removeUnused,
   saveOrder,
   updateOne,
 } from "~/modules/cms/utils/shared";
@@ -45,8 +40,6 @@ import {
 // Actions can be called with anything, so the kind and ids are checked too
 const kindSchema = v.picklist(GALLERY_KINDS, "Unknown gallery.");
 
-const WRONG_FOLDER = "That file isn't in this gallery.";
-
 /** Signs in and checks the kind, the start of every action here. */
 const start = async (kind: unknown) => {
   const admin = await requireAdmin();
@@ -55,15 +48,12 @@ const start = async (kind: unknown) => {
   const parsed = parseArgument(kindSchema, kind);
   if (!parsed.success) return { error: parsed.failure } as const;
 
-  const { table, folder, noun } = GALLERIES[parsed.output];
+  const { table, noun } = GALLERIES[parsed.output];
   return {
     error: null,
     supabase: admin.supabase,
     kind: parsed.output,
     table,
-    // Every upload for a gallery lands in its own folder, which is what lets
-    // a path be tied to this table
-    folder,
     noun,
   } as const;
 };
@@ -76,8 +66,9 @@ const imageColumns = (kind: GalleryKind, image: GalleryImage) => ({
 });
 
 /**
- * Adds a piece at the end. When it fails the upload stays where it is: the
- * dialog still holds it for another try and discards it when it closes.
+ * Adds a piece at the end, with a file from Media: one just uploaded or one
+ * picked there. When it fails the file stays in Media, and the dialog still
+ * holds it for another try.
  */
 export async function addGalleryItem(
   kind: GalleryKind,
@@ -90,7 +81,8 @@ export async function addGalleryItem(
   const parsed = parse(newGalleryItemSchema, input);
   if (!parsed.success) return parsed.failure;
   const { title, description, ...image } = parsed.output;
-  if (!isInFolder(image.image, context.folder)) return failed(WRONG_FOLDER);
+  const missing = await missingMedia(image.image);
+  if (missing) return failed(missing);
 
   const sortOrder = await nextSortOrder(supabase, table);
   if (sortOrder === null) return failed(`Couldn't add the ${noun}.`);
@@ -139,8 +131,8 @@ export async function updateGalleryItem(
 }
 
 /**
- * Swaps the file, keeping title, place and cover. The new file was uploaded
- * just for this, so it's removed again when the swap doesn't happen.
+ * Swaps the file, keeping title, place and cover. The old file stays in
+ * Media, where it can be used again or removed.
  */
 export async function replaceGalleryImage(
   kind: GalleryKind,
@@ -149,60 +141,23 @@ export async function replaceGalleryImage(
 ): Promise<ActionResult> {
   const context = await start(kind);
   if (context.error) return context.error;
-  const { supabase, table, folder } = context;
-
-  const parsed = parse(galleryImageSchema, image);
-  if (!parsed.success) return parsed.failure;
-  if (!isInFolder(parsed.output.image, folder)) return failed(WRONG_FOLDER);
-
-  const undo = async (failure: ActionResult) => {
-    await discardFailedUpload(supabase, folder, parsed.output.image);
-    return failure;
-  };
 
   const parsedId = parseArgument(idSchema, id);
-  if (!parsedId.success) return undo(parsedId.failure);
+  if (!parsedId.success) return parsedId.failure;
+  const parsed = parse(galleryImageSchema, image);
+  if (!parsed.success) return parsed.failure;
 
-  const { data: before, error: readError } = await supabase
-    .from(table)
-    .select("image")
-    .eq("id", parsedId.output)
-    .maybeSingle();
-  if (readError) {
-    return undo(dbFailed(readError, "Couldn't replace the image."));
-  }
-  if (!before) return undo(failed(GONE));
+  const missing = await missingMedia(parsed.output.image);
+  if (missing) return failed(missing);
 
   const failure = await updateOne(
-    supabase,
-    table,
+    context.supabase,
+    context.table,
     parsedId.output,
     imageColumns(context.kind, parsed.output),
     "Couldn't replace the image.",
   );
-  if (failure) return undo(failure);
-
-  await removeReplaced(supabase, before.image, parsed.output.image);
-  return published();
-}
-
-/**
- * Removes a file that was uploaded for a new piece that was then never
- * added, like when the dialog is cancelled. Only files in the gallery's own
- * folder that nothing uses can go.
- */
-export async function discardGalleryUpload(
-  kind: GalleryKind,
-  path: string,
-): Promise<ActionResult> {
-  const context = await start(kind);
-  if (context.error) return context.error;
-
-  const parsed = parseArgument(galleryImageSchema.entries.image, path);
-  if (!parsed.success) return parsed.failure;
-  if (!isInFolder(parsed.output, context.folder)) return failed(WRONG_FOLDER);
-
-  return discardUnused(context.supabase, parsed.output);
+  return failure ?? published();
 }
 
 /** The piece shown on the home page widget. One per gallery. */
@@ -252,26 +207,22 @@ export async function reorderGallery(
   return error ? dbFailed(error, "Couldn't save the order.") : published();
 }
 
-/** Deletes a piece and its file. */
+/** Deletes a piece. Its file stays in Media. */
 export async function deleteGalleryItem(
   kind: GalleryKind,
   id: string,
 ): Promise<ActionResult> {
   const context = await start(kind);
   if (context.error) return context.error;
-  const { supabase } = context;
 
   const parsedId = parseArgument(idSchema, id);
   if (!parsedId.success) return parsedId.failure;
 
-  const { data: deleted, error } = await supabase
+  const { error } = await context.supabase
     .from(context.table)
     .delete()
-    .eq("id", parsedId.output)
-    .select("image")
-    .maybeSingle();
+    .eq("id", parsedId.output);
   if (error) return dbFailed(error, `Couldn't delete the ${context.noun}.`);
 
-  await removeUnused(supabase, [deleted?.image]);
   return published();
 }

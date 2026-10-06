@@ -10,19 +10,15 @@ import { requireAdmin } from "~/modules/cms/utils/require-admin";
 import {
   type ActionResult,
   dbFailed,
-  discardUnused,
   failed,
-  GONE,
   idSchema,
   insertWithId,
-  isInFolder,
   MISSING_FUNCTION,
+  missingMedia,
   orNull,
   parse,
   parseArgument,
   published,
-  removeReplaced,
-  removeUnused,
   updateOne,
 } from "~/modules/cms/utils/shared";
 import { WALL_SLOTS, type WallLayout } from "~/modules/content/types";
@@ -31,10 +27,6 @@ import type { WallItemRow, WallListId } from "~/modules/content/utils/rows";
 // Null is "make a new one". Actions can be called with anything, so an id
 // that is given is checked before it goes into a filter
 const optionalIdSchema = v.nullish(idSchema);
-
-// Where the uploads of items and tags land in the media bucket
-const ITEM_FOLDER = "work";
-const TAG_FOLDER = "icons";
 
 // ── Items ─────────────────────────────────────────────────────────────────────
 
@@ -141,11 +133,11 @@ export async function saveWallItem(
   if (!parsed.success) return parsed.failure;
   const item = parsed.output;
 
+  // Uploaded here or picked from Media, the file has to be in the bucket
+  const missing = await missingMedia(item.media);
+  if (missing) return failed(missing);
+
   if (!itemId) {
-    // A new item's media always comes from the form's own upload button
-    if (!isInFolder(item.media, ITEM_FOLDER)) {
-      return failed("Upload the media again.");
-    }
     const result = await insertWithId(
       supabase,
       "wall_items",
@@ -171,20 +163,6 @@ export async function saveWallItem(
     return { ...published(), id: result.id };
   }
 
-  const { data: before, error: readError } = await supabase
-    .from("wall_items")
-    .select("media")
-    .eq("id", itemId)
-    .maybeSingle();
-  if (readError) return dbFailed(readError, "Couldn't save the item.");
-  if (!before) return failed(GONE);
-
-  // Media that stays may sit anywhere, the import kept its own folders. Only
-  // a change has to come from the upload button
-  if (item.media !== before.media && !isInFolder(item.media, ITEM_FOLDER)) {
-    return failed("Upload the media again.");
-  }
-
   if (item.mediaType === "video") {
     const refusal = await refuseVideo(supabase, itemId);
     if (refusal) return failed(refusal);
@@ -197,9 +175,8 @@ export async function saveWallItem(
     itemColumns(item),
     "Couldn't save the item.",
   );
+  // A file that was replaced stays in Media
   if (failure) return failure;
-
-  await removeReplaced(supabase, before.media, item.media);
   return { ...published(), id: itemId };
 }
 
@@ -207,7 +184,7 @@ export async function saveWallItem(
  * Deletes an item the slow way, for a database without the delete_wall_item
  * function: every place it's used first, the item last. A failure halfway
  * then leaves an item that still exists and can be deleted again, never an id
- * that points at nothing. Returns the item's media.
+ * that points at nothing.
  */
 const deleteItemInSteps = async (supabase: SupabaseClient, id: string) => {
   const { data: blocks, error: blocksError } = await supabase
@@ -254,15 +231,10 @@ const deleteItemInSteps = async (supabase: SupabaseClient, id: string) => {
     }
   }
 
-  const { data: deleted, error } = await supabase
-    .from("wall_items")
-    .delete()
-    .eq("id", id)
-    .select("media")
-    .maybeSingle();
+  const { error } = await supabase.from("wall_items").delete().eq("id", id);
   if (error) return { failure: dbFailed(error, "Couldn't delete the item.") };
 
-  return { media: (deleted?.media as string | undefined) ?? null };
+  return { failure: null };
 };
 
 /**
@@ -284,43 +256,23 @@ export async function deleteWallItem(
 
   // One function call, so the wall, the lists and the item change together.
   // It comes with supabase/migrations/0003_cms_hardening.sql
-  const { data, error } = await supabase.rpc("delete_wall_item", {
+  const { error } = await supabase.rpc("delete_wall_item", {
     item_id: parsedId.output,
   });
-  let media = (data as string | null) ?? null;
   if (error?.code === MISSING_FUNCTION) {
     const deleted = await deleteItemInSteps(supabase, parsedId.output);
     if (deleted.failure) return deleted.failure;
-    media = deleted.media;
   } else if (error) {
     return dbFailed(error, "Couldn't delete the item.");
   }
 
-  await removeUnused(supabase, [media]);
+  // Its file stays in Media
   const result = published();
   if (returnToList === true) {
     const { href } = await getAdminPaths();
     redirect(href("/admin/ui-ux/items"), RedirectType.replace);
   }
   return result;
-}
-
-/**
- * Removes a file that was uploaded for an item but never saved, like when the
- * new item dialog is cancelled. Only files in the items' folder that nothing
- * uses can go.
- */
-export async function discardWallUpload(path: string): Promise<ActionResult> {
-  const admin = await requireAdmin();
-  if (admin.error) return failed(admin.error);
-
-  const parsed = parseArgument(wallItemSchema.entries.media, path);
-  if (!parsed.success) return parsed.failure;
-  if (!isInFolder(parsed.output, ITEM_FOLDER)) {
-    return failed("That file isn't an item's.");
-  }
-
-  return discardUnused(admin.supabase, parsed.output);
 }
 
 // ── Tags ──────────────────────────────────────────────────────────────────────
@@ -344,10 +296,12 @@ export async function saveWallTag(
   if (!parsed.success) return parsed.failure;
   const tag = parsed.output;
 
+  if (tag.logo) {
+    const missing = await missingMedia(tag.logo);
+    if (missing) return failed(missing);
+  }
+
   if (!tagId) {
-    if (tag.logo && !isInFolder(tag.logo, TAG_FOLDER)) {
-      return failed("Upload the logo again.");
-    }
     const result = await insertWithId(
       supabase,
       "wall_tags",
@@ -358,19 +312,6 @@ export async function saveWallTag(
     return result.error ? failed(result.error) : published();
   }
 
-  const { data: before, error: readError } = await supabase
-    .from("wall_tags")
-    .select("logo")
-    .eq("id", tagId)
-    .maybeSingle();
-  if (readError) return dbFailed(readError, "Couldn't save the tag.");
-  if (!before) return failed(GONE);
-
-  // Like an item's media: only a new logo has to come from the upload button
-  if (tag.logo && tag.logo !== before.logo && !isInFolder(tag.logo, TAG_FOLDER)) {
-    return failed("Upload the logo again.");
-  }
-
   const failure = await updateOne(
     supabase,
     "wall_tags",
@@ -378,10 +319,8 @@ export async function saveWallTag(
     tag,
     "Couldn't save the tag.",
   );
-  if (failure) return failure;
-
-  await removeReplaced(supabase, before.logo, tag.logo);
-  return published();
+  // A logo that was replaced or removed stays in Media
+  return failure ?? published();
 }
 
 const tagInUse = (count: number) =>
@@ -404,12 +343,10 @@ export async function deleteWallTag(id: string): Promise<ActionResult> {
   }
   if (count) return failed(tagInUse(count));
 
-  const { data: deleted, error } = await supabase
+  const { error } = await supabase
     .from("wall_tags")
     .delete()
-    .eq("id", parsedId.output)
-    .select("logo")
-    .maybeSingle();
+    .eq("id", parsedId.output);
   if (error) {
     // An item got the tag between the count and the delete
     if (error.code === STILL_REFERENCED) {
@@ -418,7 +355,7 @@ export async function deleteWallTag(id: string): Promise<ActionResult> {
     return dbFailed(error, "Couldn't delete the tag.");
   }
 
-  await removeUnused(supabase, [deleted?.logo]);
+  // Its logo stays in Media
   return published();
 }
 

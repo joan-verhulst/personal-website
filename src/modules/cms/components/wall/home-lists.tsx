@@ -12,7 +12,7 @@ import Panel from "~/modules/cms/components/panel";
 import ReorderButton from "~/modules/cms/components/reorder-button";
 import ItemPickerDialog from "~/modules/cms/components/wall/item-picker-dialog";
 import type { WallItemRow, WallTagRow } from "~/modules/content/utils/rows";
-import { mediaUrl } from "~/modules/supabase/utils/media";
+import { mediaUrl } from "~/modules/media/utils/media-url";
 
 interface ListEditorProps {
   items: WallItemRow[];
@@ -92,21 +92,18 @@ export const ExperimentsEditor = ({
               return {
                 id,
                 title: titleOf(id),
-                thumbnail:
-                  item?.media_type === "image" ? (
-                    <Image
-                      src={mediaUrl(item.media)}
-                      alt=""
-                      fill
-                      sizes="48px"
-                    />
-                  ) : item ? (
-                    <video
-                      src={mediaUrl(item.media)}
-                      muted
-                      preload="metadata"
-                    />
-                  ) : undefined,
+                // Nothing to show for an item whose file was deleted
+                thumbnail: !item?.media ? undefined : item.media_type ===
+                  "image" ? (
+                  <Image
+                    src={mediaUrl(item.media)}
+                    alt=""
+                    fill
+                    sizes="48px"
+                  />
+                ) : (
+                  <video src={mediaUrl(item.media)} muted preload="metadata" />
+                ),
               };
             })}
             onSave={(ids) => {

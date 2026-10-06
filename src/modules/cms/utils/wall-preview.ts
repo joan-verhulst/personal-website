@@ -1,6 +1,6 @@
 import type { WallItem } from "~/modules/content/types";
 import type { WallItemRow, WallTagRow } from "~/modules/content/utils/rows";
-import { mediaUrl, optionalMediaUrl } from "~/modules/supabase/utils/media";
+import { mediaUrl, optionalMediaUrl } from "~/modules/media/utils/media-url";
 
 /** A row as the wall renders it, for previews in the CMS. */
 export const toPreviewItem = (

@@ -1,9 +1,16 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { updateTag } from "next/cache";
 import * as v from "valibot";
-import { mediaPath } from "~/modules/cms/schema/shared";
 import { slugify } from "~/modules/cms/utils/slugify";
-import { MEDIA_BUCKET } from "~/modules/supabase/utils/media";
+import {
+  formatBytes,
+  STORAGE_LIMIT_BYTES,
+} from "~/modules/media/utils/media-types";
+import {
+  deleteMedia,
+  listMedia,
+  mediaExists,
+} from "~/modules/media/utils/storage";
 import { CONTENT_TAG } from "~/modules/supabase/utils/public-client";
 
 // What every CMS action returns: nothing when it worked. Field errors are
@@ -223,110 +230,102 @@ export const MEDIA_COLUMNS = [
   ["site", "about_image"],
 ] as const;
 
-/** Uploads for one kind of content live in one folder of the bucket. */
-export const isInFolder = (path: string, folder: string) =>
-  path.startsWith(`${folder}/`);
-
 /**
- * Whether any row points at this file, or null when that couldn't be checked.
- * Treat null as in use: a file only goes once nothing needs it.
+ * Why a file of this size can't be stored, or null when it can. The bucket
+ * stays within R2's free storage: an upload that would take it over the
+ * limit is refused, and so is one when the storage left can't be checked.
  */
-export const isMediaUsed = async (supabase: SupabaseClient, path: string) => {
-  const counts = await Promise.all(
-    MEDIA_COLUMNS.map(([table, column]) =>
-      supabase
-        .from(table)
-        .select(column, { count: "exact", head: true })
-        .eq(column, path),
-    ),
-  );
-  const unread = counts.find((result) => result.error || result.count === null);
-  if (unread) {
-    console.error(`Couldn't check whether ${path} is in use`, unread.error);
-    return null;
-  }
-  return counts.some((result) => Boolean(result.count));
+export const noRoomFor = async (size: number) => {
+  const files = await listMedia();
+  if (!files) return "Couldn't check the storage left. Nothing was uploaded.";
+
+  const used = files.reduce((total, file) => total + file.size, 0);
+  if (used + size <= STORAGE_LIMIT_BYTES) return null;
+  const left = formatBytes(Math.max(0, STORAGE_LIMIT_BYTES - used));
+  return `Only ${left} of free storage is left, too little for this file. Remove media you don't use on the Media page first.`;
 };
 
 /**
- * Removes files from the bucket and returns how many went. A failure only
- * leaves clutter, so it's logged rather than passed on.
+ * Removes files from the bucket, and what Media knew about them, and returns
+ * the ones that went. A failure only leaves clutter, so it's logged rather
+ * than passed on. The bucket's keys can delete anything: call this only
+ * after requireAdmin.
  */
 export const removeMedia = async (
   supabase: SupabaseClient,
   paths: (string | null | undefined)[],
 ) => {
   const existing = paths.filter((path): path is string => Boolean(path));
-  if (!existing.length) return 0;
+  if (!existing.length) return [];
 
-  const { data, error } = await supabase.storage
-    .from(MEDIA_BUCKET)
-    .remove(existing);
-  if (error) {
-    console.error(error);
-    return 0;
-  }
-  // Storage answers a file it didn't delete with a shorter list, not an error
-  const removed = data?.length ?? 0;
-  if (removed < existing.length) {
+  const removed = await deleteMedia(existing);
+  if (removed.length < existing.length) {
     console.warn(
-      `Removed ${removed} of ${existing.length} files: ${existing.join(", ")}`,
+      `Removed ${removed.length} of ${existing.length} files: ${existing.join(", ")}`,
     );
+  }
+  if (removed.length) {
+    const { error } = await supabase.from("media").delete().in("path", removed);
+    if (error) console.error("Couldn't forget the removed files", error);
   }
   return removed;
 };
 
-/**
- * Removes files a row no longer points at, unless another row still does:
- * imported rows can share a file.
- */
-export const removeUnused = async (
-  supabase: SupabaseClient,
-  paths: (string | null | undefined)[],
-) => {
-  const unused: string[] = [];
-  for (const path of new Set(paths)) {
-    if (path && (await isMediaUsed(supabase, path)) === false) {
-      unused.push(path);
-    }
-  }
-  await removeMedia(supabase, unused);
-};
-
-/** After a row swapped its file: removes the old one when it really changed. */
-export const removeReplaced = async (
-  supabase: SupabaseClient,
-  before: string | null | undefined,
-  next: string | null | undefined,
-) => {
-  if (before && before !== next) await removeUnused(supabase, [before]);
-};
-
-/** Removes an upload that never became part of a row. */
-export const discardUnused = async (
-  supabase: SupabaseClient,
-  path: string,
-): Promise<ActionResult> => {
-  const isUsed = await isMediaUsed(supabase, path);
-  if (isUsed === null) return failed("Couldn't check the file.");
-  if (!isUsed) await removeMedia(supabase, [path]);
-  return {};
-};
-
-const anyMediaPath = mediaPath("Unknown file.");
+/** What the media table keeps about a file, see 0006_media_library.sql. */
+export interface MediaDetails {
+  path: string;
+  /** The name it was uploaded with, without its extension. */
+  name: string;
+  kind: "image" | "video";
+  width: number;
+  height: number;
+  hue: number;
+  chroma: number;
+}
 
 /**
- * After a replace failed: drops the file that was uploaded for it, which no
- * row will ever point at. The path comes from the caller, so it only goes
- * when it sits in the folder the upload belongs in and nothing uses it.
+ * Remembers a file's details, so the picker can fill a form with them later.
+ * A failure is only logged: the file is in the bucket all the same, and Media
+ * shows it without its details.
  */
-export const discardFailedUpload = async (
+export const rememberMedia = async (
   supabase: SupabaseClient,
-  folder: string,
-  path: unknown,
+  details: MediaDetails,
 ) => {
-  const parsed = v.safeParse(anyMediaPath, path);
-  if (parsed.success && isInFolder(parsed.output, folder)) {
-    await removeUnused(supabase, [parsed.output]);
+  const { error } = await supabase.from("media").upsert(details);
+  if (error) console.error("Couldn't save the file's details", error);
+};
+
+/**
+ * Why a row can't point at this file, or null when it can: it has to be in
+ * the bucket. An upload or a pick from Media gives a path that is, but an
+ * action can be called with anything.
+ */
+export const missingMedia = async (path: string) => {
+  const exists = await mediaExists(path);
+  if (exists === null) return "Couldn't check the file. Try again.";
+  return exists ? null : "That file is no longer in Media. Pick another.";
+};
+
+// Postgres' not null violation, here before 0006_media_library.sql has been run
+const NOT_NULL = "23502";
+
+/**
+ * Empties every column that shows this file, before the file is deleted. The
+ * rows stay: the site leaves out a photo, artwork, record or item without its
+ * file until another one is picked. Returns why it failed, or null.
+ */
+export const clearMediaUses = async (supabase: SupabaseClient, path: string) => {
+  const results = await Promise.all(
+    MEDIA_COLUMNS.map(([table, column]) =>
+      supabase.from(table).update({ [column]: null }).eq(column, path),
+    ),
+  );
+  const error = results.find((result) => result.error)?.error;
+  if (!error) return null;
+  if (error.code === NOT_NULL) {
+    return "Run supabase/migrations/0006_media_library.sql first, so a photo or item can stay without its file.";
   }
+  console.error(error);
+  return "Couldn't take the file off everything that uses it. The file wasn't deleted.";
 };

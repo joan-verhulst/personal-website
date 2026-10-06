@@ -1,6 +1,6 @@
 import Image from "next/image";
 import type { WallItemRow } from "~/modules/content/utils/rows";
-import { mediaUrl } from "~/modules/supabase/utils/media";
+import { mediaUrl } from "~/modules/media/utils/media-url";
 import { wallBackgrounds } from "~/modules/ui-ux/utils/wall-backgrounds";
 import cn from "~/utils/cn";
 
@@ -38,7 +38,8 @@ const MediaThumb = ({ item, sizes = "320px", className }: MediaThumbProps) => (
         style={{ background: wallBackgrounds[item.background] }}
       />
     )}
-    {item?.media_type === "image" && (
+    {/* An item whose file was deleted from Media shows its background only */}
+    {item?.media && item.media_type === "image" && (
       <Image
         src={mediaUrl(item.media)}
         alt=""
@@ -47,7 +48,7 @@ const MediaThumb = ({ item, sizes = "320px", className }: MediaThumbProps) => (
         className="object-cover object-left-top"
       />
     )}
-    {item?.media_type === "video" && (
+    {item?.media && item.media_type === "video" && (
       <video
         src={mediaUrl(item.media)}
         muted

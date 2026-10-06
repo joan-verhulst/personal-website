@@ -9,7 +9,7 @@ import {
 import type { GalleryRow } from "~/modules/cms/components/gallery/gallery-grid";
 import ReorderButton from "~/modules/cms/components/reorder-button";
 import { useAction } from "~/modules/cms/hooks/use-action";
-import { mediaUrl } from "~/modules/supabase/utils/media";
+import { mediaUrl } from "~/modules/media/utils/media-url";
 
 interface Props {
   kind: GalleryKind;
@@ -27,7 +27,10 @@ const ReorderGalleryButton = ({ kind, rows }: Props) => {
       items={rows.map((row) => ({
         id: row.id,
         title: row.title,
-        thumbnail: <Image src={mediaUrl(row.image)} alt="" fill sizes="48px" />,
+        // A piece whose image was deleted from Media shows the empty box
+        thumbnail: row.image && (
+          <Image src={mediaUrl(row.image)} alt="" fill sizes="48px" />
+        ),
       }))}
       onSave={async (ids) => {
         const result = await run(() => reorderGallery(kind, ids), "Order saved");

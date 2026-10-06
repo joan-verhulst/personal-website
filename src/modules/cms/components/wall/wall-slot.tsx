@@ -8,7 +8,7 @@ import {
   type SlotSize,
 } from "~/modules/cms/components/wall/wall-layouts";
 import type { WallItemRow, WallTagRow } from "~/modules/content/utils/rows";
-import { mediaUrl } from "~/modules/supabase/utils/media";
+import { mediaUrl } from "~/modules/media/utils/media-url";
 import { wallBackgrounds } from "~/modules/ui-ux/utils/wall-backgrounds";
 import cn from "~/utils/cn";
 
@@ -44,6 +44,10 @@ interface MediaProps {
  * the real card, with <WallCardPreview />.
  */
 const WallMedia = ({ item, sizes }: MediaProps) => {
+  // Its file was deleted from Media: the slot shows the background alone,
+  // and the row stays off the site until the item has another
+  if (!item.media) return null;
+
   const media =
     item.media_type === "video" ? (
       <video

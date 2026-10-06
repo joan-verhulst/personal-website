@@ -1,12 +1,19 @@
+import { createUpload, saveMediaDetails } from "~/modules/cms/actions/media";
 import { measureColor } from "~/modules/content/utils/measure-color";
-import { createBrowserSupabase } from "~/modules/supabase/utils/browser-client";
-import { MEDIA_BUCKET, mediaUrl } from "~/modules/supabase/utils/media";
+import {
+  isMediaType,
+  MAX_MEDIA_BYTES,
+} from "~/modules/media/utils/media-types";
+import { mediaUrl } from "~/modules/media/utils/media-url";
 
+/** A file in Media, as a form takes it: just uploaded, or picked there. */
 export interface UploadedMedia {
   // Path in the media bucket, what the database stores
   path: string;
   url: string;
   type: "image" | "video";
+  /** The name it was uploaded with, without its extension. */
+  name: string;
   width: number;
   height: number;
   hue: number;
@@ -16,37 +23,11 @@ export interface UploadedMedia {
 interface Options {
   // Longest side for images; bigger ones are scaled down before uploading
   maxSize?: number;
-  // Read the photo's hue and colorfulness, for the photo table
-  measureColor?: boolean;
 }
 
 // Below this, an image that's small enough is uploaded untouched
 const KEEP_ORIGINAL_BYTES = 1.5e6;
 const JPEG_QUALITY = 0.85;
-
-// What the site can show, with the extension each is stored under. The bucket
-// enforces the same list and size once supabase/migrations/0003_cms_hardening.sql
-// has been run; checking here gives a clear message before anything goes up
-const ALLOWED_TYPES: Record<string, string> = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-  "image/gif": "gif",
-  "image/avif": "avif",
-  "image/svg+xml": "svg",
-  "video/mp4": "mp4",
-  "video/webm": "webm",
-};
-const MAX_BYTES = 40 * 1024 * 1024;
-
-const isAllowed = (type: string) => Object.hasOwn(ALLOWED_TYPES, type);
-
-// The stored name is random, never the original: the bucket is public, so a
-// file's name shows in its URL to every visitor
-const randomName = () =>
-  Array.from(crypto.getRandomValues(new Uint8Array(12)), (byte) =>
-    byte.toString(36).padStart(2, "0"),
-  ).join("");
 
 const toBlob = (canvas: HTMLCanvasElement, type: string, quality?: number) =>
   new Promise<Blob>((resolve, reject) =>
@@ -148,22 +129,21 @@ const prepareImage = async (file: File, options: Options) => {
   const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
   const { width, height } = bitmap;
 
+  // Every image gets its hue and colorfulness, which the photo table sorts
+  // by: any file in Media can end up a photo. 48px is plenty for an average
   let hue = 0;
   let chroma = 0;
-  if (options.measureColor) {
-    // 48px is plenty for an average, like the import script
-    const scale = Math.min(1, 48 / Math.max(width, height));
-    const small = document.createElement("canvas");
-    small.width = Math.max(1, Math.round(width * scale));
-    small.height = Math.max(1, Math.round(height * scale));
-    const context = small.getContext("2d");
-    if (context) {
-      context.drawImage(bitmap, 0, 0, small.width, small.height);
-      ({ hue, chroma } = measureColor(
-        context.getImageData(0, 0, small.width, small.height).data,
-        4,
-      ));
-    }
+  const colorScale = Math.min(1, 48 / Math.max(width, height));
+  const small = document.createElement("canvas");
+  small.width = Math.max(1, Math.round(width * colorScale));
+  small.height = Math.max(1, Math.round(height * colorScale));
+  const smallContext = small.getContext("2d");
+  if (smallContext) {
+    smallContext.drawImage(bitmap, 0, 0, small.width, small.height);
+    ({ hue, chroma } = measureColor(
+      smallContext.getImageData(0, 0, small.width, small.height).data,
+      4,
+    ));
   }
 
   const maxSize = options.maxSize ?? 2560;
@@ -174,7 +154,7 @@ const prepareImage = async (file: File, options: Options) => {
     file.type === "image/gif" ||
     (scale === 1 &&
       file.size <= KEEP_ORIGINAL_BYTES &&
-      isAllowed(file.type));
+      isMediaType(file.type));
 
   if (keepOriginal) {
     bitmap.close();
@@ -221,7 +201,7 @@ export const uploadMedia = async (
     throw new Error(`${file.name} isn't an image or a video.`);
   }
   // A video goes up as it is, so a .mov can be turned away before it's read
-  if (isVideo && !isAllowed(file.type)) throw wrongType(file, file.type);
+  if (isVideo && !isMediaType(file.type)) throw wrongType(file, file.type);
 
   const prepared = isVideo
     ? { blob: file as Blob, type: file.type, ...(await videoSize(file)), hue: 0, chroma: 0 }
@@ -231,8 +211,8 @@ export const uploadMedia = async (
 
   // Checked on what goes up, not on the file that was picked: a large photo
   // has been scaled down by now
-  if (!isAllowed(prepared.type)) throw wrongType(file, prepared.type);
-  if (prepared.blob.size > MAX_BYTES) {
+  if (!isMediaType(prepared.type)) throw wrongType(file, prepared.type);
+  if (prepared.blob.size > MAX_MEDIA_BYTES) {
     const megabytes = (prepared.blob.size / (1024 * 1024)).toFixed(1);
     throw new Error(`${file.name} is ${megabytes} MB. The limit is 40 MB.`);
   }
@@ -241,25 +221,62 @@ export const uploadMedia = async (
     throw new Error(`Couldn't read the size of ${file.name}.`);
   }
 
-  const path = `${folder}/${randomName()}.${ALLOWED_TYPES[prepared.type]}`;
+  // The server picks the file's name and signs an upload for exactly this
+  // file, then the browser sends it to the bucket itself
+  const upload = await createUpload({
+    folder,
+    type: prepared.type,
+    size: prepared.blob.size,
+  });
+  if (upload.error || !upload.path || !upload.url) {
+    throw new Error(`Couldn't upload ${file.name}: ${upload.error ?? "no upload URL."}`);
+  }
+  const { path } = upload;
 
-  const { error } = await createBrowserSupabase()
-    .storage.from(MEDIA_BUCKET)
-    .upload(path, prepared.blob, {
-      contentType: prepared.type,
-      cacheControl: "31536000",
+  let response: Response;
+  try {
+    response = await fetch(upload.url, {
+      method: "PUT",
+      body: prepared.blob,
+      headers: upload.headers,
     });
-  if (error) throw new Error(`Couldn't upload ${file.name}: ${error.message}`);
+  } catch {
+    // A dropped connection, or a site the bucket's CORS policy doesn't list
+    throw new Error(`Couldn't upload ${file.name}. Check your connection and try again.`);
+  }
+  if (!response.ok) {
+    throw new Error(`Couldn't upload ${file.name}: the bucket answered ${response.status}.`);
+  }
 
-  return {
+  const media: UploadedMedia = {
     path,
     url: mediaUrl(path),
     type: isVideo ? "video" : "image",
+    name: file.name.replace(/\.[^.]+$/, "").slice(0, 200),
     width: prepared.width,
     height: prepared.height,
     hue: prepared.hue,
     chroma: prepared.chroma,
   };
+
+  // Media remembers the name, size and color, so the file can be picked for
+  // something else later. The upload worked either way, so a failure here
+  // only means Media shows the file without them
+  saveMediaDetails({
+    path,
+    name: media.name,
+    kind: media.type,
+    width: media.width,
+    height: media.height,
+    hue: media.hue,
+    chroma: media.chroma,
+  })
+    .then((result) => {
+      if (result.error) console.error(result.error);
+    })
+    .catch((error: unknown) => console.error(error));
+
+  return media;
 };
 
 /** Turns a file name into a title: "img-0027-pano edit.jpg" → "Img 0027 pano edit". */

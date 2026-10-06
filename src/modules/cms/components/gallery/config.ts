@@ -15,8 +15,6 @@ export interface GalleryConfig {
   noun: string;
   plural: string;
   description: string;
-  // Photos keep their hue and colorfulness, for the photo table
-  measureColor: boolean;
 }
 
 export const GALLERIES: Record<GalleryKind, GalleryConfig> = {
@@ -29,7 +27,6 @@ export const GALLERIES: Record<GalleryKind, GalleryConfig> = {
     plural: "photos",
     description:
       "The grid follows this order. The photo table scatters them and groups by color, which is measured on upload.",
-    measureColor: true,
   },
   artworks: {
     table: "artworks",
@@ -40,7 +37,6 @@ export const GALLERIES: Record<GalleryKind, GalleryConfig> = {
     plural: "artworks",
     description:
       "The slider follows this order. The first few load right away, so lead with the strongest pieces.",
-    measureColor: false,
   },
 };
 

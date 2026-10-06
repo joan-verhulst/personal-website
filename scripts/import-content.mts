@@ -1,7 +1,7 @@
 /**
- * Copies the content that used to be hard-coded into Supabase: uploads every
- * image and video from public/ to the media bucket and fills the tables.
- * Run once, after supabase/migrations/0001_cms.sql:
+ * Copies the content that used to be hard-coded into the CMS: uploads every
+ * image and video from public/ to the media bucket on R2 and fills the tables
+ * in Supabase. Run once, after supabase/migrations/0001_cms.sql:
  *
  *   node --env-file=.env.local scripts/import-content.mts
  *
@@ -11,6 +11,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { createClient } from "@supabase/supabase-js";
+import { AwsClient } from "aws4fetch";
 import sharp from "sharp";
 import { measureColor } from "../src/modules/content/utils/measure-color.ts";
 import type { WallItem } from "../src/modules/content/types.ts";
@@ -20,15 +21,27 @@ import { photographyProjects } from "./content/photography.ts";
 import { about, contact, covers } from "./content/site.ts";
 import { experiments, uiUxHighlights, uiUxWall } from "./content/ui-ux.ts";
 
-const BUCKET = "media";
 const PUBLIC_DIR = path.join(import.meta.dirname, "..", "public");
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const secretKey = process.env.SUPABASE_SECRET_KEY;
+const {
+  NEXT_PUBLIC_SUPABASE_URL: url,
+  SUPABASE_SECRET_KEY: secretKey,
+  R2_ACCOUNT_ID,
+  R2_ACCESS_KEY_ID,
+  R2_SECRET_ACCESS_KEY,
+  R2_BUCKET,
+} = process.env;
 
-if (!url || !secretKey) {
+if (
+  !url ||
+  !secretKey ||
+  !R2_ACCOUNT_ID ||
+  !R2_ACCESS_KEY_ID ||
+  !R2_SECRET_ACCESS_KEY ||
+  !R2_BUCKET
+) {
   console.error(
-    "Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SECRET_KEY in .env.local first.",
+    "Set NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SECRET_KEY and the R2_ variables in .env.local first.",
   );
   process.exit(1);
 }
@@ -37,6 +50,14 @@ if (!url || !secretKey) {
 const supabase = createClient(url, secretKey, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
+
+const r2 = new AwsClient({
+  accessKeyId: R2_ACCESS_KEY_ID,
+  secretAccessKey: R2_SECRET_ACCESS_KEY,
+  service: "s3",
+  region: "auto",
+});
+const BUCKET_URL = `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${R2_BUCKET}`;
 
 const fail = (what: string, error: { message: string } | null) => {
   if (!error) return;
@@ -84,14 +105,21 @@ const upload = async (publicPath: string) => {
   const extension = path.extname(publicPath).toLowerCase();
   const file = await readFile(path.join(PUBLIC_DIR, publicPath));
 
-  const { error } = await supabase.storage
-    .from(BUCKET)
-    .upload(storagePath, file, {
-      contentType: CONTENT_TYPES[extension] ?? "application/octet-stream",
-      cacheControl: "31536000",
-      upsert: true,
-    });
-  fail(`Uploading ${publicPath}`, error);
+  const response = await r2.fetch(
+    `${BUCKET_URL}/${storagePath.split("/").map(encodeURIComponent).join("/")}`,
+    {
+      method: "PUT",
+      body: file,
+      headers: {
+        "content-type": CONTENT_TYPES[extension] ?? "application/octet-stream",
+        "cache-control": "public, max-age=31536000, immutable",
+      },
+    },
+  );
+  fail(
+    `Uploading ${publicPath}`,
+    response.ok ? null : { message: `R2 answered ${response.status}` },
+  );
 
   console.log(`  ↑ ${storagePath} (${(file.length / 1e6).toFixed(1)} MB)`);
   uploaded.set(publicPath, storagePath);

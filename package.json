@@ -20,6 +20,7 @@
         "@supabase/supabase-js": "^2.117.2",
         "@t3-oss/env-nextjs": "^0.13.10",
         "@tanstack/react-table": "^8.21.3",
+        "aws4fetch": "^1.0.20",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "eyes-next": "^0.3.0",

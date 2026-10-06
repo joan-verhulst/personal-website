@@ -21,7 +21,7 @@ import {
 } from "~/modules/cms/components/records/new-record-dialog";
 import { useAction } from "~/modules/cms/hooks/use-action";
 import type { RecordRow } from "~/modules/content/utils/rows";
-import { mediaUrl } from "~/modules/supabase/utils/media";
+import { mediaUrl } from "~/modules/media/utils/media-url";
 
 // Two columns on a phone, and from there a card never gets wider than this
 const CARD_SIZES = "(min-width: 640px) 300px, 50vw";
@@ -41,7 +41,7 @@ const RecordCard = ({ row, isFirst, onEdit }: CardProps) => {
   const handleDelete = async () => {
     const isConfirmed = await confirm({
       title: `Delete "${row.title}"?`,
-      description: "Its cover is removed from storage too. This can't be undone.",
+      description: "Its cover stays in Media. This can't be undone.",
       confirmLabel: "Delete",
       tone: "danger",
     });
@@ -54,7 +54,15 @@ const RecordCard = ({ row, isFirst, onEdit }: CardProps) => {
       aspect="square"
       title={row.title}
       meta={`${row.artist} · ${row.type === "album" ? "Album" : "Song"}`}
-      badge={isFirst && <Badge tone="primary">Home widget</Badge>}
+      badge={
+        (isFirst || !row.cover) && (
+          <>
+            {isFirst && <Badge tone="primary">Home widget</Badge>}
+            {/* Deleted from Media: off the site until another is picked */}
+            {!row.cover && <Badge tone="warning">No cover</Badge>}
+          </>
+        )
+      }
       actions={
         <CardMenu
           label={`Actions for "${row.title}"`}
@@ -90,7 +98,10 @@ const RecordCard = ({ row, isFirst, onEdit }: CardProps) => {
         </CardMenu>
       }
     >
-      <Image src={mediaUrl(row.cover)} alt="" fill sizes={CARD_SIZES} />
+      {/* Left out, the card shows its grey box: the cover was deleted from Media */}
+      {row.cover && (
+        <Image src={mediaUrl(row.cover)} alt="" fill sizes={CARD_SIZES} />
+      )}
     </MediaCard>
   );
 };

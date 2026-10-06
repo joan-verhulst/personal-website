@@ -10,25 +10,24 @@ import { requireAdmin } from "~/modules/cms/utils/require-admin";
 import {
   type ActionResult,
   dbFailed,
-  discardFailedUpload,
   failed,
-  GONE,
   idSchema,
   idsSchema,
   insertWithId,
-  isInFolder,
+  missingMedia,
   nextSortOrder,
+  noRoomFor,
   parse,
   parseArgument,
   published,
+  rememberMedia,
   removeMedia,
-  removeReplaced,
-  removeUnused,
   saveOrder,
   updateOne,
 } from "~/modules/cms/utils/shared";
 import { slugify } from "~/modules/cms/utils/slugify";
-import { MEDIA_BUCKET } from "~/modules/supabase/utils/media";
+import { measureImage } from "~/modules/media/utils/measure-image";
+import { putMedia } from "~/modules/media/utils/storage";
 
 // Where covers live in the media bucket
 const FOLDER = "on-rotation";
@@ -198,10 +197,11 @@ export async function addRecord(
     return failed("That artwork is too large.");
   }
 
+  const full = await noRoomFor(body.byteLength);
+  if (full) return failed(full);
+
   const cover = `${FOLDER}/${slugify(parsed.output.title)}-${Date.now().toString(36)}.${COVER_TYPES[contentType]}`;
-  const upload = await supabase.storage
-    .from(MEDIA_BUCKET)
-    .upload(cover, body, { contentType, cacheControl: "31536000" });
+  const upload = await putMedia(cover, body, contentType);
   if (upload.error) return dbFailed(upload.error, "Couldn't save the artwork.");
 
   const result = await insertWithId(
@@ -216,8 +216,22 @@ export async function addRecord(
     "Couldn't add the record.",
   );
   if (result.error) {
+    // Fetched for this record alone, so it goes with it
     await removeMedia(supabase, [cover]);
     return failed(result.error);
+  }
+
+  // In Media like an upload, with its size and color, so it can be picked
+  // elsewhere too. A failure here leaves the record as it is
+  try {
+    await rememberMedia(supabase, {
+      path: cover,
+      name: parsed.output.title,
+      kind: "image",
+      ...(await measureImage(body)),
+    });
+  } catch (error) {
+    console.error(error);
   }
 
   return published();
@@ -246,8 +260,8 @@ export async function updateRecord(
 }
 
 /**
- * Swaps the cover for an uploaded one. The new file was uploaded just for
- * this, so it's removed again when the swap doesn't happen.
+ * Swaps the cover for one from Media: just uploaded or picked there. The old
+ * cover stays in Media.
  */
 export async function replaceRecordCover(
   id: string,
@@ -255,43 +269,23 @@ export async function replaceRecordCover(
 ): Promise<ActionResult> {
   const admin = await requireAdmin();
   if (admin.error) return failed(admin.error);
-  const { supabase } = admin;
-
-  const parsed = parseArgument(coverSchema, cover);
-  if (!parsed.success) return parsed.failure;
-  if (!isInFolder(parsed.output, FOLDER)) {
-    return failed("That file isn't a record's cover.");
-  }
-
-  const undo = async (failure: ActionResult) => {
-    await discardFailedUpload(supabase, FOLDER, parsed.output);
-    return failure;
-  };
 
   const parsedId = parseArgument(idSchema, id);
-  if (!parsedId.success) return undo(parsedId.failure);
+  if (!parsedId.success) return parsedId.failure;
+  const parsed = parseArgument(coverSchema, cover);
+  if (!parsed.success) return parsed.failure;
 
-  const { data: before, error: readError } = await supabase
-    .from("records")
-    .select("cover")
-    .eq("id", parsedId.output)
-    .maybeSingle();
-  if (readError) {
-    return undo(dbFailed(readError, "Couldn't replace the cover."));
-  }
-  if (!before) return undo(failed(GONE));
+  const missing = await missingMedia(parsed.output);
+  if (missing) return failed(missing);
 
   const failure = await updateOne(
-    supabase,
+    admin.supabase,
     "records",
     parsedId.output,
     { cover: parsed.output },
     "Couldn't replace the cover.",
   );
-  if (failure) return undo(failure);
-
-  await removeReplaced(supabase, before.cover, parsed.output);
-  return published();
+  return failure ?? published();
 }
 
 export async function reorderRecords(ids: string[]): Promise<ActionResult> {
@@ -305,23 +299,19 @@ export async function reorderRecords(ids: string[]): Promise<ActionResult> {
   return error ? dbFailed(error, "Couldn't save the order.") : published();
 }
 
-/** Deletes a record and its cover. */
+/** Deletes a record. Its cover stays in Media. */
 export async function deleteRecord(id: string): Promise<ActionResult> {
   const admin = await requireAdmin();
   if (admin.error) return failed(admin.error);
-  const { supabase } = admin;
 
   const parsedId = parseArgument(idSchema, id);
   if (!parsedId.success) return parsedId.failure;
 
-  const { data: deleted, error } = await supabase
+  const { error } = await admin.supabase
     .from("records")
     .delete()
-    .eq("id", parsedId.output)
-    .select("cover")
-    .maybeSingle();
+    .eq("id", parsedId.output);
   if (error) return dbFailed(error, "Couldn't delete the record.");
 
-  await removeUnused(supabase, [deleted?.cover]);
   return published();
 }

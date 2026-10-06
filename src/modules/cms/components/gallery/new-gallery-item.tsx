@@ -3,13 +3,12 @@
 import { Plus } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import {
-  addGalleryItem,
-  discardGalleryUpload,
-} from "~/modules/cms/actions/gallery";
+import { addGalleryItem } from "~/modules/cms/actions/gallery";
 import Button from "~/modules/cms/components/button";
 import FormDialog from "~/modules/cms/components/form-dialog";
-import BulkUploadButton from "~/modules/cms/components/gallery/bulk-upload-button";
+import BulkUploadButton, {
+  useAddPieces,
+} from "~/modules/cms/components/gallery/bulk-upload-button";
 import {
   capitalize,
   GALLERIES,
@@ -21,6 +20,7 @@ import {
   newGalleryItemSchema,
 } from "~/modules/cms/components/gallery/schema";
 import Input from "~/modules/cms/components/input";
+import { ChooseFromMedia } from "~/modules/cms/components/media-picker";
 import UploadArea from "~/modules/cms/components/upload-area";
 import UploadButton from "~/modules/cms/components/upload-button";
 import { useAction } from "~/modules/cms/hooks/use-action";
@@ -49,8 +49,8 @@ interface DialogProps {
 }
 
 /**
- * The dialog that uploads and adds a piece: one image with its details, or
- * several at once, which skips the form.
+ * The dialog that adds a piece: one image with its details, uploaded or
+ * picked from Media, or several at once, which skips the form.
  */
 export const NewGalleryDialog = ({
   kind,
@@ -63,6 +63,8 @@ export const NewGalleryDialog = ({
   const { run, isPending } = useAction();
   const [isUploading, setIsUploading] = useState(false);
   const [isBulkUploading, setIsBulkUploading] = useState(false);
+  const [isAddingPicks, setIsAddingPicks] = useState(false);
+  const pieces = useAddPieces(kind);
   // Read by uploads that finish after the dialog closed
   const openRef = useRef(open);
   useEffect(() => {
@@ -82,23 +84,15 @@ export const NewGalleryDialog = ({
   } = useForm({ schema: newGalleryItemSchema, defaultValues: EMPTY });
   const [image, title, description] = watch(["image", "title", "description"]);
 
-  // An upload that never became a piece only takes up space
-  const discard = (path: string) => {
-    if (path) discardGalleryUpload(kind, path).catch(() => undefined);
-  };
-
-  const close = (isAdded: boolean) => {
-    if (!isAdded) discard(getValues("image"));
+  // An upload that didn't become a piece stays in Media, for another time
+  const close = () => {
     onOpenChange(false);
     reset(EMPTY);
   };
 
-  const handleUploaded = (media: UploadedMedia, file: File) => {
-    if (!openRef.current) {
-      discard(media.path);
-      return;
-    }
-    discard(getValues("image"));
+  const handleUploaded = (media: UploadedMedia) => {
+    // The dialog closed while the file went up
+    if (!openRef.current) return;
     setValue("image", media.path);
     setValue("width", media.width);
     setValue("height", media.height);
@@ -106,10 +100,25 @@ export const NewGalleryDialog = ({
     setValue("chroma", media.chroma);
     clearErrors("image");
     if (!getValues("title").trim()) {
-      setValue("title", titleFromFile(file.name).slice(0, 200), {
+      setValue("title", titleFromFile(media.name).slice(0, 200), {
         shouldValidate: true,
       });
     }
+  };
+
+  // One file fills the form, like an upload. Several skip it: each becomes a
+  // piece of its own right away
+  const handlePicked = async (files: UploadedMedia[]) => {
+    if (files.length === 1) {
+      handleUploaded(files[0]);
+      return;
+    }
+    setIsAddingPicks(true);
+    pieces.start();
+    for (const file of files) await pieces.add(file);
+    setIsAddingPicks(false);
+    // Stays open when none made it, next to the error toasts
+    if (pieces.finish() > 0) close();
   };
 
   const onSubmit = handleSubmit(async (values) => {
@@ -118,22 +127,29 @@ export const NewGalleryDialog = ({
       `${capitalize(config.noun)} added`,
     );
     if (result?.fieldErrors) setErrors(result.fieldErrors);
-    if (result && !result.error) close(true);
+    if (result && !result.error) close();
   });
 
   const uploadProps = {
     folder: config.folder,
     accept: "image/*",
-    measureColor: config.measureColor,
     onUploaded: handleUploaded,
     onUploadingChange: setIsUploading,
     onError: (message: string) => toast.error(message),
   } as const;
 
+  const pickerProps = {
+    title: "Choose from Media",
+    accept: "image",
+    pickLabel: (count: number) =>
+      count > 1 ? `Add ${count} ${config.plural}` : "Use image",
+    onPick: handlePicked,
+  } as const;
+
   return (
     <FormDialog
       open={open}
-      onOpenChange={(isOpen) => (isOpen ? onOpenChange(true) : close(false))}
+      onOpenChange={(isOpen) => (isOpen ? onOpenChange(true) : close())}
       trigger={trigger}
       title={`New ${config.noun}`}
       description={`It's added at the end of the ${config.title.toLowerCase()} page.`}
@@ -141,9 +157,9 @@ export const NewGalleryDialog = ({
       submitLabel={`Add ${config.noun}`}
       // Several images going up count as a save too: closing mid-way would
       // hide how far along they are
-      isPending={isPending || isBulkUploading}
+      isPending={isPending || isBulkUploading || isAddingPicks}
       isSubmitDisabled={isUploading}
-      // Closing would drop what's filled in, and the uploaded image with it
+      // Closing would drop what's filled in. An uploaded image stays in Media
       isDirty={Boolean(image || title || description)}
     >
       {/* Stacked: the image first, then its details */}
@@ -161,31 +177,45 @@ export const NewGalleryDialog = ({
                 image={image}
                 alt={title || "The uploaded image"}
               />
-              <UploadButton {...uploadProps}>Replace image</UploadButton>
+              <div className="flex flex-wrap gap-2">
+                <UploadButton {...uploadProps}>Replace image</UploadButton>
+                <ChooseFromMedia {...pickerProps} disabled={isUploading}>
+                  Choose from Media
+                </ChooseFromMedia>
+              </div>
             </div>
           ) : (
             <UploadArea
               hasError={!!errors.image}
               hintId={`${formId}-image-hint`}
-              hint="Upload several to add them right away, each titled after its file. Large images are scaled down to 2560px."
+              hint="Upload or pick several to add them right away, each titled after its file. Large images are scaled down to 2560px."
             >
               <UploadButton
                 {...uploadProps}
-                disabled={isBulkUploading}
+                disabled={isBulkUploading || isAddingPicks}
                 aria-describedby={`${formId}-image-hint`}
               >
-                Choose image
+                Upload image
               </UploadButton>
               <BulkUploadButton
                 kind={kind}
-                disabled={isUploading || isPending}
+                disabled={isUploading || isPending || isAddingPicks}
                 aria-describedby={`${formId}-image-hint`}
                 onUploadingChange={setIsBulkUploading}
                 onDone={(added) => {
                   // Stays open when none made it, next to the error toasts
-                  if (added > 0) close(true);
+                  if (added > 0) close();
                 }}
               />
+              <ChooseFromMedia
+                {...pickerProps}
+                multiple
+                description={`Pick one to fill in its details, or several to add them all as ${config.plural}.`}
+                disabled={isUploading || isBulkUploading || isAddingPicks}
+                aria-describedby={`${formId}-image-hint`}
+              >
+                Choose from Media
+              </ChooseFromMedia>
             </UploadArea>
           )}
           {/* The size comes with the upload, so its errors belong here too */}

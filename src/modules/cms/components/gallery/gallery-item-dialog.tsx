@@ -11,6 +11,7 @@ import {
 import Badge from "~/modules/cms/components/badge";
 import Button from "~/modules/cms/components/button";
 import { useConfirm } from "~/modules/cms/components/confirm";
+import { Placeholder } from "~/modules/cms/components/empty-state";
 import FormDialog from "~/modules/cms/components/form-dialog";
 import {
   capitalize,
@@ -28,10 +29,12 @@ import {
   galleryDetailsSchema,
 } from "~/modules/cms/components/gallery/schema";
 import Input from "~/modules/cms/components/input";
+import { ChooseFromMedia } from "~/modules/cms/components/media-picker";
 import UploadButton from "~/modules/cms/components/upload-button";
 import { useAction } from "~/modules/cms/hooks/use-action";
 import { useForm } from "~/modules/cms/hooks/use-form";
 import { useUnsavedWarning } from "~/modules/cms/hooks/use-unsaved-warning";
+import type { UploadedMedia } from "~/modules/cms/utils/upload-media";
 
 interface Props {
   kind: GalleryKind;
@@ -58,9 +61,25 @@ const GalleryItemDialog = ({ kind, row, open, onOpenChange }: Props) => {
   const image = useAction();
   const remove = useAction();
   const [isUploading, setIsUploading] = useState(false);
-  // A new image going up or being saved: deleting or closing now would leave
-  // the uploaded file behind in storage
+  // A new image going up or being saved: closing now would hide whether it
+  // worked
   const isReplacing = isUploading || image.isPending;
+
+  // Uploaded or picked from Media, the new image replaces the old one, which
+  // stays in Media
+  const replaceImage = async (media: UploadedMedia) => {
+    await image.run(
+      () =>
+        replaceGalleryImage(kind, row.id, {
+          image: media.path,
+          width: media.width,
+          height: media.height,
+          hue: media.hue,
+          chroma: media.chroma,
+        }),
+      "Image replaced",
+    );
+  };
 
   const {
     register,
@@ -137,41 +156,46 @@ const GalleryItemDialog = ({ kind, row, open, onOpenChange }: Props) => {
         <Input.Root>
           <Input.Label as="span">Image</Input.Label>
           {/* The whole piece shows, so nothing is hidden while editing it */}
-          <GalleryPreview image={row.image} alt={row.title} priority>
-            {row.is_cover && (
-              <div className="absolute top-2 left-2">
-                <Badge tone="primary">
-                  <Star aria-hidden className="fill-current" />
-                  Cover
-                </Badge>
-              </div>
-            )}
-          </GalleryPreview>
-          <UploadButton
-            folder={config.folder}
-            accept="image/*"
-            measureColor={config.measureColor}
-            aria-describedby={`${formId}-image-hint`}
-            className="mt-0.5"
-            onUploaded={async (media) => {
-              await image.run(
-                () =>
-                  replaceGalleryImage(kind, row.id, {
-                    image: media.path,
-                    width: media.width,
-                    height: media.height,
-                    hue: media.hue,
-                    chroma: media.chroma,
-                  }),
-                "Image replaced",
-              );
-            }}
-            onError={(message) => toast.error(message)}
-            onUploadingChange={setIsUploading}
-            disabled={image.isPending || remove.isPending}
-          >
-            Replace image
-          </UploadButton>
+          {row.image ? (
+            <GalleryPreview image={row.image} alt={row.title} priority>
+              {row.is_cover && (
+                <div className="absolute top-2 left-2">
+                  <Badge tone="primary">
+                    <Star aria-hidden className="fill-current" />
+                    Cover
+                  </Badge>
+                </div>
+              )}
+            </GalleryPreview>
+          ) : (
+            <Placeholder>
+              Its image was deleted from Media, so it's off the site until you
+              pick another.
+            </Placeholder>
+          )}
+          <div className="mt-0.5 flex flex-wrap gap-2">
+            <UploadButton
+              folder={config.folder}
+              accept="image/*"
+              aria-describedby={`${formId}-image-hint`}
+              onUploaded={replaceImage}
+              onError={(message) => toast.error(message)}
+              onUploadingChange={setIsUploading}
+              disabled={image.isPending || remove.isPending}
+            >
+              {row.image ? "Replace image" : "Upload image"}
+            </UploadButton>
+            <ChooseFromMedia
+              title="Choose from Media"
+              accept="image"
+              pickLabel={() => "Use image"}
+              onPick={([media]) => replaceImage(media)}
+              aria-describedby={`${formId}-image-hint`}
+              disabled={isUploading || image.isPending || remove.isPending}
+            >
+              Choose from Media
+            </ChooseFromMedia>
+          </div>
           <Input.Hint id={`${formId}-image-hint`}>
             <span className="tabular-nums">{describeSize(row)}.</span>{" "}
             Replacing it saves right away and keeps the title, place and cover.

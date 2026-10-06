@@ -46,7 +46,7 @@ export const describeSize = (row: Pick<GalleryRow, "width" | "height">) =>
 
 /** What deleting a piece does, for the confirm dialog. */
 export const deleteWarning = (row: Pick<GalleryRow, "is_cover">) =>
-  `The image is removed from storage too. This can't be undone.${
+  `Its image stays in Media. This can't be undone.${
     row.is_cover
       ? " It's the cover, so the home widget shows the first one in the order until you pick another."
       : ""
@@ -85,11 +85,17 @@ const GalleryCard = ({ kind, row, onEdit }: CardProps) => {
       title={row.title}
       meta={describeSize(row)}
       badge={
-        row.is_cover && (
-          <Badge tone="primary">
-            <Star aria-hidden className="fill-current" />
-            Cover
-          </Badge>
+        (row.is_cover || !row.image) && (
+          <>
+            {row.is_cover && (
+              <Badge tone="primary">
+                <Star aria-hidden className="fill-current" />
+                Cover
+              </Badge>
+            )}
+            {/* Off the site until another image is picked */}
+            {!row.image && <Badge tone="warning">No image</Badge>}
+          </>
         )
       }
       actions={
@@ -134,8 +140,9 @@ const GalleryCard = ({ kind, row, onEdit }: CardProps) => {
         </CardMenu>
       }
     >
-      {/* The card's button already names it, so the image stays silent */}
-      <GalleryImage image={row.image} alt="" sizes={CARD_SIZES} />
+      {/* The card's button already names it, so the image stays silent.
+          Without one the card shows its grey box: it was deleted from Media */}
+      {row.image && <GalleryImage image={row.image} alt="" sizes={CARD_SIZES} />}
     </MediaCard>
   );
 };

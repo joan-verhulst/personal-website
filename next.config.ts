@@ -5,11 +5,11 @@ const config: NextConfig = {
   images: {
     // 90 keeps text in UI screenshots sharp
     qualities: [75, 90],
-    // Media from the CMS lives in the Supabase storage bucket
-    remotePatterns: process.env.NEXT_PUBLIC_SUPABASE_URL
+    // Media from the CMS lives in the media bucket on R2, on its own domain
+    remotePatterns: process.env.NEXT_PUBLIC_MEDIA_URL
       ? [
           new URL(
-            `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/media/**`,
+            `${process.env.NEXT_PUBLIC_MEDIA_URL.replace(/\/+$/, "")}/**`,
           ),
         ]
       : [],

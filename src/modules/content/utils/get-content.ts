@@ -16,7 +16,7 @@ import type {
   WallListRow,
   WallTagRow,
 } from "~/modules/content/utils/rows";
-import { mediaUrl, optionalMediaUrl } from "~/modules/supabase/utils/media";
+import { mediaUrl, optionalMediaUrl } from "~/modules/media/utils/media-url";
 import { createPublicClient } from "~/modules/supabase/utils/public-client";
 
 // A failed read should fail the build or request loudly, not render a site
@@ -52,8 +52,14 @@ const sizeOf = (row: { width: number; height: number }) =>
     ? { width: row.width, height: row.height }
     : { width: 4, height: 3 };
 
+// A row whose file was deleted from Media has nothing to show, so it stays
+// off the site until another file is picked
+const hasImage = <Row extends { image: string | null }>(
+  row: Row,
+): row is Row & { image: string } => row.image !== null;
+
 const toWallItem = (
-  row: WallItemRow,
+  row: WallItemRow & { media: string },
   tags: Map<string, WallTag>,
 ): WallItem => ({
   id: row.id,
@@ -104,8 +110,8 @@ export const getContent = cache(async (): Promise<Content> => {
   if (site.error) throw new Error(`Couldn't read site: ${site.error.message}`);
   const siteRow = site.data as SiteRow | null;
 
-  const photoRows = rowsOf<PhotoRow>("photos", photos);
-  const artworkRows = rowsOf<ArtworkRow>("artworks", artworks);
+  const photoRows = rowsOf<PhotoRow>("photos", photos).filter(hasImage);
+  const artworkRows = rowsOf<ArtworkRow>("artworks", artworks).filter(hasImage);
 
   const tagsById = new Map(
     rowsOf<WallTagRow>("wall_tags", tags).map((tag) => [
@@ -117,11 +123,14 @@ export const getContent = cache(async (): Promise<Content> => {
       },
     ]),
   );
+  // An item without its file counts as missing: its row of the wall stays off
+  // the site, like one with an empty slot, and the lists skip it
   const itemsById = new Map(
-    rowsOf<WallItemRow>("wall_items", items).map((row) => [
-      row.id,
-      toWallItem(row, tagsById),
-    ]),
+    rowsOf<WallItemRow>("wall_items", items).flatMap((row) =>
+      row.media === null
+        ? []
+        : [[row.id, toWallItem({ ...row, media: row.media }, tagsById)] as const],
+    ),
   );
   const pick = (ids: string[]) =>
     ids.flatMap((id) => itemsById.get(id) ?? []);
@@ -144,7 +153,7 @@ export const getContent = cache(async (): Promise<Content> => {
     ]),
   );
 
-  const coverOf = (rows: (PhotoRow | ArtworkRow)[]) => {
+  const coverOf = (rows: ((PhotoRow | ArtworkRow) & { image: string })[]) => {
     const cover = rows.find((row) => row.is_cover) ?? rows[0];
     return cover ? mediaUrl(cover.image) : undefined;
   };
@@ -184,14 +193,23 @@ export const getContent = cache(async (): Promise<Content> => {
       image: mediaUrl(row.image),
       ...sizeOf(row),
     })),
-    records: rowsOf<RecordRow>("records", records).map((row) => ({
-      id: row.id,
-      type: row.type,
-      title: row.title,
-      artist: row.artist,
-      cover: mediaUrl(row.cover),
-      favoriteSong: { appleId: Number(row.apple_id), title: row.favorite_title },
-    })),
+    records: rowsOf<RecordRow>("records", records).flatMap((row) =>
+      row.cover === null
+        ? []
+        : [
+            {
+              id: row.id,
+              type: row.type,
+              title: row.title,
+              artist: row.artist,
+              cover: mediaUrl(row.cover),
+              favoriteSong: {
+                appleId: Number(row.apple_id),
+                title: row.favorite_title,
+              },
+            },
+          ],
+    ),
     wall,
     experiments: pick(listsById.get("experiments") ?? []),
     highlights: pick(listsById.get("highlights") ?? []).filter(

@@ -13,7 +13,6 @@ interface Props {
   folder: string;
   accept: string;
   multiple?: boolean;
-  measureColor?: boolean;
   maxSize?: number;
   variant?: VariantProps<typeof buttonVariants>["variant"];
   size?: "default" | "sm";
@@ -21,8 +20,8 @@ interface Props {
   className?: string;
   "aria-describedby"?: string;
   children: ReactNode;
-  // Called once per file, after it's in storage
-  onUploaded: (media: UploadedMedia, file: File) => Promise<void> | void;
+  // Called once per file, after it's in Media
+  onUploaded: (media: UploadedMedia) => Promise<void> | void;
   onError?: (message: string) => void;
   // True from the first file until the last one is done, so a form can wait
   onUploadingChange?: (isUploading: boolean) => void;
@@ -33,7 +32,6 @@ const UploadButton = ({
   folder,
   accept,
   multiple,
-  measureColor,
   maxSize,
   variant = "tertiary",
   size = "default",
@@ -58,8 +56,8 @@ const UploadButton = ({
         list.length > 1 ? `Uploading ${index + 1} of ${list.length}…` : "Uploading…",
       );
       try {
-        const media = await uploadMedia(file, folder, { measureColor, maxSize });
-        await onUploaded(media, file);
+        const media = await uploadMedia(file, folder, { maxSize });
+        await onUploaded(media);
       } catch (error) {
         onError?.(error instanceof Error ? error.message : "Upload failed.");
       }

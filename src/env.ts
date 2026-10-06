@@ -32,6 +32,12 @@ const env = createEnv({
             v.string('Please set NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY.'),
             v.nonEmpty('Please set NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY.'),
         ),
+        // Where the media bucket on R2 is served, its custom domain, like
+        // https://media.example.com
+        NEXT_PUBLIC_MEDIA_URL: v.pipe(
+            v.string('Please set NEXT_PUBLIC_MEDIA_URL.'),
+            v.url('The media url is badly formatted.'),
+        ),
     },
     // Since Next.js 13.4.4 or later, only client variables need to be specified.
     experimental__runtimeEnv: {
@@ -46,6 +52,7 @@ const env = createEnv({
         NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
         NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
             process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+        NEXT_PUBLIC_MEDIA_URL: process.env.NEXT_PUBLIC_MEDIA_URL,
     },
 });
 

@@ -10,6 +10,7 @@ import Button from "~/modules/cms/components/button";
 import FormSection from "~/modules/cms/components/form-section";
 import Header from "~/modules/cms/components/header";
 import Input from "~/modules/cms/components/input";
+import { ChooseFromMedia } from "~/modules/cms/components/media-picker";
 import Page from "~/modules/cms/components/page";
 import SaveActions from "~/modules/cms/components/shell/save-actions";
 import UploadArea from "~/modules/cms/components/upload-area";
@@ -19,7 +20,7 @@ import { useForm } from "~/modules/cms/hooks/use-form";
 import { useUnsavedWarning } from "~/modules/cms/hooks/use-unsaved-warning";
 import { aboutSchema } from "~/modules/cms/schema/site";
 import type { SiteRow } from "~/modules/content/utils/rows";
-import { optionalMediaUrl } from "~/modules/supabase/utils/media";
+import { optionalMediaUrl } from "~/modules/media/utils/media-url";
 
 const FORM_ID = "about-form";
 
@@ -59,16 +60,27 @@ const AboutForm = ({ site }: { site: SiteRow }) => {
   // Leaving the page would drop unsaved changes, so it asks first
   useUnsavedWarning(isDirty);
 
+  // Uploaded or picked from Media. A photo that's replaced stays in Media
   const uploadButton = (
-    <UploadButton
-      folder="about"
-      accept="image/*"
-      onUploaded={(media) => setImage(media.path)}
-      onUploadingChange={setIsUploading}
-      onError={(message) => toast.error(message)}
-    >
-      {image ? "Replace photo" : "Upload photo"}
-    </UploadButton>
+    <>
+      <UploadButton
+        folder="about"
+        accept="image/*"
+        onUploaded={(media) => setImage(media.path)}
+        onUploadingChange={setIsUploading}
+        onError={(message) => toast.error(message)}
+      >
+        {image ? "Replace photo" : "Upload photo"}
+      </UploadButton>
+      <ChooseFromMedia
+        title="Choose a photo from Media"
+        accept="image"
+        pickLabel={() => "Use photo"}
+        onPick={([media]) => setImage(media.path)}
+      >
+        Choose from Media
+      </ChooseFromMedia>
+    </>
   );
 
   const onSubmit = handleSubmit(async (values) => {

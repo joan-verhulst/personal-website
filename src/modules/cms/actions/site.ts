@@ -4,13 +4,11 @@ import { aboutSchema, contactSchema } from "~/modules/cms/schema/site";
 import { requireAdmin } from "~/modules/cms/utils/require-admin";
 import {
   type ActionResult,
-  dbFailed,
   failed,
-  isInFolder,
+  missingMedia,
   orNull,
   parse,
   published,
-  removeReplaced,
   updateOne,
 } from "~/modules/cms/utils/shared";
 
@@ -27,23 +25,10 @@ export async function saveAbout(input: unknown): Promise<ActionResult> {
   if (!parsed.success) return parsed.failure;
   const about = parsed.output;
 
-  const { data: before, error: readError } = await supabase
-    .from("site")
-    .select("about_image")
-    .eq("id", 1)
-    .maybeSingle();
-  // The database's own message means nothing on the form, keep it for the logs
-  if (readError) return dbFailed(readError, "Couldn't save the about page.");
-  if (!before) return failed(NO_SITE_ROW);
-
-  // A new photo comes from this form's upload button. The one that's there
-  // may sit anywhere: the import put it at the top of the bucket
-  if (
-    about.image &&
-    about.image !== before.about_image &&
-    !isInFolder(about.image, "about")
-  ) {
-    return failed("Upload the photo again.");
+  // Uploaded here or picked from Media, the photo has to be in the bucket
+  if (about.image) {
+    const missing = await missingMedia(about.image);
+    if (missing) return failed(missing);
   }
 
   const failure = await updateOne(
@@ -62,10 +47,8 @@ export async function saveAbout(input: unknown): Promise<ActionResult> {
     "Couldn't save the about page.",
     NO_SITE_ROW,
   );
-  if (failure) return failure;
-
-  await removeReplaced(supabase, before.about_image, about.image);
-  return published();
+  // A photo that was replaced or removed stays in Media
+  return failure ?? published();
 }
 
 export async function saveContact(input: unknown): Promise<ActionResult> {

@@ -16,6 +16,7 @@ import Header from "~/modules/cms/components/header";
 import Input from "~/modules/cms/components/input";
 import { TagDot } from "~/modules/cms/components/item-card";
 import { CardMenu } from "~/modules/cms/components/media-card";
+import { ChooseFromMedia } from "~/modules/cms/components/media-picker";
 import { panelClass } from "~/modules/cms/components/panel";
 import {
   DropdownMenuItem,
@@ -40,7 +41,7 @@ import { useAction } from "~/modules/cms/hooks/use-action";
 import { useForm } from "~/modules/cms/hooks/use-form";
 import { wallTagSchema } from "~/modules/cms/schema/wall";
 import type { WallTagRow } from "~/modules/content/utils/rows";
-import { optionalMediaUrl } from "~/modules/supabase/utils/media";
+import { optionalMediaUrl } from "~/modules/media/utils/media-url";
 import WallTag from "~/modules/ui-ux/components/wall-tag";
 import { wallBackgrounds } from "~/modules/ui-ux/utils/wall-backgrounds";
 import cn from "~/utils/cn";
@@ -266,6 +267,16 @@ const TagDialog = ({ tag, usage, open, onOpenChange }: TagDialogProps) => {
             >
               {logo ? "Replace" : "Upload SVG"}
             </UploadButton>
+            <ChooseFromMedia
+              title="Choose a logo from Media"
+              accept="svg"
+              pickLabel={() => "Use logo"}
+              onPick={([media]) =>
+                setValue("logo", media.path, { shouldDirty: true })
+              }
+            >
+              Choose from Media
+            </ChooseFromMedia>
             {logo && (
               <Button
                 variant="ghost"

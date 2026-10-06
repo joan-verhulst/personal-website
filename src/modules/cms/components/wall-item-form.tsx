@@ -8,7 +8,7 @@ import {
   Video,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import {
   type Control,
   Controller,
@@ -19,7 +19,6 @@ import {
 import { toast } from "sonner";
 import {
   deleteWallItem,
-  discardWallUpload,
   saveWallItem,
 } from "~/modules/cms/actions/wall";
 import AdminLink from "~/modules/cms/components/admin-link";
@@ -30,6 +29,7 @@ import { Placeholder } from "~/modules/cms/components/empty-state";
 import FormSection from "~/modules/cms/components/form-section";
 import Header, { textLinkClass } from "~/modules/cms/components/header";
 import Input, { useInputField } from "~/modules/cms/components/input";
+import { ChooseFromMedia } from "~/modules/cms/components/media-picker";
 import MediaThumb from "~/modules/cms/components/media-thumb";
 import Page from "~/modules/cms/components/page";
 import Panel from "~/modules/cms/components/panel";
@@ -70,7 +70,8 @@ const fromRow = (row: WallItemRow): WallItemValues => ({
   title: row.title,
   tagId: row.tag_id ?? "",
   mediaType: row.media_type,
-  media: row.media,
+  // Empty when its file was deleted from Media, which asks for another
+  media: row.media ?? "",
   width: row.width,
   height: row.height,
   background: row.background,
@@ -118,37 +119,28 @@ export const describeDelete = (usage: string[]) => {
   return `It's used in: ${places.join(", ")}, and comes off there too.${wallNote}`;
 };
 
-/** Removes an upload no item ended up using. A failure only leaves clutter. */
-const discardUpload = (path: string) => {
-  if (path) discardWallUpload(path).catch(() => undefined);
-};
-
 // ── Fields ────────────────────────────────────────────────────────────────────
 
 type WallItemControl = Control<WallItemValues, unknown, WallItemOutput>;
 
-interface MediaUploadButtonProps {
+interface MediaButtonsProps {
   hasMedia: boolean;
   setValue: UseFormSetValue<WallItemValues>;
-  /**
-   * Runs before the form takes a new upload, while it still holds the old
-   * media. Returning false drops the upload, like when the page was left.
-   */
-  onBeforeUse: (media: UploadedMedia) => boolean;
   /** True while a file goes up, so Save can wait for it. */
   onUploadingChange: (isUploading: boolean) => void;
 }
 
-/** Uploads a screenshot or reel and fills in its type and size. */
-const MediaUploadButton = ({
+/**
+ * Uploads a screenshot or reel, or picks one from Media, and fills in its
+ * type and size. A file that was replaced stays in Media.
+ */
+const MediaButtons = ({
   hasMedia,
   setValue,
-  onBeforeUse,
   onUploadingChange,
-}: MediaUploadButtonProps) => {
+}: MediaButtonsProps) => {
   // Revalidates, so an "upload first" error clears once there's media
-  const handleUploaded = (media: UploadedMedia) => {
-    if (!onBeforeUse(media)) return;
+  const handleMedia = (media: UploadedMedia) => {
     const options = { shouldDirty: true, shouldValidate: true };
     setValue("mediaType", media.type, options);
     setValue("width", media.width, options);
@@ -157,16 +149,26 @@ const MediaUploadButton = ({
   };
 
   return (
-    <UploadButton
-      folder="work"
-      accept="image/*,video/mp4,video/webm"
-      maxSize={3200}
-      onUploaded={handleUploaded}
-      onUploadingChange={onUploadingChange}
-      onError={(message) => toast.error(message)}
-    >
-      {hasMedia ? "Replace" : "Upload"}
-    </UploadButton>
+    <>
+      <UploadButton
+        folder="work"
+        accept="image/*,video/mp4,video/webm"
+        maxSize={3200}
+        onUploaded={handleMedia}
+        onUploadingChange={onUploadingChange}
+        onError={(message) => toast.error(message)}
+      >
+        {hasMedia ? "Replace" : "Upload"}
+      </UploadButton>
+      <ChooseFromMedia
+        title="Choose from Media"
+        accept="any"
+        pickLabel={() => "Use file"}
+        onPick={([media]) => handleMedia(media)}
+      >
+        Choose from Media
+      </ChooseFromMedia>
+    </>
   );
 };
 
@@ -327,33 +329,6 @@ const WallItemForm = ({ item, tags, usage = [], list }: Props) => {
     defaultValues: item ? fromRow(item) : emptyWallItem(),
   });
 
-  // The upload this form holds that no save has kept yet
-  const unsavedUpload = useRef("");
-  const isMounted = useRef(false);
-
-  // Leaving without saving would strand that upload in storage. The server
-  // refuses to remove a file an item uses, so saved media is never at risk
-  useEffect(() => {
-    isMounted.current = true;
-    return () => {
-      isMounted.current = false;
-      discardUpload(unsavedUpload.current);
-      unsavedUpload.current = "";
-    };
-  }, []);
-
-  const handleBeforeUse = (upload: UploadedMedia) => {
-    // The page was left while the file went up, so nothing will use it
-    if (!isMounted.current) {
-      discardUpload(upload.path);
-      return false;
-    }
-    // A second upload before saving makes the first one unused
-    discardUpload(unsavedUpload.current);
-    unsavedUpload.current = upload.path;
-    return true;
-  };
-
   // Leaving the page would drop unsaved changes, so it asks first
   useUnsavedWarning(isDirty);
 
@@ -394,7 +369,6 @@ const WallItemForm = ({ item, tags, usage = [], list }: Props) => {
         }
         if (!result?.id) return;
         if (result.listError) toast.error(result.listError);
-        unsavedUpload.current = "";
         // Turns Save off, so a second click can't create the item twice
         setIsCreated(true);
         // Nothing is unsaved any more, so leaving doesn't ask
@@ -411,7 +385,6 @@ const WallItemForm = ({ item, tags, usage = [], list }: Props) => {
       const result = await run(() => saveWallItem(item.id, input), "Item saved");
       if (result?.fieldErrors) setErrors(result.fieldErrors);
       else if (result && !result.error) {
-        unsavedUpload.current = "";
         // What was saved is the new starting point, so Save turns off again
         reset(input);
       }
@@ -541,10 +514,9 @@ const WallItemForm = ({ item, tags, usage = [], list }: Props) => {
                 <p className="font-medium text-neutral-950 text-xs">
                   {describeMedia(values)}
                 </p>
-                <MediaUploadButton
+                <MediaButtons
                   hasMedia
                   setValue={setValue}
-                  onBeforeUse={handleBeforeUse}
                   onUploadingChange={setIsUploading}
                 />
               </div>
@@ -554,11 +526,17 @@ const WallItemForm = ({ item, tags, usage = [], list }: Props) => {
               )}
             </>
           ) : (
-            <UploadArea hint="Images, MP4 or WebM" hasError={!!errors.media}>
-              <MediaUploadButton
+            <UploadArea
+              hint={
+                item
+                  ? "Its file was deleted from Media, so the item is off the site. Upload or pick another, then save."
+                  : "Images, MP4 or WebM"
+              }
+              hasError={!!errors.media}
+            >
+              <MediaButtons
                 hasMedia={false}
                 setValue={setValue}
-                onBeforeUse={handleBeforeUse}
                 onUploadingChange={setIsUploading}
               />
             </UploadArea>

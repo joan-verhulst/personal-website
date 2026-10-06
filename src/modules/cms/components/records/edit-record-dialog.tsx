@@ -13,6 +13,7 @@ import Button from "~/modules/cms/components/button";
 import { useConfirm } from "~/modules/cms/components/confirm";
 import FormDialog from "~/modules/cms/components/form-dialog";
 import Input from "~/modules/cms/components/input";
+import { ChooseFromMedia } from "~/modules/cms/components/media-picker";
 import {
   FavoriteSongFields,
   RecordDetailsFields,
@@ -22,8 +23,9 @@ import {
 import UploadButton from "~/modules/cms/components/upload-button";
 import { useAction } from "~/modules/cms/hooks/use-action";
 import { useUnsavedWarning } from "~/modules/cms/hooks/use-unsaved-warning";
+import type { UploadedMedia } from "~/modules/cms/utils/upload-media";
 import type { RecordRow } from "~/modules/content/utils/rows";
-import { mediaUrl } from "~/modules/supabase/utils/media";
+import { mediaUrl } from "~/modules/media/utils/media-url";
 
 interface Props {
   row: RecordRow;
@@ -58,6 +60,12 @@ const EditRecordDialog = ({ row, isFirst, open, onOpenChange }: Props) => {
 
   const isBusy = remove.isPending || isUploading || cover.isPending;
 
+  // Uploaded or picked from Media, it saves right away
+  const replaceCover = (media: UploadedMedia) =>
+    cover
+      .run(() => replaceRecordCover(row.id, media.path), "Cover replaced")
+      .then(() => undefined);
+
   const handleOpenChange = (isOpen: boolean) => {
     // A delete or a new cover mid-way would lose its result with the dialog
     if (!isOpen && isBusy) return;
@@ -73,7 +81,7 @@ const EditRecordDialog = ({ row, isFirst, open, onOpenChange }: Props) => {
   const handleDelete = async () => {
     const isConfirmed = await confirm({
       title: `Delete "${row.title}"?`,
-      description: "Its cover is removed from storage too. This can't be undone.",
+      description: "Its cover stays in Media. This can't be undone.",
       confirmLabel: "Delete",
       tone: "danger",
     });
@@ -116,37 +124,45 @@ const EditRecordDialog = ({ row, isFirst, open, onOpenChange }: Props) => {
         <Input.Root>
           <Input.Label as="span">Cover</Input.Label>
           <div className="relative size-28 overflow-hidden rounded-xl border border-neutral-950/10 bg-neutral-100">
-            <Image
-              src={mediaUrl(row.cover)}
-              alt={`Cover of ${row.title}`}
-              fill
-              sizes="112px"
-              className="object-cover"
-            />
+            {/* Without one, its cover was deleted from Media */}
+            {row.cover && (
+              <Image
+                src={mediaUrl(row.cover)}
+                alt={`Cover of ${row.title}`}
+                fill
+                sizes="112px"
+                className="object-cover"
+              />
+            )}
           </div>
-          <UploadButton
-            folder="on-rotation"
-            accept="image/*"
-            maxSize={1200}
-            aria-describedby={`${id}-cover-hint`}
-            className="mt-0.5"
-            disabled={isPending || remove.isPending}
-            onUploadingChange={setIsUploading}
-            onUploaded={(media) =>
-              cover
-                .run(
-                  () => replaceRecordCover(row.id, media.path),
-                  "Cover replaced",
-                )
-                .then(() => undefined)
-            }
-            onError={(message) => toast.error(message)}
-          >
-            Replace cover
-          </UploadButton>
+          <div className="mt-0.5 flex flex-wrap gap-2">
+            <UploadButton
+              folder="on-rotation"
+              accept="image/*"
+              maxSize={1200}
+              aria-describedby={`${id}-cover-hint`}
+              disabled={isPending || remove.isPending}
+              onUploadingChange={setIsUploading}
+              onUploaded={replaceCover}
+              onError={(message) => toast.error(message)}
+            >
+              {row.cover ? "Replace cover" : "Upload cover"}
+            </UploadButton>
+            <ChooseFromMedia
+              title="Choose from Media"
+              accept="image"
+              pickLabel={() => "Use as cover"}
+              onPick={([media]) => replaceCover(media)}
+              aria-describedby={`${id}-cover-hint`}
+              disabled={isBusy || isPending}
+            >
+              Choose from Media
+            </ChooseFromMedia>
+          </div>
           <Input.Hint id={`${id}-cover-hint`}>
-            Square, from Apple Music when the record was added. Replacing it
-            saves right away.
+            {row.cover
+              ? "Square, from Apple Music when the record was added. Replacing it saves right away, and the old one stays in Media."
+              : "Its cover was deleted from Media, so the record is off the site until it has another."}
           </Input.Hint>
         </Input.Root>
         <RecordDetailsFields form={form} idPrefix={id} />

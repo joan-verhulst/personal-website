@@ -1,7 +1,8 @@
 import type { WallBackground, WallLayout } from "~/modules/content/types";
 
 // Rows as they're stored, see supabase/migrations. Media columns hold paths in
-// the media bucket.
+// the media bucket. One is null when its file was deleted from Media: the row
+// stays off the site until another file is picked.
 
 export interface SiteRow {
   id: 1;
@@ -21,7 +22,7 @@ export interface PhotoRow {
   id: string;
   title: string;
   description: string | null;
-  image: string;
+  image: string | null;
   width: number;
   height: number;
   hue: number;
@@ -34,7 +35,7 @@ export interface ArtworkRow {
   id: string;
   title: string;
   description: string | null;
-  image: string;
+  image: string | null;
   width: number;
   height: number;
   sort_order: number;
@@ -46,7 +47,7 @@ export interface RecordRow {
   type: "album" | "song";
   title: string;
   artist: string;
-  cover: string;
+  cover: string | null;
   apple_id: number;
   favorite_title: string;
   sort_order: number;
@@ -64,7 +65,7 @@ export interface WallItemRow {
   title: string;
   tag_id: string | null;
   media_type: "image" | "video";
-  media: string;
+  media: string | null;
   width: number;
   height: number;
   background: WallBackground;

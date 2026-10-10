@@ -3,7 +3,7 @@
 import { X } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
-import { useWatch } from "react-hook-form";
+import { type FieldError, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { saveAbout } from "~/modules/cms/actions/site";
 import Button from "~/modules/cms/components/button";
@@ -21,14 +21,108 @@ import { useUnsavedWarning } from "~/modules/cms/hooks/use-unsaved-warning";
 import { aboutSchema } from "~/modules/cms/schema/site";
 import type { SiteRow } from "~/modules/content/utils/rows";
 import { optionalMediaUrl } from "~/modules/media/utils/media-url";
+import cn from "~/utils/cn";
 
 const FORM_ID = "about-form";
+
+interface PhotoSectionProps {
+  title: string;
+  description: string;
+  /** The shape the site crops it to, as an aspect class. */
+  aspect: string;
+  path: string | null;
+  isDirty?: boolean;
+  error?: FieldError;
+  onChange: (path: string | null) => void;
+  onUploadingChange: (isUploading: boolean) => void;
+}
+
+/** One of the about photos, set by an upload, a pick from Media or Remove. */
+const PhotoSection = ({
+  title,
+  description,
+  aspect,
+  path,
+  isDirty,
+  error,
+  onChange,
+  onUploadingChange,
+}: PhotoSectionProps) => {
+  const url = optionalMediaUrl(path);
+
+  // Uploaded or picked from Media. A photo that's replaced stays in Media
+  const uploadButton = (
+    <>
+      <UploadButton
+        folder="about"
+        accept="image/*"
+        onUploaded={(media) => onChange(media.path)}
+        onUploadingChange={onUploadingChange}
+        onError={(message) => toast.error(message)}
+      >
+        {path ? "Replace photo" : "Upload photo"}
+      </UploadButton>
+      <ChooseFromMedia
+        title="Choose a photo from Media"
+        accept="image"
+        pickLabel={() => "Use photo"}
+        onPick={([media]) => onChange(media.path)}
+      >
+        Choose from Media
+      </ChooseFromMedia>
+    </>
+  );
+
+  return (
+    <FormSection title={title} description={description}>
+      {url ? (
+        <>
+          <div
+            className={cn(
+              "relative w-full max-w-md overflow-hidden rounded-xl border border-neutral-950/10 bg-neutral-100",
+              aspect,
+            )}
+          >
+            <Image
+              src={url}
+              alt={title}
+              fill
+              sizes="(min-width: 640px) 448px, 100vw"
+              className="object-cover"
+            />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {uploadButton}
+            {/* Only leaves the form until Save, so it isn't a delete */}
+            <Button variant="ghost" onClick={() => onChange(null)}>
+              <X size={16} aria-hidden />
+              Remove
+            </Button>
+          </div>
+        </>
+      ) : (
+        <UploadArea hint="No photo yet." hasError={!!error}>
+          {uploadButton}
+        </UploadArea>
+      )}
+      {/* The preview already shows it, which could pass for saved */}
+      {isDirty && (
+        <Input.Hint>
+          {path
+            ? "The new photo shows on the site after you save."
+            : "The photo leaves the site after you save."}
+        </Input.Hint>
+      )}
+      <Input.Error error={error} />
+    </FormSection>
+  );
+};
 
 /** The about page's editor: the header, the sections and Save in the bottom bar. */
 const AboutForm = ({ site }: { site: SiteRow }) => {
   const { run, isPending } = useAction();
-  // Save waits for a photo that's still going up
-  const [isUploading, setIsUploading] = useState(false);
+  // Save waits for the photos that are still going up
+  const [uploads, setUploads] = useState(0);
   const {
     register,
     handleSubmit,
@@ -44,6 +138,11 @@ const AboutForm = ({ site }: { site: SiteRow }) => {
       headline: site.about_headline,
       intro: site.about_intro,
       image: site.about_image,
+      // Before 0008_about_modal_image.sql the modal shows the widget's photo
+      modalImage:
+        site.about_modal_image === undefined
+          ? site.about_image
+          : site.about_modal_image,
       currentlyName: site.currently_name ?? "",
       currentlySince: site.currently_since ?? "",
       currentlyBlurb: site.currently_blurb ?? "",
@@ -51,37 +150,19 @@ const AboutForm = ({ site }: { site: SiteRow }) => {
     },
   });
 
-  // The photo has no input of its own: uploads and Remove set it directly
-  const image = useWatch({ control, name: "image" });
-  const imageUrl = optionalMediaUrl(image);
-  const setImage = (path: string | null) =>
-    setValue("image", path, { shouldDirty: true, shouldValidate: true });
+  // The photos have no input of their own: uploads and Remove set them
+  const [image, modalImage] = useWatch({
+    control,
+    name: ["image", "modalImage"],
+  });
+  const setPhoto =
+    (name: "image" | "modalImage") => (path: string | null) =>
+      setValue(name, path, { shouldDirty: true, shouldValidate: true });
+  const onUploadingChange = (isUploading: boolean) =>
+    setUploads((count) => count + (isUploading ? 1 : -1));
 
   // Leaving the page would drop unsaved changes, so it asks first
   useUnsavedWarning(isDirty);
-
-  // Uploaded or picked from Media. A photo that's replaced stays in Media
-  const uploadButton = (
-    <>
-      <UploadButton
-        folder="about"
-        accept="image/*"
-        onUploaded={(media) => setImage(media.path)}
-        onUploadingChange={setIsUploading}
-        onError={(message) => toast.error(message)}
-      >
-        {image ? "Replace photo" : "Upload photo"}
-      </UploadButton>
-      <ChooseFromMedia
-        title="Choose a photo from Media"
-        accept="image"
-        pickLabel={() => "Use photo"}
-        onPick={([media]) => setImage(media.path)}
-      >
-        Choose from Media
-      </ChooseFromMedia>
-    </>
-  );
 
   const onSubmit = handleSubmit(async (values) => {
     const result = await run(() => saveAbout(values), "About saved");
@@ -98,7 +179,7 @@ const AboutForm = ({ site }: { site: SiteRow }) => {
     <Page width="form">
       <Header
         title="About"
-        description="The about modal on the home page: the headline, the intro, your photo and the Currently card."
+        description="The about modal on the home page: the headline, the intro, your photos and the Currently card."
       />
 
       <form
@@ -131,45 +212,27 @@ const AboutForm = ({ site }: { site: SiteRow }) => {
           </Input.Root>
         </FormSection>
 
-        <FormSection
-          title="Photo"
-          description="Shown in the about modal and on the home page widget, cropped to 16:9."
-        >
-          {imageUrl ? (
-            <>
-              <div className="relative aspect-video w-full max-w-md overflow-hidden rounded-xl border border-neutral-950/10 bg-neutral-100">
-                <Image
-                  src={imageUrl}
-                  alt="The about photo"
-                  fill
-                  sizes="(min-width: 640px) 448px, 100vw"
-                  className="object-cover"
-                />
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {uploadButton}
-                {/* Only leaves the form until Save, so it isn't a delete */}
-                <Button variant="ghost" onClick={() => setImage(null)}>
-                  <X size={16} aria-hidden />
-                  Remove
-                </Button>
-              </div>
-            </>
-          ) : (
-            <UploadArea hint="No photo yet." hasError={!!errors.image}>
-              {uploadButton}
-            </UploadArea>
-          )}
-          {/* The preview already shows it, which could pass for saved */}
-          {dirtyFields.image && (
-            <Input.Hint>
-              {image
-                ? "The new photo shows on the site after you save."
-                : "The photo leaves the site after you save."}
-            </Input.Hint>
-          )}
-          <Input.Error error={errors.image} />
-        </FormSection>
+        <PhotoSection
+          title="Widget photo"
+          description="On the About widget, in the island and in link previews, cropped to about 2:1. The footer shows it blurred."
+          aspect="aspect-2/1"
+          path={image}
+          isDirty={dirtyFields.image}
+          error={errors.image}
+          onChange={setPhoto("image")}
+          onUploadingChange={onUploadingChange}
+        />
+
+        <PhotoSection
+          title="Modal photo"
+          description="At the top of the about modal, cropped to 16:9."
+          aspect="aspect-video"
+          path={modalImage}
+          isDirty={dirtyFields.modalImage}
+          error={errors.modalImage}
+          onChange={setPhoto("modalImage")}
+          onUploadingChange={onUploadingChange}
+        />
 
         <FormSection
           title="Currently"
@@ -228,7 +291,7 @@ const AboutForm = ({ site }: { site: SiteRow }) => {
         formId={FORM_ID}
         isDirty={isDirty}
         isPending={isPending}
-        isDisabled={isUploading}
+        isDisabled={uploads > 0}
       />
     </Page>
   );

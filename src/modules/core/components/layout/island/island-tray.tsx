@@ -32,10 +32,12 @@ const getTiles = ({
   covers,
   experiments,
   highlights,
+  products,
   records,
 }: Content): Tile[] => {
   const [highlight] = highlights;
   const [experiment] = experiments;
+  const [product] = products;
   const [record] = records;
 
   return [
@@ -98,13 +100,24 @@ const getTiles = ({
     className: "bg-neutral-50",
     image: experiment?.media.src,
   },
-  {
-    id: "contact",
-    label: widgets.contact.label,
-    widget: "contact",
-    area: "4 / 5 / 5 / 7",
-    className: "bg-linear-to-b from-[#B1EB10] to-[#2FC72F]",
-  },
+  // Products took contact's spot on the home screen, once there's one
+  product
+    ? {
+        id: "products",
+        label: widgets.products.label,
+        widget: "products",
+        area: "4 / 5 / 5 / 7",
+        style: { background: getWallBackground(product) },
+        image: product.media.type === "image" ? product.media.src : undefined,
+        inset: product.bare ? undefined : "screen",
+      }
+    : {
+        id: "contact",
+        label: widgets.contact.label,
+        widget: "contact",
+        area: "4 / 5 / 5 / 7",
+        className: "bg-linear-to-b from-[#B1EB10] to-[#2FC72F]",
+      },
   ];
 };
 

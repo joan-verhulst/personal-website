@@ -10,6 +10,12 @@ export type Events = {
   // A row in the contact modal. The email row is a mailto: link, which
   // outbound tracking doesn't count
   "Contact Clicked": { service: string };
+  // The contact modal opening, and from where: the pill next to the island,
+  // or the contact widget on home or in the island's tray
+  "Contact Opened": { from: "pill" | "widget" };
+  // A card's button in the contact modal or a footer banner. UI/UX links
+  // out, the others open an email, which outbound tracking doesn't count
+  "Contact Card Clicked": { card: string; from: "modal" | "footer" };
   // A piece on the UI/UX wall, opened in its modal
   "UI/UX Item Opened": { item: string };
   // A print on the photography table, opened up close

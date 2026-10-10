@@ -1,5 +1,6 @@
 "use client";
 
+import { fallbackCards } from "~/data/contact-cards";
 import { saveContact } from "~/modules/cms/actions/site";
 import FormSection from "~/modules/cms/components/form-section";
 import Header from "~/modules/cms/components/header";
@@ -13,6 +14,29 @@ import { contactSchema } from "~/modules/cms/schema/site";
 import type { SiteRow } from "~/modules/content/utils/rows";
 
 const FORM_ID = "contact-form";
+
+// The cards in the contact modal, in its order. Each also shows as a banner
+// in its section's footer
+const CARDS = [
+  {
+    key: "uiUx",
+    title: "UI/UX card",
+    description:
+      "The first card in the contact modal, and the banner in the footer on home and UI/UX. Its button links out.",
+  },
+  {
+    key: "photography",
+    title: "Photography card",
+    description:
+      "The banner in the Photography footer too. Its button opens an email, with the title as its subject.",
+  },
+  {
+    key: "digitalArt",
+    title: "Digital art card",
+    description:
+      "The banner in the Digital Art footer too. Its button opens an email, with the title as its subject.",
+  },
+] as const;
 
 /** The contact links' editor: the header, the sections and Save in the bottom bar. */
 const ContactForm = ({ site }: { site: SiteRow }) => {
@@ -30,6 +54,16 @@ const ContactForm = ({ site }: { site: SiteRow }) => {
       instagram: site.instagram_url ?? "",
       linkedin: site.linkedin_url ?? "",
       email: site.email ?? "",
+      uiUxTitle: site.card_ui_ux_title ?? "",
+      uiUxText: site.card_ui_ux_text ?? "",
+      uiUxButton: site.card_ui_ux_button ?? "",
+      uiUxUrl: site.card_ui_ux_url ?? "",
+      photographyTitle: site.card_photography_title ?? "",
+      photographyText: site.card_photography_text ?? "",
+      photographyButton: site.card_photography_button ?? "",
+      digitalArtTitle: site.card_digital_art_title ?? "",
+      digitalArtText: site.card_digital_art_text ?? "",
+      digitalArtButton: site.card_digital_art_button ?? "",
     },
   });
 
@@ -51,7 +85,7 @@ const ContactForm = ({ site }: { site: SiteRow }) => {
     <Page width="form">
       <Header
         title="Contact"
-        description="The links on the contact widget. Leave a field empty to hide its icon."
+        description="The cards in the contact modal and the footer banners, and your links. Leave a link empty to hide its icon."
       />
 
       <form
@@ -60,6 +94,65 @@ const ContactForm = ({ site }: { site: SiteRow }) => {
         noValidate
         className="flex flex-col gap-4"
       >
+        {CARDS.map(({ key, title, description }) => {
+          const fallback = fallbackCards[key];
+          return (
+            <FormSection key={key} title={title} description={description}>
+              <Input.Root error={errors[`${key}Title`]}>
+                <Input.Label htmlFor={`${key}-title`}>
+                  Title
+                  <Input.Optional />
+                </Input.Label>
+                <Input.Field
+                  id={`${key}-title`}
+                  placeholder={fallback.title}
+                  {...register(`${key}Title`)}
+                />
+                <Input.Error error={errors[`${key}Title`]} />
+              </Input.Root>
+              <Input.Root error={errors[`${key}Text`]}>
+                <Input.Label htmlFor={`${key}-text`}>
+                  Text
+                  <Input.Optional />
+                </Input.Label>
+                <Input.Textarea
+                  id={`${key}-text`}
+                  placeholder={fallback.text}
+                  {...register(`${key}Text`)}
+                />
+                <Input.Error error={errors[`${key}Text`]} />
+              </Input.Root>
+              <Input.Root error={errors[`${key}Button`]}>
+                <Input.Label htmlFor={`${key}-button`}>
+                  Button
+                  <Input.Optional />
+                </Input.Label>
+                <Input.Field
+                  id={`${key}-button`}
+                  placeholder={fallback.button}
+                  {...register(`${key}Button`)}
+                />
+                <Input.Error error={errors[`${key}Button`]} />
+              </Input.Root>
+              {key === "uiUx" && (
+                <Input.Root error={errors.uiUxUrl}>
+                  <Input.Label htmlFor="uiUx-url">
+                    Button link
+                    <Input.Optional />
+                  </Input.Label>
+                  <Input.Field
+                    id="uiUx-url"
+                    type="url"
+                    placeholder={fallback.href}
+                    {...register("uiUxUrl")}
+                  />
+                  <Input.Error error={errors.uiUxUrl} />
+                </Input.Root>
+              )}
+            </FormSection>
+          );
+        })}
+
         <FormSection
           title="Social"
           description="Full links to your profiles, starting with https://."
@@ -92,7 +185,10 @@ const ContactForm = ({ site }: { site: SiteRow }) => {
           </Input.Root>
         </FormSection>
 
-        <FormSection title="Email" description="Opens in the visitor's mail app.">
+        <FormSection
+          title="Email"
+          description="Opens in the visitor's mail app, from the email icon and the Photography and Digital art cards. Without it, those two cards are hidden."
+        >
           <Input.Root error={errors.email}>
             <Input.Label htmlFor="email">
               Email address

@@ -15,6 +15,9 @@ import {
   useSyncExternalStore,
 } from "react";
 import IslandButton from "~components/layout/island/island-button";
+import IslandContact, {
+  CONTACT_ROOM,
+} from "~components/layout/island/island-contact";
 import IslandCounter from "~components/layout/island/island-counter";
 import IslandDial from "~components/layout/island/island-dial";
 import IslandTicker from "~components/layout/island/island-ticker";
@@ -221,96 +224,98 @@ const Island = () => {
       };
   const label = section?.label ?? siteData.owner.name;
   const count = controls?.count ?? section?.count;
+  // Room for the contact pill on both sides, so the island stays centered
+  const width = `min(${size.width}px, calc(100vw - 1.5rem - 2 * ${CONTACT_ROOM}))`;
 
   return (
-    <nav
-      ref={islandRef}
-      aria-label="Site"
-      className={cn(
-        // Over the open section (z-5), under modals (z-50)
-        "fixed top-3 left-1/2 z-10 -translate-x-1/2 overflow-hidden rounded-[22px] bg-neutral-950 text-neutral-50",
-        animationsEnabled &&
-          "transition-[width,height] duration-[550ms] ease-[cubic-bezier(0.34,1.4,0.64,1)] motion-reduce:transition-none",
-      )}
-      style={{
-        width: `min(${size.width}px, calc(100vw - 1.5rem))`,
-        height: size.height,
-      }}
-      onPointerEnter={handlePointerEnter}
-      onPointerLeave={handlePointerLeave}
-      onFocus={() => setIsFocused(true)}
-      onBlur={handleBlur}
-    >
-      {/* At rest: who this is, or where you are */}
-      <Layer isActive={!isOpen}>
-        <div className="flex h-9 items-center gap-1.5 px-1.5">
-          {!isHome && (
-            <IslandButton label="Go back" onClick={() => visit("/")}>
-              <Undo2 className="size-3" />
-            </IslandButton>
-          )}
-          <button
-            type="button"
-            aria-label="Open navigation"
-            aria-expanded={isOpen}
-            onClick={unfold}
-            onMouseEnter={haptic.onMouseEnter}
-            className={cn(
-              "flex h-full min-w-0 flex-1 cursor-pointer items-center gap-2 whitespace-nowrap px-1.5 text-[13px]",
-              isHome ? "justify-center" : "justify-between",
-            )}
-          >
-            {isHome ? (
-              <>
-                {/* The headshot, flush with the island's rounded end */}
-                <Image
-                  src={HEADSHOT}
-                  alt=""
-                  width={24}
-                  height={24}
-                  className="-ml-1.5 size-6 shrink-0 rounded-full"
-                />
-                <span className="size-1.5 shrink-0 rounded-full bg-primary" />
-                <span className="truncate">{label}</span>
-              </>
-            ) : controls?.labels ? (
-              <IslandTicker
-                label={label}
-                labels={controls.labels}
-                pointed={controls.pointed ?? null}
-              />
-            ) : (
-              <span className="truncate">{label}</span>
-            )}
-            {count !== undefined && <IslandCounter value={count} />}
-          </button>
-        </div>
-
-        {/* The open page's controls, see IslandControls */}
-        <div
-          ref={slotRef}
-          inert={!showControls}
-          className={cn(
-            "px-3 pb-2.5 transition-opacity duration-200 empty:hidden motion-reduce:transition-none",
-            showControls ? "opacity-100 delay-100" : "opacity-0",
-          )}
-        />
-      </Layer>
-
-      <Layer isActive={isOpen}>
-        {UNFOLD === "dial" ? (
-          <IslandDial pathname={pathname} onVisit={visit} />
-        ) : (
-          <IslandTray
-            pathname={pathname}
-            isOpen={isOpen}
-            onVisit={visit}
-            onWidget={openFromTray}
-            onClose={fold}
-          />
+    <>
+      <nav
+        ref={islandRef}
+        aria-label="Site"
+        className={cn(
+          // Over the open section (z-5), under modals (z-50)
+          "fixed top-3 left-1/2 z-10 -translate-x-1/2 overflow-hidden rounded-[22px] bg-neutral-950 text-neutral-50",
+          animationsEnabled &&
+            "transition-[width,height] duration-[550ms] ease-[cubic-bezier(0.34,1.4,0.64,1)] motion-reduce:transition-none",
         )}
-      </Layer>
-    </nav>
+        style={{ width, height: size.height }}
+        onPointerEnter={handlePointerEnter}
+        onPointerLeave={handlePointerLeave}
+        onFocus={() => setIsFocused(true)}
+        onBlur={handleBlur}
+      >
+        {/* At rest: who this is, or where you are */}
+        <Layer isActive={!isOpen}>
+          <div className="flex h-9 items-center gap-1.5 px-1.5">
+            {!isHome && (
+              <IslandButton label="Go back" onClick={() => visit("/")}>
+                <Undo2 className="size-3" />
+              </IslandButton>
+            )}
+            <button
+              type="button"
+              aria-label="Open navigation"
+              aria-expanded={isOpen}
+              onClick={unfold}
+              onMouseEnter={haptic.onMouseEnter}
+              className={cn(
+                "flex h-full min-w-0 flex-1 cursor-pointer items-center gap-2 whitespace-nowrap px-1.5 text-[13px]",
+                isHome ? "justify-center" : "justify-between",
+              )}
+            >
+              {isHome ? (
+                <>
+                  {/* The headshot, flush with the island's rounded end */}
+                  <Image
+                    src={HEADSHOT}
+                    alt=""
+                    width={24}
+                    height={24}
+                    className="-ml-1.5 size-6 shrink-0 rounded-full"
+                  />
+                  <span className="size-1.5 shrink-0 rounded-full bg-primary" />
+                  <span className="truncate">{label}</span>
+                </>
+              ) : controls?.labels ? (
+                <IslandTicker
+                  label={label}
+                  labels={controls.labels}
+                  pointed={controls.pointed ?? null}
+                />
+              ) : (
+                <span className="truncate">{label}</span>
+              )}
+              {count !== undefined && <IslandCounter value={count} />}
+            </button>
+          </div>
+
+          {/* The open page's controls, see IslandControls */}
+          <div
+            ref={slotRef}
+            inert={!showControls}
+            className={cn(
+              "px-3 pb-2.5 transition-opacity duration-200 empty:hidden motion-reduce:transition-none",
+              showControls ? "opacity-100 delay-100" : "opacity-0",
+            )}
+          />
+        </Layer>
+
+        <Layer isActive={isOpen}>
+          {UNFOLD === "dial" ? (
+            <IslandDial pathname={pathname} onVisit={visit} />
+          ) : (
+            <IslandTray
+              pathname={pathname}
+              isOpen={isOpen}
+              onVisit={visit}
+              onWidget={openFromTray}
+              onClose={fold}
+            />
+          )}
+        </Layer>
+      </nav>
+      <IslandContact islandWidth={width} />
+    </>
   );
 };
 

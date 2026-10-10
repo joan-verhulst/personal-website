@@ -132,7 +132,10 @@ export interface RotationRecord {
 export interface About {
   headline: string;
   intro: string;
+  // On the About widget, the island's tile and the link preview
   image?: string;
+  // At the top of the about modal
+  modalImage?: string;
   // Where I work now, linked from the bottom of the about modal
   currently?: {
     name: string;
@@ -147,13 +150,36 @@ export interface Contact {
   linkedin?: string;
   // Plain address, without mailto:
   email?: string;
+  // The cards in the contact modal, which also show in their section's
+  // footer. Always filled: empty fields fall back, see data/contact-cards.ts
+  cards: Record<ContactCardKey, ContactCard>;
 }
+
+// One per section. Photography and digital art open an email
+export type ContactCardKey = "uiUx" | "photography" | "digitalArt";
+
+export interface ContactCard {
+  title: string;
+  text: string;
+  button: string;
+  // Where the button leads. Only the UI/UX card links out, the others open
+  // an email with the title as its subject
+  href?: string;
+}
+
+// ── Search ────────────────────────────────────────────────────────────────────
+
+// The pages search engines index, see data/pages.ts
+export type PageKey = "home" | "uiUx" | "digitalArt" | "photography";
 
 // ── All of it ─────────────────────────────────────────────────────────────────
 
 export interface Content {
   about: About;
   contact: Contact;
+  // What search results and link previews show under each page's title.
+  // Missing, the page uses its fallback, see utils/page-metadata.ts
+  descriptions: Partial<Record<PageKey, string>>;
   photos: Print[];
   artworks: Artwork[];
   records: RotationRecord[];
@@ -161,6 +187,9 @@ export interface Content {
   // Side projects and motion studies, shown in the experiments modal on the
   // home page. The first two fill the home page widget: an image, then a video.
   experiments: WallItem[];
+  // Things people can try right now, shown in the products modal. The first
+  // fills the home page widget. Empty, home shows the contact widget instead
+  products: WallItem[];
   // The two wall items that rotate in the home page widget, always images
   highlights: WallItem[];
   // Images on the home page widgets

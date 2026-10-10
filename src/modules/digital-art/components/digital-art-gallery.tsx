@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
+import PageWithFooter from "~components/layout/footer";
 import IslandControls from "~components/layout/island/island-controls";
 import ImagePopover from "~/modules/core/components/image-popover";
 import ArtScrubber from "~/modules/digital-art/components/art-scrubber";
@@ -28,7 +29,9 @@ const DigitalArtGallery = ({ artworks }: Props) => {
   const titles = useMemo(() => artworks.map(({ title }) => title), [artworks]);
 
   return (
-    <main className="relative h-screen overflow-hidden bg-neutral-50">
+    <PageWithFooter className="h-screen overflow-hidden">
+      {/* The island names the section on screen, this names it for search */}
+      <h1 className="sr-only">Digital Art</h1>
       {/* The island names the piece pointed at, and counts which one it is */}
       <IslandControls
         labels={titles}
@@ -63,7 +66,7 @@ const DigitalArtGallery = ({ artworks }: Props) => {
         activeIndex={activeIndex}
         onActiveIndexChange={setActiveIndex}
       />
-    </main>
+    </PageWithFooter>
   );
 };
 

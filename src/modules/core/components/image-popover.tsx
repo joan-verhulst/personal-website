@@ -573,7 +573,7 @@ const ImagePopover = ({
             animateClose();
           }}
           onMouseEnter={haptic.onMouseEnter}
-          className="flex items-center justify-center w-8 h-8 rounded-lg text-neutral-50 bg-primary-500 hover:bg-primary-500/75 transition-colors duration-200 cursor-pointer"
+          className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg bg-primary-500 text-neutral-50 transition-colors duration-200 hover:bg-primary-600"
         >
           <X size={14} />
         </button>

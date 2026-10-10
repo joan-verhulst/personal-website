@@ -11,6 +11,7 @@ import {
 import { gsap } from "gsap";
 import SlideCard from "./slider-card";
 import cn from "~/utils/cn";
+import { isFooterClosed, openFooter } from "~/utils/footer";
 import { useAnimationPreference } from "~/modules/core/context/animation-preference-context";
 import {
   type Artwork,
@@ -31,6 +32,8 @@ const MOMENTUM = 220;
 // Past the first or last slide a drag only follows at this share, so it
 // stretches a little and springs back instead of running off
 const OVERDRAG = 0.25;
+// How far past the last piece a finger has to pull to open the footer
+const PULL_TO_FOOTER = 160;
 // The settle after a drag or flick: long and soft, so it glides into place
 const SETTLE = { duration: 0.7, ease: "power3.out" };
 
@@ -70,6 +73,7 @@ const HorizontalImageSlider = ({
   onPendingIndexChange,
   onOpenPopover,
 }: Props) => {
+  const containerRef = useRef<HTMLDivElement>(null);
   const sliderRef = useRef<HTMLDivElement>(null);
   const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
   const imgRefs = useRef<(HTMLImageElement | null)[]>([]);
@@ -393,6 +397,20 @@ const HorizontalImageSlider = ({
       return;
     }
 
+    // A pull well past the last piece opens the footer, which touch can't
+    // scroll to on a phone: the slider takes every drag. The overdrag only
+    // follows part of the finger, so this measures the finger
+    const pastLast =
+      (calculateCenterOffset(items.length - 1) - currentPos) / OVERDRAG;
+    if (isVertical && pastLast > PULL_TO_FOOTER) {
+      gsap.to(sliderRef.current, {
+        [axis]: calculateCenterOffset(activeIndex),
+        ...SETTLE,
+      });
+      openFooter(sliderRef.current);
+      return;
+    }
+
     // A finger that stopped before letting go doesn't flick
     const isStill = performance.now() - dragLastTime.current > 80;
     const momentum = isStill ? 0 : dragVelocity.current * MOMENTUM;
@@ -408,6 +426,7 @@ const HorizontalImageSlider = ({
   }, [
     isVertical,
     activeIndex,
+    items.length,
     onActiveIndexChange,
     onPendingIndexChange,
     calculateCenterOffset,
@@ -421,9 +440,18 @@ const HorizontalImageSlider = ({
   const wheelTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleWheel = useCallback(
-    (e: React.WheelEvent) => {
+    (e: WheelEvent) => {
+      const delta = isVertical ? e.deltaY : e.deltaX || e.deltaY;
+      // Left to the footer: on from the last piece, and anything while the
+      // footer is open or being pulled
+      const container = containerRef.current;
+      const pastLast = delta > 0 && activeIndex === items.length - 1;
+      if (container && (!isFooterClosed(container) || pastLast)) {
+        wheelAccumulator.current = 0;
+        return;
+      }
       e.preventDefault();
-      wheelAccumulator.current += isVertical ? e.deltaY : e.deltaX || e.deltaY;
+      wheelAccumulator.current += delta;
 
       if (wheelTimer.current) clearTimeout(wheelTimer.current);
       wheelTimer.current = setTimeout(() => {
@@ -442,6 +470,15 @@ const HorizontalImageSlider = ({
     },
     [isVertical, activeIndex, items.length, onActiveIndexChange],
   );
+
+  // React listens to wheel passively, so its handler couldn't keep the page
+  // from scrolling along
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    container.addEventListener("wheel", handleWheel, { passive: false });
+    return () => container.removeEventListener("wheel", handleWheel);
+  }, [handleWheel]);
 
   // ── Global listeners ────────────────────────────────────────────────────────
 
@@ -485,9 +522,12 @@ const HorizontalImageSlider = ({
         // Server rendered without a viewport, so hidden until it's laid out
         !ready && "invisible",
       )}
+      ref={containerRef}
+      // Takes every touch, so a pull past the last piece opens the footer
+      // instead, see handleDragEnd
+      data-gestures
       onMouseDown={handleDragStart}
       onTouchStart={handleDragStart}
-      onWheel={handleWheel}
     >
       <div
         ref={sliderRef}

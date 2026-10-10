@@ -30,6 +30,7 @@ import {
 } from "~/modules/photography/utils/print-layouts";
 import cn from "~/utils/cn";
 import { track } from "~/utils/eyes";
+import { isFooterClosed, openFooter } from "~/utils/footer";
 
 gsap.registerPlugin(Draggable, Flip, InertiaPlugin);
 
@@ -38,6 +39,11 @@ const VIEW_STORAGE_KEY = "photography-view";
 
 // Room a focused print keeps from the frame's edges
 const FOCUS_INSET = 24;
+
+// How far past its bottom edge the table has to be pulled to open the
+// footer. Its edge resistance lets it follow 15% of the finger, so this is
+// a pull of about 160px
+const PULL_TO_FOOTER = 24;
 
 // Photo width in the grid below: 2, 3 or 4 columns, tiles padded 6%, capped at 120rem wide
 const GRID_IMAGE_SIZES =
@@ -189,10 +195,13 @@ const PhotoTable = ({ prints }: Props) => {
           setHasDragged(true);
         },
         // The click that ends a drag fires before this, so it's still ignored
-        onDragEnd: () => {
+        onDragEnd: function (this: Draggable) {
           setTimeout(() => {
             wasDragged.current = false;
           }, 0);
+          // A pull well past the bottom edge opens the footer, which touch
+          // can't scroll to: the table takes every drag
+          if (this.minY - this.y > PULL_TO_FOOTER) openFooter(stage);
         },
       })[0];
     }
@@ -252,6 +261,13 @@ const PhotoTable = ({ prints }: Props) => {
       const world = worldRef.current;
       // Leave pinch zoom to the browser
       if (!draggable || !world || event.ctrlKey) return;
+      // Left to the footer: down once the table's bottom edge is in view,
+      // and anything while the footer is open or being pulled
+      const isDown =
+        event.deltaY > 0 && Math.abs(event.deltaY) > Math.abs(event.deltaX);
+      if (!isFooterClosed(stage) || (isDown && draggable.y <= draggable.minY)) {
+        return;
+      }
       event.preventDefault();
 
       // Some mice report lines instead of pixels
@@ -362,6 +378,9 @@ const PhotoTable = ({ prints }: Props) => {
               ? "touch-none overflow-hidden"
               : "overflow-y-auto overscroll-contain",
           )}
+          // The table takes every touch, so a pull past its edge opens the
+          // footer instead, see onDragEnd
+          data-gestures={isTable || undefined}
         >
           <div
             ref={worldRef}

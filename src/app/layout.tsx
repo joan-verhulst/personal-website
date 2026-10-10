@@ -7,6 +7,7 @@ import "~styles/global.css";
 import { env } from "~/env";
 import { siteData } from "~/data/site";
 import { openGraph } from "~/utils/page-metadata";
+import { Fixhere } from "fixhere/react";
 
 const GoogleSansFlexFont = Google_Sans_Flex({
   subsets: ["latin"],
@@ -31,7 +32,7 @@ const RootLayout = ({ children }: PropsWithChildren) => {
         {/* biome-ignore lint/security/noDangerouslySetInnerHtml: a fixed string, it has to run before the page paints */}
         <script dangerouslySetInnerHTML={{ __html: INTRO_SCRIPT }} />
       </head>
-      <body>{children}</body>
+      <body>{children}<Fixhere /></body>
     </html>
   );
 };

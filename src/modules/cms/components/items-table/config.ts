@@ -2,5 +2,5 @@
 export const ITEMS = {
   title: "Items",
   description:
-    "Every screenshot and reel. An item shows on the site once it's placed on the wall or in experiments.",
+    "Every screenshot and reel. An item shows on the site once it's placed on the wall, in experiments or in products.",
 };

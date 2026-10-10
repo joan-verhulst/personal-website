@@ -93,7 +93,7 @@ const SlideCard = ({
             onMouseEnter={haptic.onMouseEnter}
           >
             <Maximize
-              className="text-neutral-50 mt-1 hover:scale-90 hover:text-neutral-50/50 duration-200"
+              className="mt-1 text-neutral-50 duration-200 hover:scale-90 hover:text-neutral-300"
               size={18}
             />
           </button>

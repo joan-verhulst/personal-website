@@ -1,6 +1,6 @@
 # **CMS**
 
-The site's content lives in Supabase and is edited at **`/admin`**, or on a host of its own (see [Admin address](#admin-address)): UI/UX work, photography, digital art, the records on rotation, the about modal and the contact links. Gear and the page chrome (labels, metadata) stay in code.
+The site's content lives in Supabase and is edited at **`/admin`**, or on a host of its own (see [Admin address](#admin-address)): UI/UX work, experiments and products, photography, digital art, the records on rotation, the about modal, and the contact cards and links. Gear and the page chrome (labels, metadata) stay in code.
 
 ### **How it fits together**
 
@@ -15,7 +15,7 @@ The site's content lives in Supabase and is edited at **`/admin`**, or on a host
 
 ### **Setting it up**
 
-1. **Schema.** In the Supabase dashboard, open the SQL editor and run the files in `supabase/migrations` in order: `0001_cms.sql` (tables and access), `0002_wall_double.sql` (the double row on the wall) and `0003_cms_hardening.sql` (reordering and deleting in one step; its limits on the Supabase storage bucket date from before media moved to R2). The last two are safe to run again. Then `0005_optional_tag.sql` (UI/UX items without a tag) and `0006_media_library.sql` (the media library, see [Media library](#media-library)). `0004_two_factor.sql` comes later, in step 7.
+1. **Schema.** In the Supabase dashboard, open the SQL editor and run the files in `supabase/migrations` in order: `0001_cms.sql` (tables and access), `0002_wall_double.sql` (the double row on the wall) and `0003_cms_hardening.sql` (reordering and deleting in one step; its limits on the Supabase storage bucket date from before media moved to R2). The last two are safe to run again. Then `0005_optional_tag.sql` (UI/UX items without a tag) and `0006_media_library.sql` (the media library, see [Media library](#media-library)), `0007_search_descriptions.sql` (the descriptions under each page in search results), `0008_about_modal_image.sql` (a photo of its own for the about modal, apart from the About widget's), `0009_contact_cards.sql` (the cards in the contact modal, which also show as footer banners) and `0010_products.sql` (the products list, whose widget takes the contact widget's spot on home). `0004_two_factor.sql` comes later, in step 7.
 2. **Your account.** Authentication → Users → *Add user*, with your email and a password. Then turn off sign ups: Authentication → Sign In / Providers → *Allow new users to sign up*, and *Allow anonymous sign-ins* on the same page. Check that Authentication → Users lists only your own account afterwards, and delete any other. Strangers with an account can't change content, but they can fill the list and use up the project's email limit.
 3. **Make it an admin.** In the SQL editor:
 
@@ -68,7 +68,7 @@ To set it up:
 
 1. **Domain on Cloudflare.** R2 can only serve on a domain whose DNS Cloudflare runs. Add the domain to a free Cloudflare account and point its nameservers there. Keep the records that lead to Vercel (the apex `A` record and the `CNAME`s for `www` and the admin host) on **DNS only**, not proxied.
 2. **Bucket.** R2 → Create bucket, named `media`. Under Settings → Custom Domains, connect `media.<your domain>`. Leave the `r2.dev` URL off.
-3. **CORS.** Under Settings → CORS Policy, allow uploads from the admin. Every address you upload from has to be listed, so add `http://admin.localhost:3000` too if you use that locally:
+3. **CORS.** Under Settings → CORS Policy, allow uploads from the admin, and reads from anywhere. Every address you upload from has to be listed, so add `http://admin.localhost:3000` too if you use that locally. The reads are for the tag logos on UI/UX: they're drawn as CSS masks, and a browser only loads a mask from another domain when the bucket allows it:
 
     ```json
     [
@@ -76,6 +76,11 @@ To set it up:
         "AllowedOrigins": ["https://admin.joanverhulst.com", "http://localhost:3000"],
         "AllowedMethods": ["PUT"],
         "AllowedHeaders": ["content-type", "cache-control"],
+        "MaxAgeSeconds": 3600
+      },
+      {
+        "AllowedOrigins": ["*"],
+        "AllowedMethods": ["GET", "HEAD"],
         "MaxAgeSeconds": 3600
       }
     ]

@@ -2,14 +2,34 @@ import type { CSSProperties } from "react";
 import type { WallTag as WallTagData } from "~/modules/content/types";
 import cn from "~/utils/cn";
 
+// The project's logo, used as a mask so it takes the text color around it on
+// any background
+export const TagLogo = ({
+  logo,
+  className,
+}: {
+  logo: string;
+  className?: string;
+}) => (
+  <span
+    aria-hidden
+    className={cn("shrink-0 bg-current", className)}
+    style={{
+      maskImage: `url(${logo})`,
+      maskSize: "contain",
+      maskRepeat: "no-repeat",
+      maskPosition: "center",
+    }}
+  />
+);
+
 interface Props {
   tag: WallTagData;
   className?: string;
   style?: CSSProperties;
 }
 
-// Tag pill with the project's logo, if it has one. The logo is used as a mask
-// so it takes the pill's text color on any background.
+// Tag pill with the project's logo, if it has one
 const WallTag = ({ tag, className, style }: Props) => (
   <span
     className={cn(
@@ -18,18 +38,7 @@ const WallTag = ({ tag, className, style }: Props) => (
     )}
     style={style}
   >
-    {tag.logo && (
-      <span
-        aria-hidden
-        className="h-3.5 w-4 shrink-0 bg-current"
-        style={{
-          maskImage: `url(${tag.logo})`,
-          maskSize: "contain",
-          maskRepeat: "no-repeat",
-          maskPosition: "center",
-        }}
-      />
-    )}
+    {tag.logo && <TagLogo logo={tag.logo} className="h-3.5 w-4" />}
     {tag.label}
   </span>
 );

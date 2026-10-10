@@ -27,8 +27,8 @@ interface ListEditorProps {
   isPending?: boolean;
 }
 
-// What the home page widget expects in its first two places
-const WIDGET_SLOTS = ["image", "video"] as const;
+// What a home page widget takes from the start of its list, by place
+type WidgetSlot = "image" | "video" | "any";
 
 interface ListCardProps {
   item?: WallItemRow;
@@ -58,14 +58,27 @@ const ListCard = ({ item, tags, label, corner, children }: ListCardProps) => (
   </li>
 );
 
-/** Side projects and motion studies, in the order the modal shows them. */
-export const ExperimentsEditor = ({
+interface OrderedListProps extends ListEditorProps {
+  title: string;
+  description: string;
+  /** What the list holds, as in "No experiments yet". */
+  noun: string;
+  /** What the home widget takes from the start of the list. */
+  widgetSlots: readonly WidgetSlot[];
+}
+
+/** A home list in the order its modal shows it: add, reorder and remove. */
+const OrderedListEditor = ({
   items,
   tags,
   value: list,
   onChange,
   isPending,
-}: ListEditorProps) => {
+  title,
+  description,
+  noun,
+  widgetSlots,
+}: OrderedListProps) => {
   const [isPicking, setIsPicking] = useState(false);
 
   const byId = (id: string) => items.find((item) => item.id === id);
@@ -73,8 +86,8 @@ export const ExperimentsEditor = ({
 
   return (
     <Panel
-      title="Experiments"
-      description="Side projects and motion studies, in the experiments modal. The first two fill the home page widget: an image, then a video."
+      title={title}
+      description={description}
       actions={
         <>
           <Button disabled={isPending} onClick={() => setIsPicking(true)}>
@@ -82,7 +95,7 @@ export const ExperimentsEditor = ({
             Add item
           </Button>
           <ReorderButton
-            title="Reorder experiments"
+            title={`Reorder ${noun}`}
             description="Drag the rows, or use their arrow buttons, to change the order. It's saved with the page."
             // The order lands in the list here, the page's Save keeps it
             saveLabel="Apply order"
@@ -118,8 +131,9 @@ export const ExperimentsEditor = ({
         <ol className={cardGridClass()}>
           {list.map((id, index) => {
             const item = byId(id);
-            const expected = WIDGET_SLOTS[index];
-            const fitsWidget = !expected || item?.media_type === expected;
+            const expected = widgetSlots[index];
+            const fitsWidget =
+              !expected || expected === "any" || item?.media_type === expected;
 
             return (
               <ListCard
@@ -132,7 +146,7 @@ export const ExperimentsEditor = ({
                   <Button
                     size="icon-sm"
                     variant="ghost"
-                    aria-label={`Remove ${titleOf(id)} from the experiments`}
+                    aria-label={`Remove ${titleOf(id)} from the ${noun}`}
                     disabled={isPending}
                     className="-mt-1 -mr-1"
                     onClick={() => onChange(list.filter((other) => other !== id))}
@@ -156,24 +170,46 @@ export const ExperimentsEditor = ({
           })}
         </ol>
       ) : (
-        <Placeholder>No experiments yet. Add an item to start.</Placeholder>
+        <Placeholder>No {noun} yet. Add an item to start.</Placeholder>
       )}
 
       <ItemPickerDialog
         open={isPicking}
         onOpenChange={setIsPicking}
-        title="Add to the experiments"
+        title={`Add to the ${noun}`}
         description="It goes at the end of the list."
         items={items}
         tags={tags}
         disabledReason={(item) =>
-          list.includes(item.id) ? "Already in the experiments" : undefined
+          list.includes(item.id) ? `Already in the ${noun}` : undefined
         }
         onPick={(id) => onChange([...list, id])}
       />
     </Panel>
   );
 };
+
+/** Side projects and motion studies, in the order the modal shows them. */
+export const ExperimentsEditor = (props: ListEditorProps) => (
+  <OrderedListEditor
+    {...props}
+    title="Experiments"
+    description="Side projects and motion studies, in the experiments modal. The first two fill the home page widget: an image, then a video."
+    noun="experiments"
+    widgetSlots={["image", "video"]}
+  />
+);
+
+/** What people can try, in the order the products modal shows it. */
+export const ProductsEditor = (props: ListEditorProps) => (
+  <OrderedListEditor
+    {...props}
+    title="Products"
+    description="Things people can try right now, in the products modal. Each card goes by its item's tag, the brand, with the title as a fallback, so give each a tag and a link to try it. The first fills the home page widget, which takes the contact widget's spot once there's a product here."
+    noun="products"
+    widgetSlots={["any"]}
+  />
+);
 
 /** The two screenshots that take turns on the home page's UI/UX widget. */
 export const HighlightsEditor = ({

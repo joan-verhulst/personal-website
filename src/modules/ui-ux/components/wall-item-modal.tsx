@@ -93,7 +93,7 @@ const WallItemModal = ({ item, isOpen, onClose }: Props) => {
             rel="noopener noreferrer"
             onClick={haptic.onClick}
             onMouseEnter={haptic.onMouseEnter}
-            className="absolute right-3 bottom-3 z-10 flex h-9 items-center gap-1.5 rounded-full bg-primary-500 px-4 text-neutral-50 text-sm shadow-[0_4px_12px_-4px_rgb(0_0_0/0.35)] transition-colors duration-200 hover:bg-primary-500/75 focus-visible:outline-2 focus-visible:outline-primary-500 focus-visible:outline-offset-2"
+            className="absolute right-3 bottom-3 z-10 flex h-9 items-center gap-1.5 rounded-full bg-primary-500 px-4 text-neutral-50 text-sm shadow-[0_4px_12px_-4px_rgb(0_0_0/0.35)] transition-colors duration-200 hover:bg-primary-600 focus-visible:outline-2 focus-visible:outline-primary-500 focus-visible:outline-offset-2"
           >
             {item.link.label}
             <ArrowUpRight className="size-4" />

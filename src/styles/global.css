@@ -7,6 +7,17 @@
  */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
+/*
+ * The page's bottom corners as it lifts off the footer, set every frame by
+ * use-curtain.ts. Not inherited, so changing it doesn't restyle everything
+ * on the page.
+ */
+@property --curtain-radius {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
 @theme {
   /* Neutral colors */
   --color-neutral-50: #faf9f9;

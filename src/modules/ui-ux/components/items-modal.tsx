@@ -3,7 +3,7 @@
 import { gsap } from "gsap";
 import { ArrowUpRight } from "lucide-react";
 import { useCallback, useRef } from "react";
-import { useContent } from "~/modules/content/components/content-provider";
+import type { WallItem } from "~/modules/content/types";
 import Modal from "~/modules/core/components/modal";
 import AnimatedText, {
   type AnimatedTextHandle,
@@ -11,7 +11,7 @@ import AnimatedText, {
 import { useAnimationPreference } from "~/modules/core/context/animation-preference-context";
 import { useHapticSound } from "~/modules/core/hooks/use-haptic-sound";
 import WallMedia from "~/modules/ui-ux/components/wall-media";
-import WallTag from "~/modules/ui-ux/components/wall-tag";
+import WallTag, { TagLogo } from "~/modules/ui-ux/components/wall-tag";
 import { getWallBackground } from "~/modules/ui-ux/utils/wall-backgrounds";
 import cn from "~/utils/cn";
 
@@ -23,10 +23,28 @@ const PADDING_TOP = "pt-[clamp(1.25rem,6cqw,3rem)]";
 interface Props {
   isOpen: boolean;
   onClose: () => void;
+  title: string;
+  // A line over the list, saying what's in it
+  intro: string;
+  items: WallItem[];
+  // Names each card by its tag instead of its title. On the wall a title
+  // says what the shot is and the tag whose it is, and a product goes by
+  // whose it is. An item without a tag keeps its title
+  namedByTag?: boolean;
 }
 
-const ExperimentsModal = ({ isOpen, onClose }: Props) => {
-  const { experiments } = useContent();
+/**
+ * A home list in a modal, one card per item with its link in the corner:
+ * the experiments, and the products to try.
+ */
+const ItemsModal = ({
+  isOpen,
+  onClose,
+  title,
+  intro,
+  items,
+  namedByTag,
+}: Props) => {
   const introTextRef = useRef<AnimatedTextHandle>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const { animationsEnabled } = useAnimationPreference();
@@ -54,7 +72,7 @@ const ExperimentsModal = ({ isOpen, onClose }: Props) => {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Experiments"
+      title={title}
       onOpenComplete={handleOpenComplete}
     >
       <AnimatedText
@@ -63,13 +81,16 @@ const ExperimentsModal = ({ isOpen, onClose }: Props) => {
         className="mb-8 max-w-2xl font-light text-base text-neutral-950/66"
         trigger="manual"
       >
-        Side projects and motion studies, made outside of client work.
+        {intro}
       </AnimatedText>
 
       <div ref={listRef} className="flex flex-col gap-4">
-        {experiments.map((item) => {
+        {items.map((item) => {
           // Matches the wall tiles: neutral cards get a dark header
           const isNeutral = item.background === "neutral";
+          // The tag names the card in place of the title, so it isn't
+          // repeated as a pill
+          const brand = namedByTag ? item.tag : undefined;
 
           return (
             <article
@@ -88,13 +109,16 @@ const ExperimentsModal = ({ isOpen, onClose }: Props) => {
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                   <h3
                     className={cn(
-                      "text-[clamp(1rem,3cqw,1.375rem)]",
+                      "flex items-center gap-2 text-[clamp(1rem,3cqw,1.375rem)]",
                       isNeutral ? "text-neutral-950" : "text-neutral-50",
                     )}
                   >
-                    {item.title}
+                    {brand?.logo && (
+                      <TagLogo logo={brand.logo} className="h-[0.9em] w-[1.1em]" />
+                    )}
+                    {brand ? brand.label : item.title}
                   </h3>
-                  {item.tag && (
+                  {item.tag && !brand && (
                     <WallTag
                       tag={item.tag}
                       className={isNeutral ? "text-neutral-50" : "bg-neutral-50"}
@@ -142,7 +166,7 @@ const ExperimentsModal = ({ isOpen, onClose }: Props) => {
                   rel="noopener noreferrer"
                   onClick={haptic.onClick}
                   onMouseEnter={haptic.onMouseEnter}
-                  className="absolute right-4 bottom-4 flex h-9 items-center gap-1.5 rounded-full bg-primary-500 px-4 text-neutral-50 text-sm transition-colors duration-200 hover:bg-primary-500/75"
+                  className="absolute right-4 bottom-4 flex h-9 items-center gap-1.5 rounded-full bg-primary-500 px-4 text-neutral-50 text-sm transition-colors duration-200 hover:bg-primary-600"
                 >
                   {item.link.label}
                   <ArrowUpRight className="size-4" />
@@ -156,4 +180,4 @@ const ExperimentsModal = ({ isOpen, onClose }: Props) => {
   );
 };
 
-export default ExperimentsModal;
+export default ItemsModal;

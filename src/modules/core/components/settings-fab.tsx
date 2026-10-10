@@ -111,7 +111,7 @@ const SettingsFab = () => {
           {/* Animation toggle */}
           <button
             onClick={handleAnimationsToggle}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-primary-500 text-neutral-50 cursor-pointer transition-opacity whitespace-nowrap"
+            className="flex cursor-pointer items-center gap-1 whitespace-nowrap rounded-full bg-primary-500 px-2.5 py-1 text-neutral-50 text-xs transition-colors hover:bg-primary-600"
           >
             {animationsEnabled ? (
               <>
@@ -129,7 +129,7 @@ const SettingsFab = () => {
           {/* Sound toggle */}
           <button
             onClick={handleSoundToggle}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-primary-500 text-neutral-50 cursor-pointer transition-opacity whitespace-nowrap"
+            className="flex cursor-pointer items-center gap-1 whitespace-nowrap rounded-full bg-primary-500 px-2.5 py-1 text-neutral-50 text-xs transition-colors hover:bg-primary-600"
           >
             {muted ? (
               <>

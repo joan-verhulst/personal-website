@@ -10,7 +10,7 @@ importers:
     dependencies:
       '@hookform/resolvers':
         specifier: ^5.2.2
-        version: 5.9.1(react-hook-form@7.89.0(@types/react@19.2.10)(react@19.2.4))(valibot@1.2.0(typescript@5.9.3))
+        version: 5.9.1(react-hook-form@7.89.0(@types/react@19.2.10)(react@19.2.4))(valibot@1.2.0(typescript@5.9.3))(zod@4.6.5)
       '@radix-ui/react-dialog':
         specifier: ^1.1.15
         version: 1.1.23(@types/react-dom@19.2.3(@types/react@19.2.10))(@types/react@19.2.10)(react-dom@19.2.3(react@19.2.4))(react@19.2.4)
@@ -34,7 +34,7 @@ importers:
         version: 2.117.2
       '@t3-oss/env-nextjs':
         specifier: ^0.13.10
-        version: 0.13.10(typescript@5.9.3)(valibot@1.2.0(typescript@5.9.3))
+        version: 0.13.10(typescript@5.9.3)(valibot@1.2.0(typescript@5.9.3))(zod@4.6.5)
       '@tanstack/react-table':
         specifier: ^8.21.3
         version: 8.21.3(react-dom@19.2.3(react@19.2.4))(react@19.2.4)
@@ -105,6 +105,9 @@ importers:
       biome-config-pixel:
         specifier: 2.1.6
         version: 2.1.6
+      fixhere:
+        specifier: ^0.2.0
+        version: 0.2.0(react@19.2.4)
       postcss:
         specifier: ^8.5.6
         version: 8.5.6
@@ -1069,6 +1072,19 @@ packages:
   eyes-types@0.3.0:
     resolution: {integrity: sha512-P8RkfmEkIyYyNGAdmAv+5Enu5DK9HfVW2gLqxmYFhE1rh27a2UgEP+xJV/4BewOWkgYKHxdPxik5zn+40u+/bg==}
 
+  fixhere@0.2.0:
+    resolution: {integrity: sha512-NT2ECCLZgnUHtBWdpVh5lQ6WBh5v3QT3ZnjVG/bQGjJELTbGFLLyrjoZgNkOg0vooHxwE8Ln4ljm33gvA+Fbgw==}
+    engines: {node: '>=22'}
+    hasBin: true
+    peerDependencies:
+      react: '>=18'
+      vite: '>=5'
+    peerDependenciesMeta:
+      react:
+        optional: true
+      vite:
+        optional: true
+
   get-nonce@1.0.1:
     resolution: {integrity: sha512-FJhYRoDaiatfEkUK8HKlicmu/3SGFD51q3itKDGoSTysQJBnfOcxU5GxnhE1E6soB76MbT0MBtnKJuXyAx+96Q==}
     engines: {node: '>=6'}
@@ -1359,6 +1375,21 @@ packages:
       vue:
         optional: true
 
+  ws@8.22.0:
+    resolution: {integrity: sha512-Ydggc987+RO0AnWtZ/7Wq9FtNvcrL1b/RO0ud9mWjUPgDrsAAwQSF51sm2hm1XofbU/4jkpGEsLFsZZxU+1DOg==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: '>=5.0.2'
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
+
+  zod@4.6.5:
+    resolution: {integrity: sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q==}
+
 snapshots:
 
   '@alloc/quick-lru@5.2.0': {}
@@ -1420,12 +1451,13 @@ snapshots:
 
   '@floating-ui/utils@0.2.12': {}
 
-  '@hookform/resolvers@5.9.1(react-hook-form@7.89.0(@types/react@19.2.10)(react@19.2.4))(valibot@1.2.0(typescript@5.9.3))':
+  '@hookform/resolvers@5.9.1(react-hook-form@7.89.0(@types/react@19.2.10)(react@19.2.4))(valibot@1.2.0(typescript@5.9.3))(zod@4.6.5)':
     dependencies:
       '@standard-schema/utils': 0.3.0
       react-hook-form: 7.89.0(@types/react@19.2.10)(react@19.2.4)
     optionalDependencies:
       valibot: 1.2.0(typescript@5.9.3)
+      zod: 4.6.5
 
   '@img/colour@1.0.0': {}
 
@@ -1957,17 +1989,19 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  '@t3-oss/env-core@0.13.10(typescript@5.9.3)(valibot@1.2.0(typescript@5.9.3))':
+  '@t3-oss/env-core@0.13.10(typescript@5.9.3)(valibot@1.2.0(typescript@5.9.3))(zod@4.6.5)':
     optionalDependencies:
       typescript: 5.9.3
       valibot: 1.2.0(typescript@5.9.3)
+      zod: 4.6.5
 
-  '@t3-oss/env-nextjs@0.13.10(typescript@5.9.3)(valibot@1.2.0(typescript@5.9.3))':
+  '@t3-oss/env-nextjs@0.13.10(typescript@5.9.3)(valibot@1.2.0(typescript@5.9.3))(zod@4.6.5)':
     dependencies:
-      '@t3-oss/env-core': 0.13.10(typescript@5.9.3)(valibot@1.2.0(typescript@5.9.3))
+      '@t3-oss/env-core': 0.13.10(typescript@5.9.3)(valibot@1.2.0(typescript@5.9.3))(zod@4.6.5)
     optionalDependencies:
       typescript: 5.9.3
       valibot: 1.2.0(typescript@5.9.3)
+      zod: 4.6.5
 
   '@tailwindcss/node@4.1.18':
     dependencies:
@@ -2105,6 +2139,17 @@ snapshots:
       react: 19.2.4
 
   eyes-types@0.3.0: {}
+
+  fixhere@0.2.0(react@19.2.4):
+    dependencies:
+      picocolors: 1.1.1
+      ws: 8.22.0
+      zod: 4.6.5
+    optionalDependencies:
+      react: 19.2.4
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
 
   get-nonce@1.0.1: {}
 
@@ -2339,3 +2384,7 @@ snapshots:
     optionalDependencies:
       react: 19.2.4
       react-dom: 19.2.3(react@19.2.4)
+
+  ws@8.22.0: {}
+
+  zod@4.6.5: {}

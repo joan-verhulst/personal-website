@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { fallbackCards } from "~/data/contact-cards";
 import {
   type Content,
   WALL_SLOTS,
@@ -163,6 +164,12 @@ export const getContent = cache(async (): Promise<Content> => {
       headline: siteRow?.about_headline ?? "",
       intro: siteRow?.about_intro ?? "",
       image: optionalMediaUrl(siteRow?.about_image),
+      // Before 0008_about_modal_image.sql the modal shows the widget's photo
+      modalImage: optionalMediaUrl(
+        siteRow?.about_modal_image === undefined
+          ? siteRow?.about_image
+          : siteRow.about_modal_image,
+      ),
       currently: siteRow?.currently_name
         ? {
             name: siteRow.currently_name,
@@ -176,6 +183,36 @@ export const getContent = cache(async (): Promise<Content> => {
       instagram: siteRow?.instagram_url ?? undefined,
       linkedin: siteRow?.linkedin_url ?? undefined,
       email: siteRow?.email ?? undefined,
+      // Field by field, so a card that's half written still reads whole
+      cards: {
+        uiUx: {
+          title: siteRow?.card_ui_ux_title || fallbackCards.uiUx.title,
+          text: siteRow?.card_ui_ux_text || fallbackCards.uiUx.text,
+          button: siteRow?.card_ui_ux_button || fallbackCards.uiUx.button,
+          href: siteRow?.card_ui_ux_url || fallbackCards.uiUx.href,
+        },
+        photography: {
+          title:
+            siteRow?.card_photography_title || fallbackCards.photography.title,
+          text: siteRow?.card_photography_text || fallbackCards.photography.text,
+          button:
+            siteRow?.card_photography_button ||
+            fallbackCards.photography.button,
+        },
+        digitalArt: {
+          title:
+            siteRow?.card_digital_art_title || fallbackCards.digitalArt.title,
+          text: siteRow?.card_digital_art_text || fallbackCards.digitalArt.text,
+          button:
+            siteRow?.card_digital_art_button || fallbackCards.digitalArt.button,
+        },
+      },
+    },
+    descriptions: {
+      home: siteRow?.search_home || undefined,
+      uiUx: siteRow?.search_ui_ux || undefined,
+      digitalArt: siteRow?.search_digital_art || undefined,
+      photography: siteRow?.search_photography || undefined,
     },
     photos: photoRows.map((row) => ({
       id: row.id,
@@ -212,6 +249,8 @@ export const getContent = cache(async (): Promise<Content> => {
     ),
     wall,
     experiments: pick(listsById.get("experiments") ?? []),
+    // Missing until 0010_products.sql has run
+    products: pick(listsById.get("products") ?? []),
     highlights: pick(listsById.get("highlights") ?? []).filter(
       (item) => item.media.type === "image",
     ),

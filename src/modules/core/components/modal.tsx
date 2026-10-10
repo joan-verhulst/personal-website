@@ -169,7 +169,7 @@ const Modal = ({
             type="button"
             onClick={handleCloseClick}
             onMouseEnter={haptic.onMouseEnter}
-            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-full border-neutral-950/15 text-neutral-950 transition-colors hover:text-neutral-950/75"
+            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-full border-neutral-950/15 text-neutral-950 transition-colors hover:bg-neutral-100"
             aria-label="Close modal"
           >
             <X className="h-4 w-4" />

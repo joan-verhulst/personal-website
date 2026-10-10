@@ -228,6 +228,7 @@ export const MEDIA_COLUMNS = [
   ["artworks", "image"],
   ["records", "cover"],
   ["site", "about_image"],
+  ["site", "about_modal_image"],
 ] as const;
 
 /**

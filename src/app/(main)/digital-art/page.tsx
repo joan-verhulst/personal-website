@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { getContent } from "~/modules/content/utils/get-content";
 import DigitalArtGallery from "~/modules/digital-art/components/digital-art-gallery";
-import { sectionMetadata } from "~/utils/page-metadata";
+import { pageMetadata } from "~/utils/page-metadata";
 
-export const metadata: Metadata = sectionMetadata("Digital Art", "/digital-art");
+export const generateMetadata = async (): Promise<Metadata> =>
+  pageMetadata("digitalArt", await getContent());
 
 const DigitalArtPage = async () => {
   // Sizes are measured when a piece is uploaded

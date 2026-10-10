@@ -26,6 +26,13 @@ export const widgets = {
   },
   experiments: {
     label: "Experiments",
+    // Over the list in its modal
+    intro: "Side projects and motion studies, made outside of client work.",
+  },
+  // In the contact widget's place once there's a product, see Content
+  products: {
+    label: "Products",
+    intro: "Things I've made that you can try right now.",
   },
   contact: {
     label: "Contact",

@@ -9,6 +9,8 @@ export interface SiteRow {
   about_headline: string;
   about_intro: string;
   about_image: string | null;
+  // Undefined until 0008_about_modal_image.sql has run
+  about_modal_image?: string | null;
   currently_name: string | null;
   currently_since: string | null;
   currently_blurb: string | null;
@@ -16,6 +18,22 @@ export interface SiteRow {
   instagram_url: string | null;
   linkedin_url: string | null;
   email: string | null;
+  // Undefined until 0007_search_descriptions.sql has run
+  search_home?: string | null;
+  search_ui_ux?: string | null;
+  search_digital_art?: string | null;
+  search_photography?: string | null;
+  // Undefined until 0009_contact_cards.sql has run
+  card_ui_ux_title?: string | null;
+  card_ui_ux_text?: string | null;
+  card_ui_ux_button?: string | null;
+  card_ui_ux_url?: string | null;
+  card_photography_title?: string | null;
+  card_photography_text?: string | null;
+  card_photography_button?: string | null;
+  card_digital_art_title?: string | null;
+  card_digital_art_text?: string | null;
+  card_digital_art_button?: string | null;
 }
 
 export interface PhotoRow {
@@ -86,7 +104,8 @@ export interface WallBlockRow {
   sort_order: number;
 }
 
-export type WallListId = "experiments" | "highlights";
+// "products" from 0010_products.sql on
+export type WallListId = "experiments" | "highlights" | "products";
 
 export interface WallListRow {
   id: WallListId;

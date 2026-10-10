@@ -82,7 +82,7 @@ const SoundToast = () => {
       </span>
       <button
         onClick={handleDisable}
-        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs bg-neutral-950 text-neutral-50 cursor-pointer hover:opacity-80 transition-opacity whitespace-nowrap"
+        className="flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg bg-neutral-950 px-2.5 py-1 text-neutral-50 text-xs transition-colors hover:bg-neutral-800"
       >
         <VolumeOff className="w-3 h-3" />
         Disable

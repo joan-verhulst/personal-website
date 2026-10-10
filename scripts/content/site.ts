@@ -3,7 +3,7 @@
 
 export const about = {
   headline:
-    "Self taught product designer, digital artist and photographer based in The Netherlands, focussing on building top of the line products and user interfaces.",
+    "Product designer, digital artist and photographer based in The Netherlands, focussing on building top of the line products and user interfaces.",
   intro:
     "I work with people and companies who know what they're doing, care about getting it right, and see design as a core part of that. With AI making it easier than ever to build without taste, the designer who can steer you in the right direction is more valuable than ever. I've designed products used by thousands of people daily and I'm looking for the kind of work and people I can grow with.",
   image: "/assets/images/about_thumbnail.png",

@@ -13,7 +13,7 @@ import path from "node:path";
 import sharp from "sharp";
 
 const ROOT = path.join(import.meta.dirname, "..");
-const HEADSHOT = path.join(import.meta.dirname, "icons", "headshot.jpg");
+const HEADSHOT = path.join(import.meta.dirname, "icons", "headshot2.png");
 
 const square = (size: number) =>
   sharp(HEADSHOT).resize(size, size, { fit: "cover", position: "centre" });

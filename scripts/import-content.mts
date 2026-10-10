@@ -149,6 +149,8 @@ const measureHue = async (publicPath: string) => {
 // ── Site ──────────────────────────────────────────────────────────────────────
 
 console.log("About and contact");
+// The widget and the modal start out with the same photo
+const aboutImage = await upload(about.image);
 fail(
   "Saving site",
   (
@@ -156,7 +158,8 @@ fail(
       id: 1,
       about_headline: about.headline,
       about_intro: about.intro,
-      about_image: await upload(about.image),
+      about_image: aboutImage,
+      about_modal_image: aboutImage,
       currently_name: about.currently.name,
       currently_since: about.currently.since,
       currently_blurb: about.currently.blurb,

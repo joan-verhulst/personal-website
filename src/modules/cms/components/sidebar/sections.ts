@@ -9,6 +9,7 @@ import {
   type LucideIcon,
   Mail,
   Palette,
+  Search,
   ShieldCheck,
   Tag,
   UserRound,
@@ -77,6 +78,7 @@ export const sidebarSections: SidebarSection[] = [
     items: [
       { label: "About", url: "/admin/about", icon: UserRound },
       { label: "Contact", url: "/admin/contact", icon: Mail },
+      { label: "Search", url: "/admin/search", icon: Search },
       { label: "Media", url: "/admin/media", icon: HardDrive },
       { label: "Security", url: "/admin/security", icon: ShieldCheck },
     ],

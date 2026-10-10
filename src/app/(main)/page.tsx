@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import TransitionLink from "~components/utils/TransitionLink";
+import PageWithFooter from "~components/layout/footer";
 import WidgetCard from "~components/widget-card";
 import { Dot } from "lucide-react";
 import {
@@ -12,22 +13,21 @@ import {
   useState,
 } from "react";
 import { gsap } from "gsap";
+import { siteData } from "~/data/site";
 import { widgets } from "~/data/widgets";
 import AboutModal from "~/modules/about/components/about-modal";
-import ContactModal, {
-  getContactLinks,
-} from "~/modules/contact/components/contact-modal";
-import ExperimentsModal from "~/modules/experiments/components/experiments-modal";
+import { getContactLinks } from "~/modules/contact/components/contact-modal";
 import FavoritesModal from "~/modules/favorites/components/favorites-modal";
 import Gear from "~/modules/favorites/components/gear";
 import OnRotation from "~/modules/favorites/components/on-rotation";
 import Vinyl from "~/modules/favorites/components/vinyl";
+import ItemsModal from "~/modules/ui-ux/components/items-modal";
 import WallMedia from "~/modules/ui-ux/components/wall-media";
 import { getWallBackground } from "~/modules/ui-ux/utils/wall-backgrounds";
 import { useContent } from "~/modules/content/components/content-provider";
 import { useAnimationPreference } from "~/modules/core/context/animation-preference-context";
 import { track } from "~/utils/eyes";
-import { OPEN_WIDGET_EVENT } from "~/utils/open-widget";
+import { OPEN_WIDGET_EVENT, openWidget } from "~/utils/open-widget";
 
 const Page = () => {
   const gridRef = useRef<HTMLDivElement>(null);
@@ -44,26 +44,29 @@ const Page = () => {
   const [isExperimentsOpen, setIsExperimentsOpen] = useState(false);
   const [isOnRotationOpen, setIsOnRotationOpen] = useState(false);
   const [isGearOpen, setIsGearOpen] = useState(false);
-  const [isContactOpen, setIsContactOpen] = useState(false);
+  const [isProductsOpen, setIsProductsOpen] = useState(false);
 
-  const { about, contact, covers, experiments, highlights, records } =
+  const { about, contact, covers, experiments, highlights, products, records } =
     useContent();
   // Two pieces from the UI/UX wall rotate in the widget
   const [firstHighlight, secondHighlight = firstHighlight] = highlights;
   // The shader fills the experiments widget, the nav reel peeks over it
   const [shaderExperiment, navExperiment] = experiments;
+  // The first product fills its widget. Without one, contact keeps the spot
+  const [firstProduct] = products;
   // The record that's on spins on the On Rotation widget
   const [currentRecord] = records;
 
   // Opens a widget, from its card or from the island, and tells Eyes which
-  // one. Returns whether there's a widget by that name
+  // one. Returns whether there's a widget by that name. Contact isn't one of
+  // them: its modal is on every page, see ContactHost
   const showWidget = useCallback((widget: string) => {
     const open: Record<string, (isOpen: boolean) => void> = {
       about: setIsAboutOpen,
       "on-rotation": setIsOnRotationOpen,
       gear: setIsGearOpen,
-      contact: setIsContactOpen,
       experiments: setIsExperimentsOpen,
+      products: setIsProductsOpen,
     };
     if (!open[widget]) return false;
     track("Widget Opened", { widget });
@@ -269,7 +272,9 @@ const Page = () => {
   }, [activeSlide]);
 
   return (
-    <main className="min-h-screen bg-neutral-50 ">
+    <PageWithFooter className="min-h-screen">
+      {/* The widgets say what's here, this says whose it is, for search */}
+      <h1 className="sr-only">{siteData.owner.name}</h1>
       <div className="flex z-10 justify-center items-center min-h-screen py-24 px-16 md:px-0 md:py-0 md:h-screen">
         <div className="w-full md:w-3xl">
           {/* Main grid - mobile: single column, desktop: 2 equal-height rows */}
@@ -534,22 +539,62 @@ const Page = () => {
                   </WidgetCard>
                 </div>
 
-                {/* Contact: the icons are a picture, the modal has the links */}
+                {/* Products, in contact's old spot: contact is next to the
+                    island on every page now. Until there's a product to try,
+                    contact keeps it */}
                 <div className="aspect-2/1 md:aspect-auto md:h-full">
-                  <WidgetCard
-                    label={widgets.contact.label}
-                    className="bg-linear-to-b from-[#B1EB10] to-[#2FC72F] h-full"
-                    onClick={() => showWidget("contact")}
-                  >
-                    <div
-                      aria-hidden
-                      className="flex items-center justify-center gap-6 h-full pointer-events-none"
+                  {firstProduct ? (
+                    <WidgetCard
+                      label={widgets.products.label}
+                      className="h-full"
+                      onClick={() => showWidget("products")}
                     >
-                      {getContactLinks(contact).map(({ id, icon: Icon }) => (
-                        <Icon key={id} className="w-6 h-6 text-neutral-50" />
-                      ))}
-                    </div>
-                  </WidgetCard>
+                      <div
+                        className="pointer-events-none relative h-full w-full overflow-hidden rounded-4xl"
+                        style={{ background: getWallBackground(firstProduct) }}
+                      >
+                        {/* A reel fills the card, a screenshot sits in it
+                            like on the UI/UX widget */}
+                        {firstProduct.bare ? (
+                          <WallMedia
+                            item={firstProduct}
+                            sizes="(min-width: 768px) 256px, 100vw"
+                          />
+                        ) : (
+                          <div className="absolute inset-0 px-6 pt-4">
+                            <div className="relative inset-border h-full overflow-hidden rounded-t-xl">
+                              <WallMedia
+                                item={firstProduct}
+                                sizes="(min-width: 768px) 256px, 100vw"
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="absolute bottom-4 left-4 flex h-6 items-center rounded-[0.625rem] bg-neutral-950/33 px-2 backdrop-blur-lg">
+                          <span className="text-neutral-50 text-sm">
+                            {products.length} to try
+                          </span>
+                        </div>
+                      </div>
+                    </WidgetCard>
+                  ) : (
+                    // The icons are a picture, the modal has the links
+                    <WidgetCard
+                      label={widgets.contact.label}
+                      className="h-full bg-linear-to-b from-[#B1EB10] to-[#2FC72F]"
+                      onClick={() => openWidget("contact")}
+                    >
+                      <div
+                        aria-hidden
+                        className="pointer-events-none flex h-full items-center justify-center gap-6"
+                      >
+                        {getContactLinks(contact).map(({ id, icon: Icon }) => (
+                          <Icon key={id} className="h-6 w-6 text-neutral-50" />
+                        ))}
+                      </div>
+                    </WidgetCard>
+                  )}
                 </div>
               </div>
             </div>
@@ -571,15 +616,22 @@ const Page = () => {
       >
         <Gear />
       </FavoritesModal>
-      <ContactModal
-        isOpen={isContactOpen}
-        onClose={() => setIsContactOpen(false)}
-      />
-      <ExperimentsModal
+      <ItemsModal
+        title={widgets.experiments.label}
+        intro={widgets.experiments.intro}
+        items={experiments}
         isOpen={isExperimentsOpen}
         onClose={() => setIsExperimentsOpen(false)}
       />
-    </main>
+      <ItemsModal
+        title={widgets.products.label}
+        intro={widgets.products.intro}
+        items={products}
+        namedByTag
+        isOpen={isProductsOpen}
+        onClose={() => setIsProductsOpen(false)}
+      />
+    </PageWithFooter>
   );
 };
 

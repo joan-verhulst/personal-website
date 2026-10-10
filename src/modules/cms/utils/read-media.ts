@@ -105,7 +105,12 @@ const readOwners = async (supabase: SupabaseClient) => {
         label: name && row[name] ? `${noun} · ${row[name]}` : noun,
         href: href(String(row.id)),
       };
-      owners.set(path, [...(owners.get(path) ?? []), owner]);
+      const uses = owners.get(path) ?? [];
+      // About has two photos, often the same file. It's listed once
+      if (uses.some((use) => use.label === owner.label && use.href === owner.href)) {
+        continue;
+      }
+      owners.set(path, [...uses, owner]);
     }
   }
   return owners;

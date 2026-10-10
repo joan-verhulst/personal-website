@@ -83,14 +83,14 @@ const AboutModal = ({ isOpen, onClose }: Props) => {
       </AnimatedText>
 
       {/* Hero Image */}
-      {about.image && (
+      {about.modalImage && (
         <div
           ref={imageRef}
           className="relative inset-border mb-12 aspect-video w-full overflow-hidden rounded-2xl"
           style={{ opacity: 0 }}
         >
           <Image
-            src={about.image}
+            src={about.modalImage}
             alt={siteData.owner.name}
             fill
             className="object-cover"

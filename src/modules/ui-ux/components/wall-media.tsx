@@ -7,7 +7,8 @@ import { useAnimationPreference } from "~/modules/core/context/animation-prefere
 import cn from "~/utils/cn";
 
 interface Props {
-  item: WallItem;
+  // What it takes of a wall item, so a product shows its media the same way
+  item: Pick<WallItem, "title" | "media" | "bare" | "position" | "zoom">;
   sizes: string;
   className?: string;
 }

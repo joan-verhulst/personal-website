@@ -200,16 +200,6 @@ export const ExperimentsEditor = (props: ListEditorProps) => (
   />
 );
 
-/** What people can try, in the order the products modal shows it. */
-export const ProductsEditor = (props: ListEditorProps) => (
-  <OrderedListEditor
-    {...props}
-    title="Products"
-    description="Things people can try right now, in the products modal. Each card goes by its item's tag, the brand, with the title as a fallback, so give each a tag and a link to try it. The first fills the home page widget, which takes the contact widget's spot once there's a product here."
-    noun="products"
-    widgetSlots={["any"]}
-  />
-);
 
 /** The two screenshots that take turns on the home page's UI/UX widget. */
 export const HighlightsEditor = ({

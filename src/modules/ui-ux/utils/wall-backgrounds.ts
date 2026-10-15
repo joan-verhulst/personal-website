@@ -24,5 +24,7 @@ export const wallBackgrounds: Record<WallBackground, string> = {
   neutral: "var(--color-neutral-50)",
 };
 
-export const getWallBackground = ({ background }: WallItem) =>
-  wallBackgrounds[background];
+// For anything with a wall background: wall items and products
+export const getWallBackground = ({
+  background,
+}: Pick<WallItem, "background">) => wallBackgrounds[background];

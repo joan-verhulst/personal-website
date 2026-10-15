@@ -191,6 +191,22 @@ export const updateOne = async (
 // PostgREST's "no such function", here before 0003 has been run
 export const MISSING_FUNCTION = "PGRST202";
 
+// PostgREST answers a table it doesn't know with this. Postgres' own code is
+// the fallback
+export const MISSING_TABLE = ["PGRST205", "42P01"];
+
+// Tables a newer migration adds, which may not have run yet
+const NEWER_TABLES = ["products"];
+
+/**
+ * Whether the error says a table from a newer migration isn't there yet.
+ * Until it is, it counts as a table without rows: nothing in it uses a file.
+ */
+export const isTableToCome = (
+  table: string,
+  error: { code?: string } | null | undefined,
+) => NEWER_TABLES.includes(table) && MISSING_TABLE.includes(error?.code ?? "");
+
 /**
  * Saves an order: every id gets its index as sort order. Ids that are gone
  * are skipped, which is right for a row deleted in another tab.
@@ -227,6 +243,8 @@ export const MEDIA_COLUMNS = [
   ["photos", "image"],
   ["artworks", "image"],
   ["records", "cover"],
+  ["products", "media"],
+  ["products", "logo"],
   ["site", "about_image"],
   ["site", "about_modal_image"],
 ] as const;
@@ -313,16 +331,22 @@ const NOT_NULL = "23502";
 
 /**
  * Empties every column that shows this file, before the file is deleted. The
- * rows stay: the site leaves out a photo, artwork, record or item without its
- * file until another one is picked. Returns why it failed, or null.
+ * rows stay: the site leaves out a photo, artwork, record, product or item
+ * without its file until another one is picked. A product that only loses
+ * its logo shows without one. Returns why it failed, or null.
  */
 export const clearMediaUses = async (supabase: SupabaseClient, path: string) => {
   const results = await Promise.all(
-    MEDIA_COLUMNS.map(([table, column]) =>
-      supabase.from(table).update({ [column]: null }).eq(column, path),
-    ),
+    MEDIA_COLUMNS.map(async ([table, column]) => {
+      const { error } = await supabase
+        .from(table)
+        .update({ [column]: null })
+        .eq(column, path);
+      // A table that isn't there yet has nothing to let go of
+      return isTableToCome(table, error) ? null : error;
+    }),
   );
-  const error = results.find((result) => result.error)?.error;
+  const error = results.find(Boolean);
   if (!error) return null;
   if (error.code === NOT_NULL) {
     return "Run supabase/migrations/0006_media_library.sql first, so a photo or item can stay without its file.";

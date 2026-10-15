@@ -15,6 +15,7 @@ const plural = (total: number, one: string, many: string) =>
 
 const descriptions: Record<string, string> = {
   "/admin/ui-ux": "The wall of projects: screenshots, videos and their tags.",
+  "/admin/products": "Things people can try right now, in the products modal.",
   "/admin/digital-art": "Artworks in the digital art gallery.",
   "/admin/photography": "Photos in the table on the photography page.",
   "/admin/on-rotation": "Records on the favorites shelf.",
@@ -25,11 +26,13 @@ const descriptions: Record<string, string> = {
 };
 
 const AdminHome = async () => {
-  const { items, photos, artworks, records } = await readContentCounts();
+  const { items, products, photos, artworks, records } =
+    await readContentCounts();
 
   // Only collections get a count; the pages under Site are a single page each
   const counts: Record<string, string> = {
     "/admin/ui-ux": plural(items, "item", "items"),
+    "/admin/products": plural(products, "product", "products"),
     "/admin/digital-art": plural(artworks, "artwork", "artworks"),
     "/admin/photography": plural(photos, "photo", "photos"),
     "/admin/on-rotation": plural(records, "record", "records"),
@@ -50,6 +53,11 @@ const AdminHome = async () => {
               label="UI/UX items"
               value={items}
               href="/admin/ui-ux/items"
+            />
+            <StatCard
+              label="Products"
+              value={products}
+              href="/admin/products"
             />
             <StatCard label="Photos" value={photos} href="/admin/photography" />
             <StatCard

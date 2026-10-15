@@ -10,6 +10,7 @@ import {
 import type {
   ArtworkRow,
   PhotoRow,
+  ProductRow,
   RecordRow,
   SiteRow,
   WallBlockRow,
@@ -42,6 +43,10 @@ const rowsOf = <Row>(
   }
   return rows;
 };
+
+// What the API answers for a table that doesn't exist, in its own words and
+// in Postgres'
+const MISSING_TABLE = ["PGRST205", "42P01"];
 
 /**
  * A width and height that are safe to divide by. A row saved without a size,
@@ -94,22 +99,38 @@ export const getContent = cache(async (): Promise<Content> => {
   const list = (table: string) =>
     supabase.from(table).select("*", { count: "exact" });
 
-  const [site, photos, artworks, records, tags, items, blocks, lists] =
-    await Promise.all([
-      supabase.from("site").select("*").eq("id", 1).maybeSingle(),
-      // The id breaks ties, so rows with the same sort order stay put and
-      // match the order the CMS shows
-      list("photos").order("sort_order").order("id"),
-      list("artworks").order("sort_order").order("id"),
-      list("records").order("sort_order").order("id"),
-      list("wall_tags"),
-      list("wall_items"),
-      list("wall_blocks").order("sort_order").order("id"),
-      list("wall_lists"),
-    ]);
+  const [
+    site,
+    photos,
+    artworks,
+    records,
+    tags,
+    items,
+    blocks,
+    lists,
+    products,
+  ] = await Promise.all([
+    supabase.from("site").select("*").eq("id", 1).maybeSingle(),
+    // The id breaks ties, so rows with the same sort order stay put and
+    // match the order the CMS shows
+    list("photos").order("sort_order").order("id"),
+    list("artworks").order("sort_order").order("id"),
+    list("records").order("sort_order").order("id"),
+    list("wall_tags"),
+    list("wall_items"),
+    list("wall_blocks").order("sort_order").order("id"),
+    list("wall_lists"),
+    list("products").order("sort_order").order("id"),
+  ]);
 
   if (site.error) throw new Error(`Couldn't read site: ${site.error.message}`);
   const siteRow = site.data as SiteRow | null;
+
+  // The table is missing until 0011_products_table.sql has run. Until then
+  // there are no products, rather than no site
+  const productRows = MISSING_TABLE.includes(products.error?.code ?? "")
+    ? []
+    : rowsOf<ProductRow>("products", products);
 
   const photoRows = rowsOf<PhotoRow>("photos", photos).filter(hasImage);
   const artworkRows = rowsOf<ArtworkRow>("artworks", artworks).filter(hasImage);
@@ -249,8 +270,33 @@ export const getContent = cache(async (): Promise<Content> => {
     ),
     wall,
     experiments: pick(listsById.get("experiments") ?? []),
-    // Missing until 0010_products.sql has run
-    products: pick(listsById.get("products") ?? []),
+    // A product whose file was deleted from Media stays off the site
+    products: productRows.flatMap((row) =>
+      row.media === null
+        ? []
+        : [
+            {
+              id: row.id,
+              name: row.name,
+              logo: optionalMediaUrl(row.logo),
+              description: row.description ?? undefined,
+              // A link without a label still leads somewhere
+              link: row.link_href
+                ? {
+                    label: row.link_label || `Try ${row.name}`,
+                    href: row.link_href,
+                  }
+                : undefined,
+              media: {
+                type: row.media_type,
+                src: mediaUrl(row.media),
+                ...sizeOf(row),
+              },
+              background: row.background,
+              bare: row.bare || undefined,
+            },
+          ],
+    ),
     highlights: pick(listsById.get("highlights") ?? []).filter(
       (item) => item.media.type === "image",
     ),

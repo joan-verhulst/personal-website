@@ -71,6 +71,23 @@ export interface RecordRow {
   sort_order: number;
 }
 
+// From 0011_products_table.sql on
+export interface ProductRow {
+  id: string;
+  name: string;
+  logo: string | null;
+  description: string | null;
+  link_label: string | null;
+  link_href: string | null;
+  media_type: "image" | "video";
+  media: string | null;
+  width: number;
+  height: number;
+  background: WallBackground;
+  bare: boolean;
+  sort_order: number;
+}
+
 export interface WallTagRow {
   id: string;
   label: string;
@@ -104,8 +121,7 @@ export interface WallBlockRow {
   sort_order: number;
 }
 
-// "products" from 0010_products.sql on
-export type WallListId = "experiments" | "highlights" | "products";
+export type WallListId = "experiments" | "highlights";
 
 export interface WallListRow {
   id: WallListId;

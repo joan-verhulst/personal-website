@@ -6,6 +6,7 @@ const FOLDER_LABELS: Record<string, string> = {
   [LIBRARY_FOLDER]: "Uploaded to Media",
   work: "UI/UX",
   experiments: "Experiments",
+  products: "Products",
   photography: "Photography",
   "digital-art": "Digital art",
   "on-rotation": "On rotation",

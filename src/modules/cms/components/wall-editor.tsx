@@ -15,7 +15,6 @@ import StatCard from "~/modules/cms/components/stat-card";
 import {
   ExperimentsEditor,
   HighlightsEditor,
-  ProductsEditor,
 } from "~/modules/cms/components/wall/home-lists";
 import ItemLibrary from "~/modules/cms/components/wall/item-library";
 import ItemPickerDialog from "~/modules/cms/components/wall/item-picker-dialog";
@@ -121,7 +120,6 @@ const PART_LABELS = {
   rows: "Rows",
   highlights: "Highlights",
   experiments: "Experiments",
-  products: "Products",
 } as const;
 
 type Part = keyof typeof PART_LABELS;
@@ -179,21 +177,16 @@ const WallEditor = ({ items, tags, blocks, lists }: Props) => {
       // Always two places, an empty one is ""
       highlights: [highlights[0] ?? "", highlights[1] ?? ""],
       experiments: listItems("experiments"),
-      products: listItems("products"),
     };
   }, [lists]);
   const highlightsDraft = useDraft(savedLists.highlights, listSignature);
   const experimentsDraft = useDraft(savedLists.experiments, listSignature);
-  const productsDraft = useDraft(savedLists.products, listSignature);
 
   // The site needs both highlights, so one on its own waits
   const isHighlightsComplete = highlightsDraft.value.every(Boolean);
   const canSaveHighlights = highlightsDraft.isDirty && isHighlightsComplete;
   const isDirty =
-    rowsDraft.isDirty ||
-    highlightsDraft.isDirty ||
-    experimentsDraft.isDirty ||
-    productsDraft.isDirty;
+    rowsDraft.isDirty || highlightsDraft.isDirty || experimentsDraft.isDirty;
 
   // Asks before the tab closes or a link leaves the page, like Edit item
   useUnsavedWarning(isDirty);
@@ -360,13 +353,11 @@ const WallEditor = ({ items, tags, blocks, lists }: Props) => {
       rows: rowsDraft,
       highlights: highlightsDraft,
       experiments: experimentsDraft,
-      products: productsDraft,
     };
     const actions: Record<Part, () => ReturnType<typeof saveWall>> = {
       rows: () => saveWall(rows),
       highlights: () => saveWallList("highlights", highlightsDraft.value),
       experiments: () => saveWallList("experiments", experimentsDraft.value),
-      products: () => saveWallList("products", productsDraft.value),
     };
     const parts = (Object.keys(drafts) as Part[]).filter((part) =>
       part === "highlights" ? canSaveHighlights : drafts[part].isDirty,
@@ -408,7 +399,7 @@ const WallEditor = ({ items, tags, blocks, lists }: Props) => {
     const isConfirmed = await confirm({
       title: "Discard your changes?",
       description:
-        "The rows, the highlights, the experiments and the products go back to how they were last saved.",
+        "The rows, the highlights and the experiments go back to how they were last saved.",
       confirmLabel: "Discard",
       cancelLabel: "Keep editing",
       tone: "danger",
@@ -417,7 +408,6 @@ const WallEditor = ({ items, tags, blocks, lists }: Props) => {
     rowsDraft.reset();
     highlightsDraft.reset();
     experimentsDraft.reset();
-    productsDraft.reset();
   };
 
   const hiddenRows = rows.filter((row) => !isComplete(row)).length;
@@ -545,13 +535,6 @@ const WallEditor = ({ items, tags, blocks, lists }: Props) => {
         onChange={experimentsDraft.setValue}
         isPending={isPending}
       />
-      <ProductsEditor
-        items={items}
-        tags={tags}
-        value={productsDraft.value}
-        onChange={productsDraft.setValue}
-        isPending={isPending}
-      />
 
       {/* The page's one Save, in the bottom bar in place of the + button.
           Discard is here only: this page builds up a draft in many steps */}
@@ -560,10 +543,7 @@ const WallEditor = ({ items, tags, blocks, lists }: Props) => {
         isPending={isPending}
         // Half-picked highlights alone leave nothing to save yet
         isDisabled={
-          !rowsDraft.isDirty &&
-          !experimentsDraft.isDirty &&
-          !productsDraft.isDirty &&
-          !canSaveHighlights
+          !rowsDraft.isDirty && !experimentsDraft.isDirty && !canSaveHighlights
         }
         onSave={onSave}
         start={

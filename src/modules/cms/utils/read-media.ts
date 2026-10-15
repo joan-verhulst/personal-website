@@ -1,5 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { MEDIA_COLUMNS } from "~/modules/cms/utils/shared";
+import {
+  isTableToCome,
+  MEDIA_COLUMNS,
+  MISSING_TABLE,
+} from "~/modules/cms/utils/shared";
 import { mediaUrl } from "~/modules/media/utils/media-url";
 import { listMedia } from "~/modules/media/utils/storage";
 
@@ -25,14 +29,11 @@ const OWNERS: Record<MediaTable, Owner> = {
   photos: { noun: "Photo", name: "title", href: () => "/admin/photography" },
   artworks: { noun: "Artwork", name: "title", href: () => "/admin/digital-art" },
   records: { noun: "Record", name: "title", href: () => "/admin/on-rotation" },
+  products: { noun: "Product", name: "name", href: () => "/admin/products" },
   site: { noun: "About", href: () => "/admin/about" },
 };
 
 const VIDEO = /\.(mp4|webm)$/i;
-
-// PostgREST answers a table it doesn't know with this, here before
-// 0006_media_library.sql has been run. Postgres' own code is the fallback
-const MISSING_TABLES = new Set(["PGRST205", "42P01"]);
 
 // How many rows PostgREST hands out per request
 const PAGE = 1000;
@@ -93,6 +94,8 @@ const readOwners = async (supabase: SupabaseClient) => {
 
   const owners = new Map<string, MediaOwner[]>();
   for (const { table, column, data, error, count } of reads) {
+    // A table that isn't there yet has no rows to use a file
+    if (isTableToCome(table, error)) continue;
     // The API cuts a long read off at its row limit without saying so
     if (error || !data || count === null || count > data.length) {
       throw new Error(`Couldn't read the media ${table} uses`);
@@ -130,7 +133,8 @@ const readDetails = async (supabase: SupabaseClient) => {
       .order("path")
       .range(from, from + PAGE - 1);
     if (error) {
-      if (MISSING_TABLES.has(error.code)) {
+      // Before 0006_media_library.sql has been run
+      if (MISSING_TABLE.includes(error.code)) {
         return { details, hasTable: false };
       }
       throw new Error(`Couldn't read the media details: ${error.message}`);

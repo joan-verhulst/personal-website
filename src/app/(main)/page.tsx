@@ -53,7 +53,12 @@ const Page = () => {
   // The shader fills the experiments widget, the nav reel peeks over it
   const [shaderExperiment, navExperiment] = experiments;
   // The first product fills its widget. Without one, contact keeps the spot
-  const [firstProduct] = products;
+  // Named for the modal's cards and the widget's media, which go by title
+  const productItems = products.map(({ name, ...product }) => ({
+    ...product,
+    title: name,
+  }));
+  const [firstProduct] = productItems;
   // The record that's on spins on the On Rotation widget
   const [currentRecord] = records;
 
@@ -626,8 +631,7 @@ const Page = () => {
       <ItemsModal
         title={widgets.products.label}
         intro={widgets.products.intro}
-        items={products}
-        namedByTag
+        items={productItems}
         isOpen={isProductsOpen}
         onClose={() => setIsProductsOpen(false)}
       />

@@ -20,31 +20,41 @@ const PADDING_X = "px-[clamp(1.25rem,6cqw,3rem)]";
 const PADDING_LEFT = "pl-[clamp(1.25rem,6cqw,3rem)]";
 const PADDING_TOP = "pt-[clamp(1.25rem,6cqw,3rem)]";
 
+/**
+ * What a card needs: a wall item as it is, or a product by its name and
+ * logo, see the products on the home page.
+ */
+export type ItemsModalItem = Pick<
+  WallItem,
+  | "id"
+  | "title"
+  | "tag"
+  | "media"
+  | "background"
+  | "bare"
+  | "position"
+  | "zoom"
+  | "description"
+  | "link"
+> & {
+  // Single color SVG next to the title, tinted like it
+  logo?: string;
+};
+
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   title: string;
   // A line over the list, saying what's in it
   intro: string;
-  items: WallItem[];
-  // Names each card by its tag instead of its title. On the wall a title
-  // says what the shot is and the tag whose it is, and a product goes by
-  // whose it is. An item without a tag keeps its title
-  namedByTag?: boolean;
+  items: ItemsModalItem[];
 }
 
 /**
  * A home list in a modal, one card per item with its link in the corner:
  * the experiments, and the products to try.
  */
-const ItemsModal = ({
-  isOpen,
-  onClose,
-  title,
-  intro,
-  items,
-  namedByTag,
-}: Props) => {
+const ItemsModal = ({ isOpen, onClose, title, intro, items }: Props) => {
   const introTextRef = useRef<AnimatedTextHandle>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const { animationsEnabled } = useAnimationPreference();
@@ -88,9 +98,6 @@ const ItemsModal = ({
         {items.map((item) => {
           // Matches the wall tiles: neutral cards get a dark header
           const isNeutral = item.background === "neutral";
-          // The tag names the card in place of the title, so it isn't
-          // repeated as a pill
-          const brand = namedByTag ? item.tag : undefined;
 
           return (
             <article
@@ -113,12 +120,12 @@ const ItemsModal = ({
                       isNeutral ? "text-neutral-950" : "text-neutral-50",
                     )}
                   >
-                    {brand?.logo && (
-                      <TagLogo logo={brand.logo} className="h-[0.9em] w-[1.1em]" />
+                    {item.logo && (
+                      <TagLogo logo={item.logo} className="h-[0.9em] w-[1.1em]" />
                     )}
-                    {brand ? brand.label : item.title}
+                    {item.title}
                   </h3>
-                  {item.tag && !brand && (
+                  {item.tag && (
                     <WallTag
                       tag={item.tag}
                       className={isNeutral ? "text-neutral-50" : "bg-neutral-50"}

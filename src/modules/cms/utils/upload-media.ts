@@ -55,7 +55,7 @@ const videoSize = (file: File) =>
   });
 
 /** The size the browser gives an image, or 0 by 0 when it can't tell. */
-const imageSize = (file: File) =>
+const imageSize = (file: Blob) =>
   new Promise<{ width: number; height: number }>((resolve) => {
     const image = new Image();
     const url = URL.createObjectURL(file);
@@ -79,12 +79,33 @@ const pixels = (value: string | null) => {
 
 const isSize = (width: number, height: number) => width > 0 && height > 0;
 
+const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
+const XLINK_NAMESPACE = "http://www.w3.org/1999/xlink";
+
+/**
+ * An SVG copied out of a web page often comes without its namespace: inline
+ * in HTML it doesn't need one, but as a file of its own a browser shows it as
+ * plain XML, and it draws nothing as an image or a logo. Adds the namespace
+ * when it's missing, and xlink's when the file uses xlink.
+ */
+const withNamespaces = (text: string) =>
+  text.replace(/<svg\b[^>]*>/, (tag) => {
+    let fixed = tag;
+    if (!/\sxmlns\s*=/.test(fixed)) {
+      fixed = fixed.replace(/^<svg\b/, `<svg xmlns="${SVG_NAMESPACE}"`);
+    }
+    if (/\bxlink:/.test(text) && !/\sxmlns:xlink\s*=/.test(fixed)) {
+      fixed = fixed.replace(/^<svg\b/, `<svg xmlns:xlink="${XLINK_NAMESPACE}"`);
+    }
+    return fixed;
+  });
+
 /**
  * The size of an SVG, read from the file itself: its width and height, or
  * else its viewBox. Browsers disagree on the size of an SVG that only has a
  * viewBox, so asking them is the last resort.
  */
-const svgSize = async (file: File) => {
+const svgSize = async (file: Blob) => {
   const root = new DOMParser().parseFromString(
     await file.text(),
     "image/svg+xml",
@@ -114,6 +135,14 @@ const svgSize = async (file: File) => {
     width: Math.max(1, Math.round(width * scale)),
     height: Math.max(1, Math.round(height * scale)),
   };
+};
+
+/** An SVG as it goes up: as it is, unless it needs its namespace. */
+const prepareSvg = async (file: File) => {
+  const blob = new Blob([withNamespaces(await file.text())], {
+    type: "image/svg+xml",
+  });
+  return { blob, type: blob.type, ...(await svgSize(blob)), hue: 0, chroma: 0 };
 };
 
 const hasTransparency = (context: CanvasRenderingContext2D, width: number, height: number) => {
@@ -206,7 +235,7 @@ export const uploadMedia = async (
   const prepared = isVideo
     ? { blob: file as Blob, type: file.type, ...(await videoSize(file)), hue: 0, chroma: 0 }
     : isSvg
-      ? { blob: file as Blob, type: file.type, ...(await svgSize(file)), hue: 0, chroma: 0 }
+      ? await prepareSvg(file)
       : await prepareImage(file, options);
 
   // Checked on what goes up, not on the file that was picked: a large photo

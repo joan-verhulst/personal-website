@@ -82,6 +82,23 @@ export const WALL_SLOTS: Record<WallLayout, number> = {
   double: 2,
 };
 
+// ── Products ──────────────────────────────────────────────────────────────────
+
+// Something people can try right now. Shown like a wall item, but described
+// for trying it: by name, not by what the shot shows
+export interface Product {
+  id: string;
+  name: string;
+  // Single color SVG, tinted like the name next to it
+  logo?: string;
+  description?: string;
+  link?: { label: string; href: string };
+  media: WallMedia;
+  background: WallBackground;
+  // Fills the card with no frame, like a bare wall item
+  bare?: boolean;
+}
+
 // ── Photography ───────────────────────────────────────────────────────────────
 
 export interface PhotographyProject {
@@ -189,7 +206,7 @@ export interface Content {
   experiments: WallItem[];
   // Things people can try right now, shown in the products modal. The first
   // fills the home page widget. Empty, home shows the contact widget instead
-  products: WallItem[];
+  products: Product[];
   // The two wall items that rotate in the home page widget, always images
   highlights: WallItem[];
   // Images on the home page widgets

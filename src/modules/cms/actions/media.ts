@@ -13,6 +13,7 @@ import {
   clearMediaUses,
   dbFailed,
   failed,
+  isTableToCome,
   MEDIA_COLUMNS,
   type MediaDetails,
   noRoomFor,
@@ -169,13 +170,16 @@ const PAGE = 100;
 /** Every path a row points at, or null when a table couldn't be read whole. */
 const readUsedPaths = async (supabase: SupabaseClient) => {
   const reads = await Promise.all(
-    MEDIA_COLUMNS.map(([table, column]) =>
-      supabase.from(table).select(column, { count: "exact" }),
-    ),
+    MEDIA_COLUMNS.map(async ([table, column]) => ({
+      table,
+      ...(await supabase.from(table).select(column, { count: "exact" })),
+    })),
   );
 
   const used = new Set<string>();
-  for (const { data, error, count } of reads) {
+  for (const { table, data, error, count } of reads) {
+    // A table that isn't there yet has no rows to use a file
+    if (isTableToCome(table, error)) continue;
     // The API cuts a long read off at its row limit without saying so. A
     // short list here would mark media that's live as unused
     if (error || !data || count === null || count > data.length) {

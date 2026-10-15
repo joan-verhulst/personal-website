@@ -24,6 +24,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   "ui-ux": "UI/UX",
   items: "Items",
   tags: "Tags",
+  products: "Products",
   photography: "Photography",
   "digital-art": "Digital art",
   "on-rotation": "On rotation",

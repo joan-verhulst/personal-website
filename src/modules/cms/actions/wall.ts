@@ -500,7 +500,6 @@ export async function saveWall(input: unknown): Promise<ActionResult> {
 const LIST_IDS = [
   "experiments",
   "highlights",
-  "products",
 ] as const satisfies readonly WallListId[];
 
 const listSchema = v.object({
@@ -546,14 +545,7 @@ const writeWallList = async (
   }
 
   const { error } = await supabase.from("wall_lists").upsert(list);
-  if (!error) return {};
-  // The products' row is turned away until the table allows it
-  return dbFailed(
-    error,
-    list.id === "products"
-      ? "Couldn't save the products. Run supabase/migrations/0010_products.sql if you haven't yet."
-      : "Couldn't save the list.",
-  );
+  return error ? dbFailed(error, "Couldn't save the list.") : {};
 };
 
 export async function saveWallList(

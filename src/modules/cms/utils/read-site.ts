@@ -1,4 +1,5 @@
 import { adminClient } from "~/modules/cms/utils/require-admin";
+import { isTableToCome } from "~/modules/cms/utils/shared";
 import type { SiteRow } from "~/modules/content/utils/rows";
 
 /** The single site row with the about modal and contact links. */
@@ -15,6 +16,7 @@ export const readSite = async (): Promise<SiteRow> => {
 
 export interface ContentCounts {
   items: number;
+  products: number;
   photos: number;
   artworks: number;
   records: number;
@@ -26,18 +28,22 @@ const countRows = async (table: string) => {
   const { count, error } = await supabase
     .from(table)
     .select("id", { count: "exact", head: true });
-  // A count is only a hint on the dashboard, so it shouldn't take the page down
-  if (error) console.error(`Couldn't count ${table}: ${error.message}`);
+  // A count is only a hint on the dashboard, so it shouldn't take the page
+  // down. A table that isn't there yet just has none
+  if (error && !isTableToCome(table, error)) {
+    console.error(`Couldn't count ${table}: ${error.message}`);
+  }
   return count ?? 0;
 };
 
 /** How many rows each collection holds, for the dashboard. */
 export const readContentCounts = async (): Promise<ContentCounts> => {
-  const [items, photos, artworks, records] = await Promise.all([
+  const [items, products, photos, artworks, records] = await Promise.all([
     countRows("wall_items"),
+    countRows("products"),
     countRows("photos"),
     countRows("artworks"),
     countRows("records"),
   ]);
-  return { items, photos, artworks, records };
+  return { items, products, photos, artworks, records };
 };

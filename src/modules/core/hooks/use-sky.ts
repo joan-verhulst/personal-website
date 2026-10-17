@@ -115,7 +115,8 @@ interface Options {
  * clouds, rain and snow are one of five skies for the weather, see
  * utils/weather.ts, eased from one into the next. Redrawn every minute, and
  * while the footer shows as often as the weather moves. `play` runs it
- * through the last 24 hours, back to now, under the weather of each hour.
+ * through the last 24 hours, back to now. Only the time moves: the weather
+ * stays today's, so the clouds keep their look while the light goes round.
  *
  * Nothing is drawn while the page covers the footer, and the weather only
  * moves while the footer shows. When the page drops frames, with animations
@@ -239,10 +240,8 @@ export const useSky = ({
     let report: WeatherReport | null = null;
     let lastSettle = performance.now();
 
-    // The sky to move toward: the weather's, now or at a moment of the
-    // played day
-    const goalWeather = (at?: number) =>
-      skyWeather(report, SKY_DEFAULTS.clouds, at);
+    // The sky to move toward: the weather's now, in a played day too
+    const goalWeather = () => skyWeather(report, SKY_DEFAULTS.clouds);
 
     /**
      * Moves the sky toward the one for the weather: every number of its
@@ -250,11 +249,11 @@ export const useSky = ({
      * What falls switches as soon as something does, and stays until the
      * last of it has fallen.
      */
-    const settle = (at: number) => {
+    const settle = () => {
       const now = performance.now();
       const seconds = (now - lastSettle) / 1000;
       lastSettle = now;
-      const goal = goalWeather(playing ? at : undefined);
+      const goal = goalWeather();
       showCondition(goal);
       const current = weatherRef.current;
       const share =
@@ -367,7 +366,7 @@ export const useSky = ({
       const sunX =
         0.5 + EDGE * Math.min(Math.max((sun.azimuth - 180) / REACH, -1), 1);
 
-      settle(now.getTime());
+      settle();
       if (renderer) {
         advance();
         lastFrame = {
@@ -406,7 +405,7 @@ export const useSky = ({
     const redraw = (clouds: boolean) => {
       if (!lastFrame) return;
       const now = Date.now() + time.offset;
-      settle(now);
+      settle();
       advance();
       // The clock's element may be new, when the status was rendered again
       showClock(new Date(now));

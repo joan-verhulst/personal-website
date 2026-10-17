@@ -929,8 +929,8 @@ float noise1(float x, float seed) {
 }
 
 // The bolt: a jagged line down from where the lightning struck, thin and
-// bright with a soft glow, fading out before the ground. Only while the
-// flash lasts, and only for some strikes
+// bright with a soft glow, coming out of the cloud and fading out before the
+// ground. Only while the flash lasts, and only for some strikes
 float boltAt(vec2 position) {
   if (uBoltOn < 0.5 || uFlash <= 0.0) return 0.0;
   float top = uBolt.y * uResolution.y;
@@ -943,7 +943,7 @@ float boltAt(vec2 position) {
   float pixels = abs(position.x - x) / uPixelRatio;
   float core = 1.0 - smoothstep(0.5, 1.6, pixels);
   float halo = exp(-pixels / 18.0) * 0.4;
-  float reach = 1.0 - smoothstep(0.75, 1.0, down);
+  float reach = smoothstep(0.0, 0.1, down) * (1.0 - smoothstep(0.75, 1.0, down));
   return (core + halo) * reach * min(uFlash * 3.0, 1.0);
 }
 

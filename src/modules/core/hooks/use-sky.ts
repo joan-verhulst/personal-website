@@ -54,8 +54,8 @@ const WEATHER_EASE = 20;
 const PLAYED_EASE = 0.4;
 
 // How much of a played day the clouds drift through. All of it would be a
-// blur: a few clouds' widths is enough to see them race
-const TIMELAPSE = 0.004;
+// blur
+const TIMELAPSE = 0.01;
 
 // How long a played day takes
 const PLAY_SECONDS = 7;

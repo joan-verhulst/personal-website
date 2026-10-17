@@ -55,9 +55,7 @@ export interface CloudLook {
   coverage: number;
   // How large the clouds are, against their natural size
   scale: number;
-  // How high the layer hangs over the viewer, in kilometers. Its clouds
-  // grow with it, so overhead they look alike; lower ones flatten sooner
-  // toward the horizon and lose the setting sun later
+  // How high the layer hangs, in kilometers. Lower clouds loom larger
   height: number;
   // How thick the clouds are, as the depth of light they stop. Thin ones
   // glow white with the sun through them, thick ones hang dark

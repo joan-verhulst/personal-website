@@ -244,7 +244,7 @@ const CLOUD_BUDGET = 800_000;
 // The noise the clouds are shaped from is drawn once, this large, and tiles
 const NOISE_SIZE = 512;
 
-// How high the veil of thin cloud hangs, in kilometers
+// How high the veil of thin cloud hangs over the viewer, in kilometers
 const VEIL_HEIGHT = 7;
 
 // One triangle that covers the canvas, without any buffers
@@ -711,10 +711,12 @@ void main() {
   // low sun
   float open = 1.0 - smoothstep(0.55, 1.0, uCoverage);
 
-  // The veil: thin, high, streaked along the wind, and far behind the clouds
+  // The veil: thin, high, streaked along the wind, and far behind the clouds.
+  // Its height, like the clouds', counts from where the viewer stands, as
+  // the sunlight that reaches it does
   vec4 veil = vec4(0.0);
   if (uVeil > 0.0) {
-    float away = sphere(origin, dir, EARTH + VEIL_HEIGHT).y;
+    float away = sphere(origin, dir, EARTH + ALTITUDE + VEIL_HEIGHT).y;
     vec2 ground = (origin + dir * away).xz - uDrift * 2.5;
     vec2 across = vec2(-uWind.y, uWind.x);
     vec2 t = vec2(dot(ground, uWind) * 0.35, dot(ground, across)) / VEIL_TILE;
@@ -732,9 +734,9 @@ void main() {
 
   vec4 cloud = vec4(0.0);
   if (uCoverage > 0.0) {
-    // Where the view meets the layer. Toward the horizon that's far away,
-    // where the noise averages out into its mean
-    float away = sphere(origin, dir, EARTH + uHeight).y;
+    // Where the view meets the layer, its height over the viewer. Toward the
+    // horizon that's far away, where the noise averages out into its mean
+    float away = sphere(origin, dir, EARTH + ALTITUDE + uHeight).y;
     vec2 ground = (origin + dir * away).xz;
     float tile = TILE * uHeight * uScale;
     vec2 t = (ground - uDrift) / tile;
@@ -1060,14 +1062,20 @@ void main() {
     color = glass(color, position, uGlass[i].xy, uGlass[i].zw, uGlassRadius[i]);
   }
 
-  // Lightning lights the clouds from inside, most around where it struck,
-  // and the clear sky a little
+  // Lightning lights the cloud from inside: the billows around where it
+  // struck most, the rest of the deck a little, the clear sky barely. The
+  // cloud's own light and shade shape the glow, so it reads as cloud lit up
+  // rather than a lamp behind it, and it never gets so bright the footer's
+  // text washes out
   if (uFlash > 0.0) {
-    vec2 struck = uBolt.xy * uResolution;
-    float spread = 0.2 * uResolution.x;
-    float near = exp(-dot(position - struck, position - struck) / (2.0 * spread * spread));
-    float cloud = cloudsAt(position).a;
-    color += uFlash * (0.25 + cloud * (0.6 + 1.6 * near)) * vec3(0.75, 0.8, 1.0);
+    vec4 cloud = cloudsAt(position);
+    vec2 offset = (position - uBolt.xy * uResolution) / (vec2(0.32, 0.22) * uResolution.x);
+    float near = exp(-0.5 * dot(offset, offset));
+    // How light the cloud is for its cover: lighter where it's thinner
+    float lit = dot(cloud.rgb, vec3(0.2126, 0.7152, 0.0722)) / max(cloud.a, 0.05);
+    float billows = smoothstep(0.08, 0.5, lit);
+    color += uFlash * vec3(0.75, 0.8, 1.0)
+      * (0.06 + cloud.a * (0.15 + near * (0.35 + 0.9 * billows)));
   }
 
   // A little noise against banding in the dark gradients

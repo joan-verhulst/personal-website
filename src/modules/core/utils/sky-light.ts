@@ -20,7 +20,7 @@ const OZONE: Color = [0.00065, 0.00188, 0.00008];
 const STEPS = 6;
 
 /**
- * How much of the sun's light makes it to a height above home, in
+ * How much of the sun's light makes it to a height over the viewer, in
  * kilometers, as a share of each of red, green and blue. White at noon,
  * red as the sun sets, and nothing once the planet's shadow has reached
  * that height, which happens later the higher up.

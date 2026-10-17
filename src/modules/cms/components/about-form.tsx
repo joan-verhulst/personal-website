@@ -214,7 +214,7 @@ const AboutForm = ({ site }: { site: SiteRow }) => {
 
         <PhotoSection
           title="Widget photo"
-          description="On the About widget, in the island and in link previews, cropped to about 2:1. The footer shows it blurred."
+          description="On the About widget, in the island and in link previews, cropped to about 2:1."
           aspect="aspect-2/1"
           path={image}
           isDirty={dirtyFields.image}

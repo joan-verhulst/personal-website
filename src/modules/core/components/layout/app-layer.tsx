@@ -9,7 +9,15 @@ import {
   useRef,
   useSyncExternalStore,
 } from "react";
-import { closeLayer, connect, getState, subscribe } from "~/utils/app-layer";
+import { sectionAt } from "~/data/pages";
+import {
+  closeLayer,
+  connect,
+  getState,
+  subscribe,
+  takeOpened,
+} from "~/utils/app-layer";
+import { track, useEyes } from "~/utils/eyes";
 
 interface Props {
   // The parallel route that holds the section that's open, if any
@@ -23,6 +31,7 @@ interface Props {
 const AppLayer = ({ children, slot }: PropsWithChildren<Props>) => {
   const { phase, screen } = useSyncExternalStore(subscribe, getState, getState);
   const pathname = usePathname();
+  const { page } = useEyes();
   const stageRef = useRef<HTMLDivElement>(null);
   const layerRef = useRef<HTMLDivElement>(null);
   const screenRef = useRef<HTMLDivElement>(null);
@@ -58,6 +67,18 @@ const AppLayer = ({ children, slot }: PropsWithChildren<Props>) => {
   useEffect(() => {
     if (pathname === "/") closeLayer();
   }, [pathname]);
+
+  // Tells Eyes a section opened, and how. One taking another's place
+  // replaces the URL, which Eyes doesn't count as a pageview by itself
+  useEffect(() => {
+    const opened = takeOpened(pathname);
+    if (opened?.isSwap) page();
+
+    const section = sectionAt(pathname);
+    if (section) {
+      track("Section Opened", { section, from: opened?.from ?? "direct" });
+    }
+  }, [pathname, page]);
 
   return (
     <>

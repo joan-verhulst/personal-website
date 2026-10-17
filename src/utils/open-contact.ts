@@ -3,7 +3,8 @@
 export const OPEN_CONTACT_EVENT = "open-contact";
 
 export interface OpenContactDetail {
-  from: "pill" | "widget";
+  // The pill, or the contact widget on home
+  from: "pill" | "home";
 }
 
 /** Opens the contact modal. */

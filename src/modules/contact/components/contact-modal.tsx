@@ -19,8 +19,10 @@ import { wallBackgrounds } from "~/modules/ui-ux/utils/wall-backgrounds";
 import { buttonClass } from "~/utils/button";
 import { track } from "~/utils/eyes";
 
+export type ContactLinkId = "instagram" | "email" | "linkedin";
+
 interface ContactLink {
-  id: string;
+  id: ContactLinkId;
   service: string;
   handle: string;
   href: string;
@@ -48,7 +50,7 @@ export const getContactLinks = ({
   ...(instagram
     ? [
         {
-          id: "instagram",
+          id: "instagram" as const,
           service: "Instagram",
           handle: handleOf(instagram),
           href: instagram,
@@ -60,7 +62,7 @@ export const getContactLinks = ({
   ...(email
     ? [
         {
-          id: "email",
+          id: "email" as const,
           service: "Email",
           handle: email,
           href: `mailto:${email}`,
@@ -72,7 +74,7 @@ export const getContactLinks = ({
   ...(linkedin
     ? [
         {
-          id: "linkedin",
+          id: "linkedin" as const,
           service: "LinkedIn",
           handle: handleOf(linkedin),
           href: linkedin,
@@ -153,7 +155,7 @@ const ContactModal = ({ isOpen, onClose }: Props) => {
 
   const onCardClick = (card: ContactCardKey) => {
     haptic.onClick();
-    track("Contact Card Clicked", { card, from: "modal" });
+    track("Contact Clicked", { link: card, from: "modal" });
   };
 
   return (
@@ -271,7 +273,7 @@ const ContactModal = ({ isOpen, onClose }: Props) => {
                         : {})}
                       onClick={() => {
                         haptic.onClick();
-                        track("Contact Clicked", { service });
+                        track("Contact Clicked", { link: id, from: "modal" });
                       }}
                       onMouseEnter={haptic.onMouseEnter}
                       className="group flex items-center gap-3 rounded-2xl border border-neutral-950/10 p-2 pr-3 transition-colors duration-200 hover:bg-neutral-100 focus-visible:outline-2 focus-visible:outline-primary-500"

@@ -8,8 +8,8 @@ import { OPEN_WIDGET_EVENT } from "~/utils/open-widget";
 
 /**
  * The one contact modal, for every page. Opened by the pill next to the
- * island, see openContact, and by the contact widget from the home screen or
- * the island's tray, see openWidget.
+ * island and the contact widget on home, see openContact, and by the
+ * widget's tile in the island's tray, see openWidget.
  */
 const ContactHost = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -25,8 +25,7 @@ const ContactHost = () => {
       if ((event as CustomEvent<string>).detail !== "contact") return;
       // Tells the island it was taken care of, so it stays on this page
       event.preventDefault();
-      track("Widget Opened", { widget: "contact" });
-      track("Contact Opened", { from: "widget" });
+      track("Contact Opened", { from: "island" });
       setIsOpen(true);
     };
 

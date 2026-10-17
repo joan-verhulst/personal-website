@@ -48,13 +48,22 @@ interface Props {
   // A line over the list, saying what's in it
   intro: string;
   items: ItemsModalItem[];
+  // When an item's link is clicked, to tell Eyes which
+  onVisit?: (item: ItemsModalItem) => void;
 }
 
 /**
  * A home list in a modal, one card per item with its link in the corner:
  * the experiments, and the products to try.
  */
-const ItemsModal = ({ isOpen, onClose, title, intro, items }: Props) => {
+const ItemsModal = ({
+  isOpen,
+  onClose,
+  title,
+  intro,
+  items,
+  onVisit,
+}: Props) => {
   const introTextRef = useRef<AnimatedTextHandle>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const { animationsEnabled } = useAnimationPreference();
@@ -171,7 +180,10 @@ const ItemsModal = ({ isOpen, onClose, title, intro, items }: Props) => {
                   href={item.link.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={haptic.onClick}
+                  onClick={() => {
+                    haptic.onClick();
+                    onVisit?.(item);
+                  }}
                   onMouseEnter={haptic.onMouseEnter}
                   className="absolute right-4 bottom-4 flex h-9 items-center gap-1.5 rounded-full bg-primary-500 px-4 text-neutral-50 text-sm transition-colors duration-200 hover:bg-primary-600"
                 >

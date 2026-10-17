@@ -62,7 +62,7 @@ interface Props {
   onActiveIndexChange: (index: number) => void;
   pendingIndex: number | null;
   onPendingIndexChange: (index: number | null) => void;
-  onOpenPopover: () => void;
+  onOpenPopover: (index: number) => void;
 }
 
 const HorizontalImageSlider = ({

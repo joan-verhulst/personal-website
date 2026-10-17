@@ -8,3 +8,12 @@ export const pages: Record<PageKey, { path: string; title: string }> = {
   digitalArt: { path: "/digital-art", title: "Digital Art" },
   photography: { path: "/photography", title: "Photography" },
 };
+
+/** The pages that open over the home screen. */
+export type SectionKey = Exclude<PageKey, "home">;
+
+const SECTION_KEYS: SectionKey[] = ["uiUx", "digitalArt", "photography"];
+
+/** The section at a path, if it's one. */
+export const sectionAt = (pathname: string) =>
+  SECTION_KEYS.find((key) => pages[key].path === pathname);

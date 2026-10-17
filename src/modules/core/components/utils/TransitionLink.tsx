@@ -8,9 +8,9 @@ import { openApp } from "~/utils/app-layer";
 type TransitionLinkProps = ComponentProps<typeof Link>;
 
 /**
- * A link to a section, which opens out of this link like an app out of its
- * icon. The part that grows is the element marked `data-tile` inside, or the
- * link itself.
+ * A link to a section on the home screen, which opens out of this link like
+ * an app out of its icon. The part that grows is the element marked
+ * `data-tile` inside, or the link itself.
  */
 const TransitionLink = ({
   href,
@@ -37,7 +37,7 @@ const TransitionLink = ({
 
     e.preventDefault();
     const hrefString = typeof href === "string" ? href : (href.pathname ?? "/");
-    openApp(hrefString, router, e.currentTarget);
+    openApp(hrefString, router, "home", e.currentTarget);
   };
 
   return (

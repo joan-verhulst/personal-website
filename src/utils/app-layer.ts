@@ -1,6 +1,7 @@
 import type { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import type { ReactNode } from "react";
 import { gsap } from "gsap";
+import type { Events } from "~/utils/eyes";
 
 /**
  * Sections open like apps: as a layer over the home screen, which stays
@@ -367,6 +368,25 @@ const hold = () => {
   setState({ phase: "open" });
 };
 
+// ── Eyes ────────────────────────────────────────────────────────────────────
+
+// Where a section was opened from, by a click on the site
+type OpenedFrom = Exclude<Events["Section Opened"]["from"], "direct">;
+
+// The section on its way, until its route is there, see takeOpened
+let opening: { to: string; from: OpenedFrom; isSwap: boolean } | null = null;
+
+/**
+ * How the section at this path was opened, once its route is there: from
+ * where, and whether it took another's place, which replaces the URL. Null
+ * when it wasn't opened by a click here, like when it was loaded directly.
+ */
+export const takeOpened = (pathname: string) => {
+  const opened = opening?.to === pathname ? opening : null;
+  opening = null;
+  return opened;
+};
+
 // ── Actions ─────────────────────────────────────────────────────────────────
 
 /**
@@ -377,10 +397,12 @@ const hold = () => {
 export const openApp = (
   to: string,
   router: AppRouterInstance,
+  from: OpenedFrom,
   link?: HTMLElement,
 ) => {
   if (state.phase !== "closed") return;
 
+  opening = { to, from, isSwap: false };
   isOverHome = location.pathname === "/";
   if (elements) {
     href = to;
@@ -399,13 +421,18 @@ export const openApp = (
  * Goes to a section from anywhere. From the home screen it opens out of its
  * tile, with another section open it takes that one's place.
  */
-export const visitApp = (to: string, router: AppRouterInstance) => {
+export const visitApp = (
+  to: string,
+  router: AppRouterInstance,
+  from: OpenedFrom,
+) => {
   if (state.phase === "closed") {
-    openApp(to, router);
+    openApp(to, router, from);
     return;
   }
 
   if (state.phase !== "open" || location.pathname === to) return;
+  opening = { to, from, isSwap: true };
   // Replaced, not pushed: the open section stays one step away from home, so
   // going back still closes the layer
   router.replace(to, { scroll: false });

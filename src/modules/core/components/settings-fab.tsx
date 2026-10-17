@@ -85,7 +85,11 @@ const SettingsFab = () => {
 
   const handleSoundToggle = () => {
     setSoundEnabled(muted);
-    track("Setting Changed", { setting: "sound", enabled: muted });
+    track("Setting Changed", {
+      setting: "sound",
+      enabled: muted,
+      from: "settings",
+    });
   };
 
   const handleAnimationsToggle = () => {
@@ -93,13 +97,15 @@ const SettingsFab = () => {
     track("Setting Changed", {
       setting: "animations",
       enabled: !animationsEnabled,
+      from: "settings",
     });
   };
 
   return (
+    // Fades out while the footer is open, see data-footer in use-curtain.ts
     <div
       ref={containerRef}
-      className="flex items-center h-10 rounded-full border border-neutral-950/10 bg-neutral-50 overflow-hidden pointer-events-auto"
+      className="pointer-events-auto in-data-[footer=open]:invisible flex h-10 items-center overflow-hidden rounded-full border border-neutral-950/10 bg-neutral-50 in-data-[footer=open]:opacity-0 transition-[opacity,visibility] duration-300"
     >
       {/* Expandable settings panel */}
       <div

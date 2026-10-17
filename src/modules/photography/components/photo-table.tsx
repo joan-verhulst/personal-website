@@ -325,7 +325,8 @@ const PhotoTable = ({ prints }: Props) => {
     haptic.onClick();
     setActiveIndex(index);
     setIsPopoverOpen(true);
-    track("Photo Opened", { photo: prints[index].title });
+    // By where it's dealt, which the grid shuffles
+    track("Photo Opened", { photo: ordered[index].title });
   };
 
   // Keyboard focus pans a print hidden past the frame's edge into view

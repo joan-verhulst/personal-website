@@ -42,6 +42,12 @@ interface Options {
   contentRef: RefObject<HTMLElement | null>;
   animationsEnabled: boolean;
   onPop?: () => void;
+  // When the footer comes open, however it was opened
+  onOpen?: () => void;
+  // After every frame that moves the page or the footer's content, for what
+  // has to follow the content, like the sky's glass. Says whether any of the
+  // footer shows
+  onDraw?: (isShown: boolean) => void;
 }
 
 /** A scrollable element between the target and the page that can still scroll down. */
@@ -88,6 +94,8 @@ export const useCurtain = ({
   contentRef,
   animationsEnabled,
   onPop,
+  onOpen,
+  onDraw,
 }: Options) => {
   const controls = useRef<Controls | null>(null);
   // Read in the listeners, which shouldn't be rebound when these change
@@ -95,6 +103,10 @@ export const useCurtain = ({
   animateRef.current = animationsEnabled;
   const onPopRef = useRef(onPop);
   onPopRef.current = onPop;
+  const onOpenRef = useRef(onOpen);
+  onOpenRef.current = onOpen;
+  const onDrawRef = useRef(onDraw);
+  onDrawRef.current = onDraw;
 
   useEffect(() => {
     const page = pageRef.current;
@@ -141,6 +153,7 @@ export const useCurtain = ({
         radius = next;
         page.style.setProperty("--curtain-radius", `${next}px`);
       }
+      onDrawRef.current?.(lift > 0.5);
     };
 
     const moveTo = (lift: number, vars: gsap.TweenVars) => {
@@ -155,9 +168,12 @@ export const useCurtain = ({
     let isSpringing = false;
     let releaseTimer: ReturnType<typeof setTimeout> | undefined;
 
+    // On the page for what's in it, and on the document for what floats
+    // over it, like the settings pill, which keeps out of an open footer
     const setState = (next: State) => {
       state = next;
       page.dataset.footer = next;
+      document.documentElement.dataset.footer = next;
     };
     setState("closed");
 
@@ -174,6 +190,8 @@ export const useCurtain = ({
     const settle = (next: "closed" | "open", isPop = false) => {
       clearTimeout(releaseTimer);
       pull = 0;
+      // A pull back that didn't pop settles open again, without opening
+      if (next === "open" && state !== "open") onOpenRef.current?.();
       setState(next);
       isSpringing = true;
       const lift = next === "open" ? openOffset() : 0;
@@ -423,6 +441,7 @@ export const useCurtain = ({
       page.style.transform = "";
       page.style.removeProperty("--curtain-radius");
       delete page.dataset.footer;
+      delete document.documentElement.dataset.footer;
       controls.current = null;
     };
   }, [pageRef, footerRef, contentRef]);

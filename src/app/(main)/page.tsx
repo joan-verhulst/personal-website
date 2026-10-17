@@ -27,7 +27,8 @@ import { getWallBackground } from "~/modules/ui-ux/utils/wall-backgrounds";
 import { useContent } from "~/modules/content/components/content-provider";
 import { useAnimationPreference } from "~/modules/core/context/animation-preference-context";
 import { track } from "~/utils/eyes";
-import { OPEN_WIDGET_EVENT, openWidget } from "~/utils/open-widget";
+import { openContact } from "~/utils/open-contact";
+import { OPEN_WIDGET_EVENT } from "~/utils/open-widget";
 
 const Page = () => {
   const gridRef = useRef<HTMLDivElement>(null);
@@ -65,25 +66,28 @@ const Page = () => {
   // Opens a widget, from its card or from the island, and tells Eyes which
   // one. Returns whether there's a widget by that name. Contact isn't one of
   // them: its modal is on every page, see ContactHost
-  const showWidget = useCallback((widget: string) => {
-    const open: Record<string, (isOpen: boolean) => void> = {
-      about: setIsAboutOpen,
-      "on-rotation": setIsOnRotationOpen,
-      gear: setIsGearOpen,
-      experiments: setIsExperimentsOpen,
-      products: setIsProductsOpen,
-    };
-    if (!open[widget]) return false;
-    track("Widget Opened", { widget });
-    open[widget](true);
-    return true;
-  }, []);
+  const showWidget = useCallback(
+    (widget: string, from: "home" | "island") => {
+      const open: Record<string, (isOpen: boolean) => void> = {
+        about: setIsAboutOpen,
+        "on-rotation": setIsOnRotationOpen,
+        gear: setIsGearOpen,
+        experiments: setIsExperimentsOpen,
+        products: setIsProductsOpen,
+      };
+      if (!open[widget]) return false;
+      track("Widget Opened", { widget, from });
+      open[widget](true);
+      return true;
+    },
+    [],
+  );
 
   // The island can open these too, from any page
   useEffect(() => {
     const handleOpen = (event: Event) => {
       // Tells the island it was taken care of
-      if (showWidget((event as CustomEvent<string>).detail)) {
+      if (showWidget((event as CustomEvent<string>).detail, "island")) {
         event.preventDefault();
       }
     };
@@ -306,7 +310,7 @@ const Page = () => {
                     src={about.image}
                     alt={widgets.about.alt}
                     className="bg-neutral-400 h-full"
-                    onClick={() => showWidget("about")}
+                    onClick={() => showWidget("about", "home")}
                   />
                 </div>
 
@@ -320,7 +324,7 @@ const Page = () => {
                     <WidgetCard
                       label={widgets.onRotation.label}
                       className="bg-linear-to-b from-[#EBCA10] to-[#EB7E10] h-full"
-                      onClick={() => showWidget("on-rotation")}
+                      onClick={() => showWidget("on-rotation", "home")}
                     >
                       <div className="flex h-full items-center justify-center pointer-events-none">
                         {currentRecord && (
@@ -347,7 +351,7 @@ const Page = () => {
                     <WidgetCard
                       label={widgets.gear.label}
                       className="bg-linear-to-b from-[#626D77] to-[#1E2D3C] h-full"
-                      onClick={() => showWidget("gear")}
+                      onClick={() => showWidget("gear", "home")}
                     >
                       <div className="relative h-full overflow-hidden rounded-4xl">
                         <Image
@@ -505,7 +509,7 @@ const Page = () => {
                   <WidgetCard
                     label={widgets.experiments.label}
                     className="bg-neutral-50 h-full"
-                    onClick={() => showWidget("experiments")}
+                    onClick={() => showWidget("experiments", "home")}
                   >
                     <div className="relative w-full h-full overflow-hidden rounded-4xl">
                       {shaderExperiment && (
@@ -552,7 +556,7 @@ const Page = () => {
                     <WidgetCard
                       label={widgets.products.label}
                       className="h-full"
-                      onClick={() => showWidget("products")}
+                      onClick={() => showWidget("products", "home")}
                     >
                       <div
                         className="pointer-events-none relative h-full w-full overflow-hidden rounded-4xl"
@@ -588,7 +592,7 @@ const Page = () => {
                     <WidgetCard
                       label={widgets.contact.label}
                       className="h-full bg-linear-to-b from-[#B1EB10] to-[#2FC72F]"
-                      onClick={() => openWidget("contact")}
+                      onClick={() => openContact({ from: "home" })}
                     >
                       <div
                         aria-hidden
@@ -627,6 +631,9 @@ const Page = () => {
         items={experiments}
         isOpen={isExperimentsOpen}
         onClose={() => setIsExperimentsOpen(false)}
+        onVisit={({ title }) =>
+          track("Experiment Visited", { experiment: title })
+        }
       />
       <ItemsModal
         title={widgets.products.label}
@@ -634,6 +641,7 @@ const Page = () => {
         items={productItems}
         isOpen={isProductsOpen}
         onClose={() => setIsProductsOpen(false)}
+        onVisit={({ title }) => track("Product Visited", { product: title })}
       />
     </PageWithFooter>
   );

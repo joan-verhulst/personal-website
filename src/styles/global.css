@@ -100,6 +100,22 @@
 }
 
 /*
+ * The footer's glass: tinted until the sky's shader draws it as glass
+ * underneath. A button keeps a faint tint on hover
+ */
+[data-glass-on] [data-glass] {
+  background-color: transparent;
+}
+
+[data-glass-on] button[data-glass]:hover {
+  background-color: color-mix(
+    in oklab,
+    var(--color-neutral-50) 10%,
+    transparent
+  );
+}
+
+/*
  * The home widgets wait hidden while their intro is about to play, see
  * INTRO_SCRIPT in app/layout.tsx
  */

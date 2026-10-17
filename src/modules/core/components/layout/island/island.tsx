@@ -132,7 +132,7 @@ const Island = () => {
     haptic.onClick();
     if (href !== pathname) {
       if (href === "/") closeApp(router);
-      else visitApp(href, router);
+      else visitApp(href, router, "island");
     }
 
     if (UNFOLD === "dial") {

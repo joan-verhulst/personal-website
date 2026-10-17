@@ -1,6 +1,18 @@
 "use client";
 
-import Image from "next/image";
+import {
+  Cloud,
+  CloudFog,
+  CloudLightning,
+  CloudMoon,
+  CloudRain,
+  CloudSnow,
+  CloudSun,
+  FastForward,
+  type LucideIcon,
+  Moon,
+  Sun,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { type MouseEvent, type PropsWithChildren, useRef } from "react";
@@ -12,9 +24,26 @@ import { useContent } from "~/modules/content/components/content-provider";
 import { useAnimationPreference } from "~/modules/core/context/animation-preference-context";
 import { useCurtain } from "~/modules/core/hooks/use-curtain";
 import { useHapticSound } from "~/modules/core/hooks/use-haptic-sound";
+import { useSky } from "~/modules/core/hooks/use-sky";
+import {
+  CONDITION_LABELS,
+  type SkyCondition,
+} from "~/modules/core/utils/weather";
 import cn from "~/utils/cn";
 import { visitApp } from "~/utils/app-layer";
+import { track } from "~/utils/eyes";
 import { scrollerOf } from "~/utils/footer";
+
+// The weather app's icon for each sky, by day and by night
+const CONDITION_ICONS: Record<SkyCondition, [LucideIcon, LucideIcon]> = {
+  clear: [Sun, Moon],
+  partly: [CloudSun, CloudMoon],
+  cloudy: [Cloud, Cloud],
+  fog: [CloudFog, CloudFog],
+  rain: [CloudRain, CloudRain],
+  snow: [CloudSnow, CloudSnow],
+  thunder: [CloudLightning, CloudLightning],
+};
 
 const isPlainClick = (event: MouseEvent) =>
   event.button === 0 &&
@@ -43,6 +72,18 @@ const PageWithFooter = ({
   const pageRef = useRef<HTMLElement>(null);
   const footerRef = useRef<HTMLElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const skyRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const clockRef = useRef<HTMLSpanElement>(null);
+
+  const sky = useSky({
+    skyRef,
+    canvasRef,
+    clockRef,
+    animationsEnabled,
+    // The hover click: softer, and sound only, never a buzz on a phone
+    onHour: haptic.onMouseEnter,
+  });
 
   const curtain = useCurtain({
     pageRef,
@@ -50,6 +91,12 @@ const PageWithFooter = ({
     contentRef,
     animationsEnabled,
     onPop: haptic.onClick,
+    // The footer is a way to get in touch too: the page's contact card, and
+    // the same links as the contact modal
+    onOpen: () => track("Contact Opened", { from: "footer" }),
+    // The content rises as the page lifts, and the glass under it with it.
+    // The clouds only drift while the footer shows
+    onDraw: sky.refresh,
   });
 
   const toTop = () => {
@@ -65,12 +112,24 @@ const PageWithFooter = ({
     if (!isPlainClick(event)) return;
     event.preventDefault();
     if (href === pathname) toTop();
-    else visitApp(href, router);
+    else visitApp(href, router, "footer");
   };
 
-  // The about photo for now. A footer image of its own would go here
-  const image = about.image;
   const contactLinks = getContactLinks(contact);
+
+  // The sky's status: what it's doing at home, and the time there. The
+  // clock is written by the sky itself, every frame while a day plays
+  const Condition = CONDITION_ICONS[sky.condition][sky.isNight ? 1 : 0];
+  const status = (
+    <>
+      <Condition aria-hidden className="size-4" />
+      <span>{siteData.owner.home.name}</span>
+      <span ref={clockRef} className="tabular-nums" />
+      <span className="text-neutral-50/60">
+        {CONDITION_LABELS[sky.condition]}
+      </span>
+    </>
+  );
 
   return (
     <>
@@ -89,19 +148,14 @@ const PageWithFooter = ({
       <footer
         ref={footerRef}
         onFocus={() => curtain.current?.open()}
+        // The shader draws the data-glass elements as glass, see global.css
+        data-glass-on={sky.hasGlass ? "" : undefined}
         className="fixed inset-x-0 bottom-0 z-0 overflow-hidden bg-neutral-900 text-neutral-50"
       >
-        {image && (
-          <Image
-            src={image}
-            alt=""
-            fill
-            sizes="640px"
-            // Scaled up so the blur doesn't fade out at the edges
-            className="scale-125 object-cover blur-2xl"
-          />
-        )}
-        <div className="absolute inset-0 bg-neutral-950/50" />
+        {/* The sky as it is now at home, see useSky */}
+        <div ref={skyRef} className="absolute inset-0 bg-neutral-900">
+          <canvas ref={canvasRef} aria-hidden className="block size-full" />
+        </div>
 
         {/* The top padding holds CURTAIN_ROOM over the visible 64px, which
             the page's corners and its spring show. The bottom padding keeps
@@ -160,6 +214,9 @@ const PageWithFooter = ({
                         target: "_blank",
                         rel: "noopener noreferrer",
                       })}
+                      onClick={() =>
+                        track("Contact Clicked", { link: id, from: "footer" })
+                      }
                       className="underline-offset-3 hover:underline"
                     >
                       {service}
@@ -199,13 +256,36 @@ const PageWithFooter = ({
             <span>
               © {new Date().getFullYear()} {siteData.owner.name}
             </span>
-            <button
-              type="button"
-              onClick={toTop}
-              className="cursor-pointer rounded-xl bg-neutral-50/14 px-3 py-2 text-neutral-50 transition-colors duration-200 hover:bg-neutral-50/24"
-            >
-              Back to top ↑
-            </button>
+            <div className="flex gap-2">
+              {/* The sky's status. With animations, it plays the last 24
+                  hours, back to now, with the status following along */}
+              {animationsEnabled ? (
+                <button
+                  data-glass
+                  type="button"
+                  aria-label="Play the last 24 hours"
+                  title="Play the last 24 hours. Weather from Buienradar and Open-Meteo"
+                  disabled={sky.isPlaying}
+                  onClick={() => {
+                    haptic.onClick();
+                    track("Day Played");
+                    sky.play();
+                  }}
+                  className="flex cursor-pointer items-center gap-2 rounded-xl bg-neutral-50/14 py-2 pr-2.5 pl-3 text-neutral-50 transition-colors duration-200 hover:bg-neutral-50/24 disabled:cursor-default disabled:bg-neutral-50/24"
+                >
+                  {status}
+                  <FastForward aria-hidden className="size-4 text-neutral-50/70" />
+                </button>
+              ) : (
+                <div
+                  data-glass
+                  title="Weather from Buienradar and Open-Meteo"
+                  className="flex items-center gap-2 rounded-xl bg-neutral-50/14 px-3 py-2 text-neutral-50"
+                >
+                  {status}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </footer>

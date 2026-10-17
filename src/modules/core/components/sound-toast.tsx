@@ -66,7 +66,11 @@ const SoundToast = () => {
   const handleDisable = () => {
     if (timerRef.current) clearTimeout(timerRef.current);
     setSoundEnabled(false);
-    track("Setting Changed", { setting: "sound", enabled: false });
+    track("Setting Changed", {
+      setting: "sound",
+      enabled: false,
+      from: "toast",
+    });
     animateOut();
   };
 

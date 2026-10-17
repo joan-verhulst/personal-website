@@ -22,7 +22,7 @@ interface SlideCardProps {
   imgRef: (index: number, el: HTMLImageElement | null) => void;
   onSelect: (index: number) => void;
   onHover: (index: number | null) => void;
-  onOpenPopover: () => void;
+  onOpenPopover: (index: number) => void;
 }
 
 const SlideCard = ({
@@ -88,7 +88,7 @@ const SlideCard = ({
           <button
             onClick={() => {
               haptic.onClick();
-              onOpenPopover();
+              onOpenPopover(index);
             }}
             onMouseEnter={haptic.onMouseEnter}
           >

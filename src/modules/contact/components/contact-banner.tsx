@@ -26,9 +26,10 @@ const ContactBanner = ({ pathname }: { pathname: string }) => {
   const card = contact.cards[key];
 
   return (
-    // In the footer's own look, tinted like its Back to top button, so it
+    // In the footer's own look, tinted like its sky status button, so it
     // reads as part of the footer and not as the modal's card
     <section
+      data-glass
       aria-label={card.title}
       className="flex flex-wrap items-end justify-between gap-x-10 gap-y-6 rounded-4xl bg-neutral-50/14 p-6 md:items-center md:p-8"
     >
@@ -53,7 +54,7 @@ const ContactBanner = ({ pathname }: { pathname: string }) => {
           : {})}
         onClick={() => {
           haptic.onClick();
-          track("Contact Card Clicked", { card: key, from: "footer" });
+          track("Contact Clicked", { link: key, from: "footer" });
         }}
         onMouseEnter={haptic.onMouseEnter}
         className={buttonClass("light")}

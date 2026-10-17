@@ -7,6 +7,7 @@ import ImagePopover from "~/modules/core/components/image-popover";
 import ArtScrubber from "~/modules/digital-art/components/art-scrubber";
 import HorizontalImageSlider from "~/modules/digital-art/components/horizontal-image-slider";
 import type { Artwork } from "~/modules/digital-art/utils/slide-image";
+import { track } from "~/utils/eyes";
 
 interface Props {
   artworks: Artwork[];
@@ -23,7 +24,13 @@ const DigitalArtGallery = ({ artworks }: Props) => {
   const handleSlideChange = useCallback((index: number) => {
     setActiveIndex(index);
   }, []);
-  const openPopover = useCallback(() => setIsPopoverOpen(true), []);
+  const openPopover = useCallback(
+    (index: number) => {
+      setIsPopoverOpen(true);
+      track("Artwork Opened", { artwork: artworks[index].title });
+    },
+    [artworks],
+  );
 
   const shownIndex = pointedIndex ?? pendingIndex ?? activeIndex;
   const titles = useMemo(() => artworks.map(({ title }) => title), [artworks]);

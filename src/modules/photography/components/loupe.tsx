@@ -41,10 +41,9 @@ const EDGE_ROOM = 2;
 // Canvas pixels to a CSS pixel, at most
 const MAX_PIXEL_RATIO = 3;
 
-// Sharp copies of the photos under the loupe come from Next's image
-// optimizer, at one of the widths it makes: its default device sizes. The
-// ones most recently looked at are kept
-const PHOTO_WIDTHS = [640, 750, 828, 1080, 1200, 1920, 2048];
+// The photos under the loupe are the originals, straight from the media
+// bucket: it zooms in, so it might as well have every pixel, and nothing has
+// to be resized for it. The ones most recently looked at are kept
 const KEPT_PHOTOS = 6;
 
 // A print as print-card.tsx lays it out, in CSS pixels, and the colors from
@@ -229,18 +228,22 @@ const Loupe = ({
 
     const photos = new Map<string, Photo>();
 
-    // The sharp copy of a print's photo, at least this many pixels wide, or
-    // null until it's in. Asked for the first time it's under the lens
-    const sharpPhoto = (print: Print, width: number) => {
+    // A print's original photo, or null until it's in. Asked for the first
+    // time it's under the lens
+    const sharpPhoto = (print: Print) => {
       let photo = photos.get(print.id);
       if (photo) {
         photos.delete(print.id);
       } else {
         const image = new Image();
-        const imageWidth =
-          PHOTO_WIDTHS.find((option) => option >= width) ??
-          PHOTO_WIDTHS[PHOTO_WIDTHS.length - 1];
-        image.src = `/_next/image?url=${encodeURIComponent(print.image)}&w=${imageWidth}&q=90`;
+        // From another domain, so the lens may only draw it when it was
+        // asked for with CORS. Under an address of its own: the same file
+        // opened full screen was loaded without, and the browser would hand
+        // that copy back, which the lens can't use
+        image.crossOrigin = "anonymous";
+        const source = new URL(print.image, location.href);
+        source.searchParams.set("loupe", "");
+        image.src = source.href;
         const loading: Photo = { image, isReady: false };
         image.decode().then(
           () => {
@@ -362,8 +365,7 @@ const Loupe = ({
       context.clip();
       context.fillStyle = PHOTO_EMPTY;
       context.fill();
-      const image =
-        sharpPhoto(print, photoWidth * ZOOM * pixelRatio) ?? cardPhoto(card);
+      const image = sharpPhoto(print) ?? cardPhoto(card);
       if (image) {
         drawCover(
           image,

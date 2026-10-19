@@ -301,7 +301,8 @@ const MiniTable = ({ prints: all }: Props) => {
 
       {/* Put down after the prints, off while it's out of view, and gone
           for this visit if the lens couldn't be made, or the GPU dropped it */}
-      {canLoupe && isNear && (
+      {/* Mounted from the start, so the lens is made ahead, see loupe.tsx */}
+      {canLoupe && (
         <Loupe
           stageRef={stageRef}
           cardRefs={cardRefs}

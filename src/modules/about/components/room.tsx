@@ -4,14 +4,17 @@ import { gsap } from "gsap";
 import { FastForward } from "lucide-react";
 import Image from "next/image";
 import { type PointerEvent, useEffect, useRef, useState } from "react";
-import { savedLayout } from "~/modules/about/room/layout";
+import { handleOf, type RoomHandle } from "~/modules/about/room/handle";
+import { copyLayout, savedLayout } from "~/modules/about/room/layout";
 import type { Hotspot } from "~/modules/about/room/parts";
-import type { Room as RoomScene } from "~/modules/about/room/room-scene";
+import type { Room as RoomScene, RoomView } from "~/modules/about/room/room-scene";
 import { homeClockAt } from "~/modules/about/room/schedule";
 import { stillPhaseAt, stillUrl } from "~/modules/about/room/stills";
 import { useContent } from "~/modules/content/components/content-provider";
 import { useAnimationPreference } from "~/modules/core/context/animation-preference-context";
 import { useHapticSound } from "~/modules/core/hooks/use-haptic-sound";
+import { holdGraphics, whenGraphicsFree } from "~/modules/core/utils/gpu-busy";
+import { getState, subscribe } from "~/utils/app-layer";
 import cn from "~/utils/cn";
 
 // How long a played day takes
@@ -44,6 +47,53 @@ interface Press {
 // Being painted, on screen, or not possible here
 type Mode = "building" | "ready" | "failed";
 
+// Settles once the section has finished opening over the home screen, if
+// it's opening, and the page then has a quiet moment
+const whenCalm = () =>
+  new Promise<void>((resolve) => {
+    const quietly = () => {
+      if ("requestIdleCallback" in window) window.requestIdleCallback(() => resolve(), { timeout: 1000 });
+      else setTimeout(resolve, 200);
+    };
+    if (getState().phase !== "opening") {
+      quietly();
+      return;
+    }
+    const unsubscribe = subscribe(() => {
+      if (getState().phase === "opening") return;
+      unsubscribe();
+      quietly();
+    });
+  });
+
+// Lets go of a room once the section has finished closing and the page has
+// a quiet moment
+const destroyWhenCalm = (room: RoomHandle) => {
+  const quietly = () => {
+    if ("requestIdleCallback" in window) window.requestIdleCallback(() => room.destroy(), { timeout: 2000 });
+    else setTimeout(() => room.destroy(), 300);
+  };
+  if (getState().phase !== "closing") {
+    quietly();
+    return;
+  }
+  const unsubscribe = subscribe(() => {
+    if (getState().phase === "closing") return;
+    unsubscribe();
+    quietly();
+  });
+};
+
+// How large the room shows, for the room, which may be drawn in a worker
+// where it can't measure the page itself
+const viewOf = (host: HTMLElement): RoomView => ({
+  width: host.clientWidth,
+  height: host.clientHeight,
+  devicePixelRatio: window.devicePixelRatio || 1,
+});
+
+const prefersLessMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
 // Locally, /about?tune opens the room's tuner, see room/tuner.ts. Never in
 // the built site
 const wantsTuner = () =>
@@ -62,7 +112,10 @@ const Room = ({ fallback, pictures, onPick }: Props) => {
   // drawing context for good, and a room gives its context back when it
   // goes, so the next room needs a canvas of its own
   const hostRef = useRef<HTMLDivElement>(null);
-  const roomRef = useRef<RoomScene | null>(null);
+  const roomRef = useRef<RoomHandle | null>(null);
+  // Which look under the pointer is the latest: answers to older ones are
+  // too late to show
+  const hoverRef = useRef(0);
   const pressRef = useRef<Press | null>(null);
   const offsetRef = useRef({ ms: 0 });
   // While tuning, clicks in the room are the tuner's
@@ -94,12 +147,40 @@ const Room = ({ fallback, pictures, onPick }: Props) => {
     const canvas = document.createElement("canvas");
     canvas.className = "block size-full";
     host.append(canvas);
-    let room: RoomScene | null = null;
+    let room: RoomHandle | null = null;
     let isCancelled = false;
     let isShown = false;
     let isBuilding = false;
     let detachTuner: (() => void) | null = null;
     let stillTimer: ReturnType<typeof setTimeout> | null = null;
+
+    // Shown once its light is baked, so the light never settles in view. The
+    // room shows itself anyway if that takes too long, counting only while
+    // it's on screen, see room-scene.ts
+    // While the room is made, the browser's graphics are busy with it: other
+    // canvases on the page wait to start, see gpu-busy.ts. Free again a
+    // moment after it shows, once its first full frames are drawn
+    let freeGraphics: (() => void) | null = null;
+    const letGraphicsGo = () => {
+      freeGraphics?.();
+      freeGraphics = null;
+    };
+    const reveal = () => {
+      if (isCancelled) return;
+      setMode("ready");
+      // The picture under it goes once the room has faded in over it
+      stillTimer = setTimeout(() => {
+        setStill(null);
+        letGraphicsGo();
+      }, STILL_AFTER);
+    };
+    const fail = () => {
+      letGraphicsGo();
+      if (!isCancelled) setMode("failed");
+    };
+    const tellProgress = (share: number) => {
+      if (!isCancelled) setProgress(LOADED_SHARE + (1 - LOADED_SHARE) * share);
+    };
 
     const build = async () => {
       isBuilding = true;
@@ -109,6 +190,64 @@ const Room = ({ fallback, pictures, onPick }: Props) => {
       const painting = import("~/modules/about/room/painter").then(({ startPainting }) =>
         startPainting(),
       );
+      // The room itself waits for the section to finish opening and for a
+      // quiet moment: building it is heavy, and the opening would stutter
+      await whenCalm();
+      // And for lighter graphics set up first, like the light table's loupe,
+      // to be entirely ready: they'd wait behind the room otherwise, holding
+      // the page up, see gpu-busy.ts
+      await whenGraphicsFree();
+      if (isCancelled) {
+        painting.then((started) => started.stop()).catch(() => {});
+        return;
+      }
+      freeGraphics = holdGraphics();
+
+      // Drawn in a worker where the browser can, off the page entirely, see
+      // room.worker.ts. The tuner reaches into the room, so it's drawn on
+      // the page while tuning, and where there's no other way
+      if (!isTuning && typeof canvas.transferControlToOffscreen === "function") {
+        let started: Awaited<typeof painting>;
+        let startRoomWorker: typeof import("~/modules/about/room/room-client").startRoomWorker;
+        try {
+          [{ startRoomWorker }, started] = await Promise.all([
+            import("~/modules/about/room/room-client"),
+            painting,
+          ]);
+        } catch {
+          painting.then((painter) => painter.stop()).catch(() => {});
+          fail();
+          return;
+        }
+        if (isCancelled) {
+          started.stop();
+          return;
+        }
+        setProgress(LOADED_SHARE);
+        room = startRoomWorker(
+          canvas,
+          {
+            view: viewOf(host),
+            layout: copyLayout(savedLayout),
+            pictures,
+            sleeve,
+            reducedMotion: prefersLessMotion(),
+            painting: started,
+          },
+          {
+            onStatus: setStatus,
+            onProgress: tellProgress,
+            onReady: reveal,
+            onFailed: () => {
+              fail();
+            },
+          },
+        );
+        roomRef.current = room;
+        room.setVisible(isShown);
+        return;
+      }
+
       let loaded: [
         typeof import("~/modules/about/room/room-scene"),
         typeof import("~/modules/about/room/layout"),
@@ -126,10 +265,10 @@ const Room = ({ fallback, pictures, onPick }: Props) => {
         // Its code didn't come, like just after the site changed: the
         // picture of the room instead, and no painting for nothing
         painting.then((started) => started.stop()).catch(() => {});
-        if (!isCancelled) setMode("failed");
+        fail();
         return;
       }
-      const [{ createRoom }, { copyLayout, savedLayout }, tuner, started] = loaded;
+      const [{ createRoom }, , tuner, started] = loaded;
       if (isCancelled) {
         started.stop();
         return;
@@ -142,37 +281,35 @@ const Room = ({ fallback, pictures, onPick }: Props) => {
         return;
       }
       const draft = tuner?.readDraft() ?? null;
-      // Shown once its bounced light is baked, so the light never settles in
-      // view. The room shows itself anyway if that takes too long, counting
-      // only while it's on screen, see room-scene.ts
-      const reveal = () => {
-        if (isCancelled) return;
-        setMode("ready");
-        // The picture under it goes once the room has faded in over it
-        stillTimer = setTimeout(() => setStill(null), STILL_AFTER);
-      };
+      let built: RoomScene;
       try {
-        room = createRoom(canvas, {
+        built = await createRoom(canvas, {
           onStatus: setStatus,
-          onProgress: (share) => {
-            if (!isCancelled) setProgress(LOADED_SHARE + (1 - LOADED_SHARE) * share);
-          },
+          onProgress: tellProgress,
           onReady: reveal,
           layout: draft ?? copyLayout(savedLayout),
           pictures,
           sleeve,
           painting: started,
+          reducedMotion: prefersLessMotion(),
         });
       } catch {
         started.stop();
-        setMode("failed");
+        fail();
         return;
       }
+      // Gone while it was being built: let go of it at once
+      if (isCancelled) {
+        built.destroy();
+        return;
+      }
+      room = handleOf(built);
       roomRef.current = room;
+      room.resize(viewOf(host));
       room.setVisible(isShown);
 
       if (tuner) {
-        const tuned = room;
+        const tuned = built;
         isTuningRef.current = true;
         detachTuner = tuner.attachTuner(tuned, {
           hasDraft: draft !== null,
@@ -191,18 +328,24 @@ const Room = ({ fallback, pictures, onPick }: Props) => {
     });
     observer.observe(host);
 
-    const resizeObserver = new ResizeObserver(() => room?.resize());
+    const resizeObserver = new ResizeObserver(() => room?.resize(viewOf(host)));
     resizeObserver.observe(host);
 
     return () => {
       isCancelled = true;
       if (stillTimer) clearTimeout(stillTimer);
+      letGraphicsGo();
       observer.disconnect();
       resizeObserver.disconnect();
       gsap.killTweensOf(offsetRef.current);
       detachTuner?.();
       isTuningRef.current = false;
-      room?.destroy();
+      // Stopped at once, let go of later: freeing everything it holds is
+      // heavy, and leaving the page is when the section closes, animated
+      if (room) {
+        room.setVisible(false);
+        destroyWhenCalm(room);
+      }
       roomRef.current = null;
       canvas.remove();
     };
@@ -254,11 +397,14 @@ const Room = ({ fallback, pictures, onPick }: Props) => {
     if (!room || event.pointerType !== "mouse" || isTuningRef.current) return;
     const { x, y } = at(event);
     // Outlined, and grown a little, in the room itself
-    const hotspot = room.hover({ x, y });
-    setPointed((current) => {
-      if (!hotspot) return null;
-      if (current?.hotspot.label !== hotspot.label) haptic.onMouseEnter();
-      return { hotspot, x, y };
+    const asked = ++hoverRef.current;
+    room.hover({ x, y }).then((hotspot) => {
+      if (asked !== hoverRef.current) return;
+      setPointed((current) => {
+        if (!hotspot) return null;
+        if (current?.hotspot.label !== hotspot.label) haptic.onMouseEnter();
+        return { hotspot, x, y };
+      });
     });
   };
 
@@ -277,13 +423,15 @@ const Room = ({ fallback, pictures, onPick }: Props) => {
     if (isTuningRef.current) return;
     const { x, y } = at(event);
     if (isCancelled || Math.hypot(x - press.x, y - press.y) >= DRAG_FROM) return;
-    const hotspot = roomRef.current?.pick(press.x, press.y);
-    if (!hotspot) return;
-    haptic.onClick();
-    onPick(hotspot.target);
+    roomRef.current?.pick(press.x, press.y).then((hotspot) => {
+      if (!hotspot) return;
+      haptic.onClick();
+      onPick(hotspot.target);
+    });
   };
 
   const handleLeave = () => {
+    hoverRef.current += 1;
     roomRef.current?.hover(null);
     setPointed(null);
   };

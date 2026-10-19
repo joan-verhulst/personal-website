@@ -216,19 +216,6 @@ export const CursorDoodle = (props: DoodleProps) => {
 };
 
 /**
- * Currently's: a dot, on air. It fills the doodle's box like the drawings do,
- * with nothing in its flow, so the box sits on the line the same way.
- */
-export const LiveDot = ({ isShown, canMove }: DoodleProps) => (
-  <span className="relative size-full" style={dot(isShown)}>
-    {canMove && (
-      <span className="absolute inset-0 m-auto size-2 animate-ping rounded-full bg-success-500/50" />
-    )}
-    <span className="absolute inset-0 m-auto size-2 rounded-full bg-success-500" />
-  </span>
-);
-
-/**
  * A section heading with its doodle after it, which draws itself when the
  * heading comes on screen and plays again whenever the heading is hovered.
  */

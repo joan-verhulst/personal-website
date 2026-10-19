@@ -68,12 +68,18 @@ export const deleteProgram = (
   gl.deleteProgram(program);
 };
 
+// Where the browser can't say when a program is done, it's asked this long
+// after it was made, in ms: Firefox compiles in its graphics process all the
+// same, and the page only waits once it asks
+const ASK_AFTER = 400;
+
 /**
  * Waits for programs that compile in the background, and calls back once
  * they have all linked. They're asked every frame whether they're done,
- * which doesn't wait, unlike asking whether they linked. Returns a way to
- * stop waiting. Null where the browser compiles in the foreground: then
- * they're waited for when they're checked, and nothing is called.
+ * which doesn't wait, unlike asking whether they linked. Where the browser
+ * can't say, like Firefox, they're asked a moment later, by when they're
+ * usually done, rather than right away, which would hold the page up until
+ * they are. Returns a way to stop waiting.
  */
 export const whenLinked = (
   gl: WebGL2RenderingContext,
@@ -81,7 +87,12 @@ export const whenLinked = (
   onLinked: () => void,
 ): (() => void) | null => {
   const parallel = gl.getExtension("KHR_parallel_shader_compile");
-  if (!parallel) return null;
+  if (!parallel) {
+    const timer = setTimeout(() => {
+      if (!gl.isContextLost()) onLinked();
+    }, ASK_AFTER);
+    return () => clearTimeout(timer);
+  }
 
   let request = 0;
   const poll = () => {

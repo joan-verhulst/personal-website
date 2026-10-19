@@ -34,7 +34,8 @@ import {
   Shape,
   SphereGeometry,
   SRGBColorSpace,
-  type Texture,
+  ImageBitmapLoader,
+  Texture,
   TextureLoader,
   TorusGeometry,
   TubeGeometry,
@@ -1324,6 +1325,20 @@ export const createSunbeams = () => {
 
 const pictures = new TextureLoader();
 
+// A picture, as a texture: on the page as an image, in a worker, where
+// there are no images, as a bitmap, the right way up
+const loadPicture = (url: string, onLoad: (texture: Texture) => void) => {
+  if (typeof document !== "undefined") {
+    pictures.load(url, onLoad);
+    return;
+  }
+  new ImageBitmapLoader().setOptions({ imageOrientation: "flipY" }).load(url, (bitmap) => {
+    const texture = new Texture(bitmap);
+    texture.needsUpdate = true;
+    onLoad(texture);
+  });
+};
+
 // What a picture's material shows until its picture comes: white, under
 // the material's own colour. With a picture from the start, the material is
 // built for one, and the real one coming later doesn't build it again
@@ -1342,7 +1357,7 @@ const showPicture = (
   // Its picture comes later: never merged into a plain colour, see merge.ts
   material.userData.isPicture = true;
   material.map = blankPicture;
-  pictures.load(url, (texture) => {
+  loadPicture(url, (texture) => {
     if (palette.isDisposed) {
       texture.dispose();
       return;

@@ -5,6 +5,7 @@ import { Draggable } from "gsap/Draggable";
 import { InertiaPlugin } from "gsap/InertiaPlugin";
 import { type RefObject, useEffect, useRef } from "react";
 import { useAnimationPreference } from "~/modules/core/context/animation-preference-context";
+import { holdGraphics } from "~/modules/core/utils/gpu-busy";
 import { formatNumber } from "~/modules/photography/components/print-card";
 import {
   BEZEL_WIDTH,
@@ -120,6 +121,20 @@ interface Props {
  * are sharp copies once those are in, the cards' own until then. Only drawn
  * when something under it moved.
  */
+// A lens on the canvas. What it says goes to whoever is drawing with it at
+// the time, or, before anyone is, the loupe's own `onLost`
+const glassOn = (
+  canvas: HTMLCanvasElement,
+  onLost: RefObject<() => void>,
+  lost: RefObject<(() => void) | null>,
+  ready: RefObject<(() => void) | null>,
+) =>
+  createLoupeGlass(
+    canvas,
+    () => (lost.current ?? onLost.current)(),
+    () => ready.current?.(),
+  );
+
 const Loupe = ({
   stageRef,
   cardRefs,
@@ -147,6 +162,51 @@ const Loupe = ({
   // when it's taken off: it's put back on the same canvas
   useEffect(() => () => glassRef.current?.release(), []);
 
+  // What the glass says, passed on to whoever is drawing with it now
+  const readyRef = useRef<(() => void) | null>(null);
+  const lostRef = useRef<(() => void) | null>(null);
+
+  // The lens is made first thing, before it's in view: its context and its
+  // shader then go ahead of heavier graphics work on the page, like the
+  // about page's room. In Firefox every canvas's work waits in one line,
+  // and what's in it first is done first, so the loupe is there to play
+  // with while the room is still being made
+  const warmRef = useRef<LoupeGlass | null>(null);
+  //
+  // Heavier work waits until the lens is entirely ready, see gpu-busy.ts:
+  // asking whether its shader linked, and where its settings go, waits for
+  // everything ahead of it in that line, and with the room's shaders in it,
+  // the page would stand still meanwhile
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const free = holdGraphics();
+    const glass = createLoupeGlass(
+      canvas,
+      () => {
+        free();
+        (lostRef.current ?? onLostRef.current)();
+      },
+      () => {
+        free();
+        readyRef.current?.();
+      },
+    );
+    if (!glass) {
+      free();
+      onLostRef.current();
+      return;
+    }
+    warmRef.current = glass;
+    glassRef.current = glass;
+    return () => {
+      free();
+      if (warmRef.current !== glass) return;
+      warmRef.current = null;
+      glass.destroy();
+    };
+  }, []);
+
   useEffect(() => {
     const stage = stageRef.current;
     const canvas = canvasRef.current;
@@ -159,19 +219,19 @@ const Loupe = ({
     if (!context) return;
 
     let isShown = false;
-    const glass = createLoupeGlass(
-      canvas,
-      () => {
-        hide();
-        onLostRef.current();
-      },
-      // Compiled in the background: what's under the lens is drawn once
-      // it's ready
-      () => {
-        needsDraw = true;
-        if (isShown) frame();
-      },
-    );
+    lostRef.current = () => {
+      hide();
+      onLostRef.current();
+    };
+    // Compiled in the background: what's under the lens is drawn once it's
+    // ready
+    readyRef.current = () => {
+      needsDraw = true;
+      if (isShown) frame();
+    };
+    // The one made ahead, the first time; a new one after it's put away
+    const glass = warmRef.current ?? glassOn(canvas, onLostRef, lostRef, readyRef);
+    warmRef.current = null;
     if (!glass) {
       onLostRef.current();
       return;
@@ -483,7 +543,11 @@ const Loupe = ({
       const focused = document.activeElement;
       const lying: Lying[] = [];
       const raised: Lying[] = [];
-      const seen = [left, top, originX, originY];
+      // Compared from the table's corner, not the window's: scrolling moves
+      // the table and the lens together and changes nothing under the lens,
+      // and every new picture is sent up to the graphics card, which in
+      // Firefox can keep the page waiting
+      const seen = [left - originX, top - originY];
       for (const [index, card] of cardRefs.current.entries()) {
         const print = printsRef.current[index];
         if (!card || !print) continue;
@@ -524,8 +588,8 @@ const Loupe = ({
         seen.push(
           index,
           isRaised ? 1 : 0,
-          placed.x,
-          placed.y,
+          placed.x - originX,
+          placed.y - originY,
           placed.rotation,
           placed.width,
           placed.height,
@@ -663,6 +727,8 @@ const Loupe = ({
       handle.removeEventListener("pointerdown", keepPress);
       handle.removeEventListener("touchstart", keepPress);
       window.removeEventListener("resize", handleResize);
+      readyRef.current = null;
+      lostRef.current = null;
       glass.destroy();
       photos.clear();
       captions.clear();

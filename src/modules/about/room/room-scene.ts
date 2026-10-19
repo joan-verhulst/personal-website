@@ -105,6 +105,17 @@ const PENDANT_UNTIL = 22;
 const WALK_SPEED = 1.1;
 const STEPS_PER_METER = 1.7;
 
+/**
+ * How large the room shows on the page, in CSS pixels, and how many device
+ * pixels each is. The page tells the room, which may be drawn in a worker,
+ * where there's no page to measure.
+ */
+export interface RoomView {
+  width: number;
+  height: number;
+  devicePixelRatio: number;
+}
+
 export interface RoomCallbacks {
   // What I'm doing, whenever it changes
   onStatus: (label: string) => void;
@@ -124,6 +135,7 @@ export interface RoomTuning {
   // The live layout: change it, then call what applies the change
   layout: RoomLayout;
   camera: PerspectiveCamera;
+  // On the page: the tuner only runs there
   canvas: HTMLCanvasElement;
   // Drawn over the painting, unpainted: the tuner's handles
   overlay: Scene;
@@ -150,7 +162,8 @@ export interface RoomTuning {
 }
 
 export interface Room {
-  resize: (ratio?: number) => void;
+  // The room's size on the page has changed
+  resize: (view: RoomView) => void;
   // Draws while shown
   setVisible: (isShown: boolean) => void;
   // How far off the clock the room is, in milliseconds, for playing a day
@@ -223,12 +236,13 @@ const KEPT_OCCLUSION = {
 };
 
 // How many frames after something moved its shadows and shade keep being
-// drawn, so whatever eases in afterwards settles in them too
-const SETTLE_FRAMES = 30;
+// drawn, so it ends where it settles. What eases on its own, my joints and
+// what grows under the pointer, counts as moving itself
+const SETTLE_FRAMES = 4;
 // While nothing moves, the room is drawn this often a second: enough for
-// the breathing, which moves less than a pixel a frame, at a fraction of the
-// work. Anything that moves brings the full rate back
-const IDLE_FPS = 15;
+// the breathing and the typing, which move a pixel or two, at a fraction of
+// the work. Anything that moves brings the full rate back
+const IDLE_FPS = 6;
 
 const TONE_MAPPINGS: Record<RoomLayout["light"]["toneMapping"], ToneMapping> = {
   aces: ACESFilmicToneMapping,
@@ -247,8 +261,18 @@ type Step =
 
 // ── The room ────────────────────────────────────────────────────────────────
 
-export const createRoom = (
-  canvas: HTMLCanvasElement,
+// A pause in building the room, so the page gets a turn: no one stretch of
+// the work holds the page up for long
+const breathe = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+/**
+ * Builds the room on `canvas`, in steps, giving the page a turn between
+ * them. Settles once it's ready to draw; it shows itself once its light is
+ * baked, see onReady.
+ */
+export const createRoom = async (
+  // On the page, or handed to a worker, see room.worker.ts
+  canvas: HTMLCanvasElement | OffscreenCanvas,
   {
     onStatus,
     onProgress,
@@ -257,6 +281,7 @@ export const createRoom = (
     pictures,
     sleeve,
     painting,
+    reducedMotion = false,
   }: RoomCallbacks & {
     layout: RoomLayout;
     // What hangs in the frames, as image addresses
@@ -265,13 +290,18 @@ export const createRoom = (
     sleeve?: string;
     // The surfaces' painting, if it was started before the room
     painting?: Painting;
+    // The visitor asks for less motion: nothing grows under the pointer
+    reducedMotion?: boolean;
   },
-): Room => {
+): Promise<Room> => {
   const renderer = new WebGLRenderer({
     canvas,
     antialias: false,
     powerPreference: "high-performance",
   });
+  // Checking each shader for errors makes the browser finish compiling it
+  // right then, holding the page up: only while developing
+  renderer.debug.checkShaderErrors = process.env.NODE_ENV === "development";
   renderer.shadowMap.enabled = true;
   // Already soft; its radius widens the soft edge. PCFSoftShadowMap is
   // retired and falls back to this one anyway
@@ -287,6 +317,8 @@ export const createRoom = (
 
   // ── What's in it ─────────────────────────────────────────────────────────
 
+  // Whether the room shows yet, see ready
+  let isReady = false;
   // How far the painting and the first bake are, each 0 to 1. They run side
   // by side; together they're the way to showing the room
   let paintedShare = 0;
@@ -340,6 +372,7 @@ export const createRoom = (
     pieces[key].userData.piece = key;
     scene.add(pieces[key]);
   }
+  await breathe();
 
   const placePieces = () => {
     for (const key of PIECE_KEYS) {
@@ -375,14 +408,17 @@ export const createRoom = (
   // few dozen things to draw instead of hundreds, see merge.ts. The duvet
   // breathes on its own
   duvet.userData.keepApart = true;
+  await breathe();
   const mergeStill = createMerger(tintedBy(palette));
   for (const key of PIECE_KEYS) mergeStill(pieces[key]);
   mergeStill(shell);
+  await breathe();
 
   // The style, in every material and around every object, see toon.ts
   const style = createStyle();
   style.style(scene);
   style.outline(scene);
+  await breathe();
 
   // Every painted surface as sharp as the graphics card allows, also seen
   // at a glancing angle, like the floor toward the far wall
@@ -552,7 +588,9 @@ export const createRoom = (
     // bed, home or not. The monitors while I work
     const isWorking = activity === "work";
     const isEvening = hour >= PENDANT_FROM && hour < PENDANT_UNTIL;
-    const ease = 1 - Math.exp(-dt * 3);
+    // They fade while the room shows; before, they're simply as they are,
+    // so the light is captured once, as it will be seen
+    const ease = isReady ? 1 - Math.exp(-dt * 3) : 1;
     const lampTo = isEvening || (elevation < 3 && isWorking) ? 1 : 0;
     const deskTo = elevation < 6 && activity !== "sleep" ? 1 : 0;
     const screenTo = isWorking ? 1 : 0;
@@ -585,8 +623,6 @@ export const createRoom = (
   };
   let lightingKey = "";
   let lightVersion = 0;
-  // Whether the room shows yet, see ready
-  let isReady = false;
 
   // ── Bounced light and reflections ────────────────────────────────────────
   //
@@ -637,7 +673,8 @@ export const createRoom = (
     return made;
   };
   let grid = createGrid();
-  scene.add(grid);
+  // Only when there's bounced light to bake, see bakeStep
+  if (layout.light.gi > 0) scene.add(grid);
 
   // The small things barely change how light bounces, and every probe draws
   // the room six times: they're left out of the captures
@@ -710,6 +747,7 @@ export const createRoom = (
   // An empty one to start, so every material is built with a reflection
   // from the start, and isn't built again, with a stall, once there's one
   captureEnvironment(new Scene());
+  await breathe();
 
   // Where the bake is: which pass (0 for direct light, 1 for the bounce on
   // top) and the next probe. Null when there's nothing to do
@@ -732,8 +770,10 @@ export const createRoom = (
     if (isReady) return;
     isReady = true;
     // The shadows drawn so far were the bake's, without the small things:
-    // drawn again now, with everything, as the room fades in
-    moved();
+    // drawn again once, with everything, before the room shows. Nothing
+    // moved, so once is all: not a run of full frames during the fade in
+    for (const light of shadowLights) light.userData.isShadowStale = true;
+    isOcclusionFresh = false;
     isRevealDue = true;
   };
   const readyOnceDone = () => {
@@ -746,6 +786,10 @@ export const createRoom = (
     readyOnceDone();
   });
 
+  // The reflections are captured again at most this often, in ms
+  const CAPTURE_EVERY = 1500;
+  let lastCapture = Number.NEGATIVE_INFINITY;
+
   // With no bounced light asked for, the probes would be baked for nothing
   // and sampled by every pixel for nothing: they're taken out of the room,
   // and only the reflections are captured, whenever the light changes
@@ -754,6 +798,11 @@ export const createRoom = (
       if (grid.parent) scene.remove(grid);
       bake = null;
       if (lightingKey === bakedKey) return;
+      // Once the lamps are done fading, and not more often than every so
+      // often while a day is played: each capture draws the room six times
+      const now = performance.now();
+      if (isReady && (isLightEasing || now - lastCapture < CAPTURE_EVERY)) return;
+      lastCapture = now;
       bakedKey = lightingKey;
       captureEnvironment();
       if (!isBaked) {
@@ -866,16 +915,16 @@ export const createRoom = (
   };
   applyCamera();
 
-  // Sizes everything to the canvas. `ratio` overrides the pixel ratio, for
-  // a picture saved larger than the screen shows it
+  // Sizes everything to the room's size on the page, see RoomView. `ratio`
+  // overrides the pixel ratio, for a picture saved larger than it shows
+  let view: RoomView = { width: 0, height: 0, devicePixelRatio: 1 };
   const resize = (ratio?: number) => {
-    const width = canvas.clientWidth;
-    const height = canvas.clientHeight;
+    const { width, height } = view;
     if (width === 0 || height === 0) return;
     pixelRatio =
       ratio ??
       Math.min(
-        window.devicePixelRatio || 1,
+        view.devicePixelRatio || 1,
         MAX_PIXEL_RATIO,
         Math.sqrt(PIXEL_BUDGET / (width * height)),
       );
@@ -980,7 +1029,7 @@ export const createRoom = (
     style.setDetail(paint.detail);
     // How large a screen pixel is a meter from the camera, so the outline
     // is the same width near and far
-    const height = canvas.clientHeight || 1;
+    const height = view.height || 1;
     const pixel = (2 * Math.tan((camera.fov / 2) * RAD)) / height;
     style.setOutline(paint.outline, pixel, layout.colors.outline);
   };
@@ -1188,7 +1237,9 @@ export const createRoom = (
   let frameCallback: (() => void) | null = null;
   // Real time between frames, held still while the tab is hidden
   const timer = new Timer();
-  timer.connect(document);
+  // Held still while the tab is hidden, where there's a page to tell. In a
+  // worker, the browser stops its frames anyway
+  if (typeof document !== "undefined") timer.connect(document);
 
   // Drawn on the next frame whatever else is still: the pointer came onto
   // something, or left it
@@ -1310,7 +1361,8 @@ export const createRoom = (
     if (capture) {
       const { resolve, type, quality } = capture;
       capture = null;
-      canvas.toBlob(resolve, type, quality);
+      if ("toBlob" in canvas) canvas.toBlob(resolve, type, quality);
+      else canvas.convertToBlob({ type, quality }).then(resolve, () => resolve(null));
       return;
     }
     if (overlay.children.length > 0) {
@@ -1371,9 +1423,7 @@ export const createRoom = (
   let hovered: Pointed | null = null;
   let highlighted: Object3D | null = null;
   const growing = new Set<Object3D>();
-  const growth = window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    ? 1
-    : HOVER_GROWTH;
+  const growth = reducedMotion ? 1 : HOVER_GROWTH;
 
   // Whether something is drawn: it and everything it's in shows
   const isShown = (object: Object3D | null) => {
@@ -1386,8 +1436,7 @@ export const createRoom = (
   // The first thing under a point that's drawn, if it opens something. Things
   // in front of it are in the way, as they would be
   const pointAt = (x: number, y: number): Pointed | null => {
-    const width = canvas.clientWidth;
-    const height = canvas.clientHeight;
+    const { width, height } = view;
     if (!width || !height) return null;
     ndc.set((x / width) * 2 - 1, -(y / height) * 2 + 1);
     raycaster.setFromCamera(ndc, camera);
@@ -1443,7 +1492,8 @@ export const createRoom = (
   const tuning: RoomTuning = {
     layout,
     camera,
-    canvas,
+    // The tuner is only attached to a room drawn on the page, see room.tsx
+    canvas: canvas as HTMLCanvasElement,
     overlay,
     pieces,
     applyCamera: () => {
@@ -1481,7 +1531,7 @@ export const createRoom = (
         highlighted = null;
         hovered = null;
         walkway.visible = false;
-        resize(width / (canvas.clientWidth || 1));
+        resize(width / (view.width || 1));
         capture = {
           type: type ?? "image/png",
           quality,
@@ -1511,8 +1561,62 @@ export const createRoom = (
       }),
   };
 
+  // Every material's shader compiled before the first draw, one at a time:
+  // each is drawn once, small, which waits for it to be done, then the
+  // next. All at once, in Firefox, they'd fill the one line every canvas on
+  // the page waits in for seconds, and another canvas needing an answer,
+  // like the light table's loupe sending up its picture, would hold the
+  // page up until they're through. One at a time, it waits for one at most.
+  // Drawn as the picture the room is drawn into, which is what they're
+  // drawn with
+  await breathe();
+  const warmTarget = new WebGLRenderTarget(1, 1, { type: HalfFloatType });
+  const shown: Mesh[] = [];
+  scene.traverse((child) => {
+    if (child instanceof Mesh && child.visible) shown.push(child);
+  });
+  const byMaterial = new Map<unknown, Mesh[]>();
+  for (const mesh of shown) {
+    const group = byMaterial.get(mesh.material);
+    if (group) group.push(mesh);
+    else byMaterial.set(mesh.material, [mesh]);
+  }
+  const culled = shown.map((mesh) => mesh.frustumCulled);
+  // Every shadow map made in the first of these draws, the lamps' too, and
+  // their shaders with them: Firefox refuses to draw with a shadow map
+  // that isn't there. They're drawn properly once the room is, see keepStill
+  for (const light of shadowLights) light.shadow.needsUpdate = true;
+  for (const mesh of shown) {
+    mesh.visible = false;
+    // Out of the camera's view too: every shader, not just what it sees
+    mesh.frustumCulled = false;
+  }
+  try {
+    for (const group of byMaterial.values()) {
+      if (isDestroyed) break;
+      const compiled = renderer.info.programs?.length ?? 0;
+      for (const mesh of group) mesh.visible = true;
+      renderer.setRenderTarget(warmTarget);
+      renderer.render(scene, camera);
+      renderer.setRenderTarget(null);
+      for (const mesh of group) mesh.visible = false;
+      // A new shader was made: the next waits for the line to clear
+      if ((renderer.info.programs?.length ?? 0) > compiled) await breathe();
+    }
+  } finally {
+    shown.forEach((mesh, index) => {
+      mesh.visible = true;
+      mesh.frustumCulled = culled[index];
+    });
+    renderer.setRenderTarget(null);
+    warmTarget.dispose();
+  }
+
   return {
-    resize,
+    resize: (next) => {
+      view = next;
+      resize();
+    },
     setVisible: (shown) => {
       if (shown) start();
       else stop();

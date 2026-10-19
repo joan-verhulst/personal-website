@@ -16,16 +16,26 @@ import {
 
 // ── Canvases ────────────────────────────────────────────────────────────────
 
+type Canvas2D = HTMLCanvasElement | OffscreenCanvas;
+type Context2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
+
+// A canvas to paint on: one on the page, or, in a worker, where there's no
+// page, one of its own
 const canvasOf = (width: number, height: number) => {
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d");
+  let canvas: Canvas2D;
+  if (typeof document === "undefined") {
+    canvas = new OffscreenCanvas(width, height);
+  } else {
+    canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+  }
+  const ctx = canvas.getContext("2d") as Context2D | null;
   if (!ctx) throw new Error("No 2D canvas");
   return { canvas, ctx };
 };
 
-const texture = (canvas: HTMLCanvasElement, isColor: boolean, repeats = true) => {
+const texture = (canvas: Canvas2D, isColor: boolean, repeats = true) => {
   const made = new CanvasTexture(canvas);
   if (isColor) made.colorSpace = SRGBColorSpace;
   if (repeats) {
@@ -37,16 +47,16 @@ const texture = (canvas: HTMLCanvasElement, isColor: boolean, repeats = true) =>
 };
 
 export interface Surface {
-  color: CanvasTexture;
-  bump: CanvasTexture;
+  color: CanvasTexture<Canvas2D>;
+  bump: CanvasTexture<Canvas2D>;
   // Copies of either, at their own repeats, see `painted` in parts.ts: told
   // along with the originals when the painting comes in
-  copies: CanvasTexture[];
+  copies: CanvasTexture<Canvas2D>[];
 }
 
 // Brush strokes over a picture: short, soft, mostly along one direction
 const strokes = (
-  ctx: CanvasRenderingContext2D,
+  ctx: Context2D,
   size: number,
   count: number,
   angle: number,
@@ -105,6 +115,11 @@ export const createSurfaces = (
       bump: texture(made.bump.canvas, false, !WHOLE.has(name)),
       copies: [],
     };
+    // Sent up as painted, not turned over: turning a picture over on its
+    // way up is done pixel by pixel, in Firefox on the same thread as
+    // every canvas's drawing. Noise and grain look the same either way up
+    surfaces[name].color.flipY = false;
+    surfaces[name].bump.flipY = false;
   }
 
   let isStopped = false;

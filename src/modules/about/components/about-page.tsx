@@ -10,7 +10,6 @@ import { siteData } from "~/data/site";
 import {
   CursorDoodle,
   Heading,
-  LiveDot,
   PenDoodle,
   ShutterDoodle,
 } from "~/modules/about/components/doodles";
@@ -32,7 +31,6 @@ import { useAnimationPreference } from "~/modules/core/context/animation-prefere
 import { useHapticSound } from "~/modules/core/hooks/use-haptic-sound";
 import MiniSlider from "~/modules/digital-art/components/mini-slider";
 import type { Artwork } from "~/modules/digital-art/utils/slide-image";
-import HangingFilm from "~/modules/photography/components/hanging-film";
 import MiniTable from "~/modules/photography/components/mini-table";
 import { visitApp } from "~/utils/app-layer";
 import cn from "~/utils/cn";
@@ -229,17 +227,6 @@ const AboutPage = () => {
         )}
 
         <Heading doodle={ShutterDoodle}>Photography</Heading>
-        {/* The roll hanging to dry, from a rail left of the heading, in the
-            margin: two strips, one over the other, running on under the
-            table. Only where the margin is wide enough for it */}
-        {photos.length > 0 && (
-          <div data-stay className="relative h-0">
-            <HangingFilm
-              prints={photos}
-              className="absolute -top-14 right-full mr-6 hidden h-160 w-44 xl:block"
-            />
-          </div>
-        )}
         <p>
           Photography started as a hobby. I initially shot digitally, but
           eventually found myself looking for something different. Switching to
@@ -303,7 +290,7 @@ const AboutPage = () => {
 
         {currently && (
           <>
-            <Heading doodle={LiveDot}>Currently</Heading>
+            <h2>Currently</h2>
             <a
               href={currently.url}
               target="_blank"

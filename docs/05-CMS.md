@@ -107,7 +107,7 @@ Everything uploaded lands in Media and stays there until it's deleted on the **M
 
 ### **Admin address**
 
-The admin can have a host of its own, like `admin.joanverhulst.com`, on the same Vercel project and deployment. That's one optional variable: **`NEXT_PUBLIC_ADMIN_HOST`**, the host without `https://` or a path. It has to start with `admin.`: the proxy only runs on hosts like that, so the public site never pays for it (every proxy run is a function call on Vercel). Without it the admin is at `/admin` on the site's own host, everywhere.
+The admin can have a host of its own, like `admin.joanverhulst.com`, on the same Vercel project and deployment. That's one optional variable: **`NEXT_PUBLIC_ADMIN_HOST`**, the host without `https://` or a path. It has to start with `admin.`: the proxy runs for every page only on hosts like that, and for `/admin` on any host to guard it, so the public site's pages never pay for it (every proxy run is a function call on Vercel). Without it the admin is at `/admin` on the site's own host, everywhere.
 
 With it set, the proxy (`src/proxy.ts`) decides per request:
 

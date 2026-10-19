@@ -297,7 +297,6 @@ const isReport = (value: unknown): value is WeatherReport =>
   Array.isArray((value as WeatherReport).hours) &&
   (value as WeatherReport).hours.every(isHour);
 
-/** The weather at home now, or null when it can't be had. */
 // How often the weather is asked for again, as often as the radar changes.
 // Until then the last report serves
 export const WEATHER_MS = 5 * 60_000;
@@ -308,9 +307,16 @@ export const WEATHER_MS = 5 * 60_000;
 let last: { report: WeatherReport; at: number } | null = null;
 let pending: Promise<WeatherReport | null> | null = null;
 
+// Longer than the route takes at its slowest, retries and all. A request
+// that hangs, like on a dropped connection, would otherwise hold up every
+// footer waiting on it for good
+const REQUEST_MS = 20_000;
+
 const requestWeather = async (): Promise<WeatherReport | null> => {
   try {
-    const response = await fetch("/api/weather");
+    const response = await fetch("/api/weather", {
+      signal: AbortSignal.timeout(REQUEST_MS),
+    });
     if (!response.ok) return null;
     const report: unknown = await response.json();
     if (!isReport(report)) return null;

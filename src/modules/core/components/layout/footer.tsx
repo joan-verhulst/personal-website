@@ -29,8 +29,8 @@ import {
   CONDITION_LABELS,
   type SkyCondition,
 } from "~/modules/core/utils/weather";
-import cn from "~/utils/cn";
 import { visitApp } from "~/utils/app-layer";
+import cn from "~/utils/cn";
 import { track } from "~/utils/eyes";
 import { scrollerOf } from "~/utils/footer";
 
@@ -262,7 +262,7 @@ const PageWithFooter = ({
                   href="https://www.buienradar.nl"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="underline-offset-3 hover:underline"
+                  className="whitespace-nowrap text-neutral-50 underline-offset-3 hover:underline"
                 >
                   Buienradar
                 </a>{" "}
@@ -271,7 +271,7 @@ const PageWithFooter = ({
                   href="https://open-meteo.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="underline-offset-3 hover:underline"
+                  className="whitespace-nowrap text-neutral-50 underline-offset-3 hover:underline"
                 >
                   Open-Meteo
                 </a>

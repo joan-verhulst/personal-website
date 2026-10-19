@@ -12,8 +12,8 @@ const env = createEnv({
         ),
         // The host the admin is served on, like "admin.example.com". Unset,
         // the admin stays at /admin on the site's own host. It has to start
-        // with "admin.": the proxy only runs on hosts like that, see the
-        // matcher in src/proxy.ts.
+        // with "admin.": the proxy runs for every page only on hosts like
+        // that, and for /admin anywhere, see the matcher in src/proxy.ts.
         NEXT_PUBLIC_ADMIN_HOST: v.optional(
             v.pipe(
                 v.string(),
@@ -23,7 +23,7 @@ const env = createEnv({
                 ),
                 v.regex(
                     /^admin\./i,
-                    'The admin host has to start with "admin.", like admin.example.com: the proxy only runs on hosts like that.',
+                    'The admin host has to start with "admin.", like admin.example.com: the proxy only serves the admin from its root on hosts like that.',
                 ),
             ),
         ),

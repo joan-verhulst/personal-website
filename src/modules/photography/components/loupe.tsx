@@ -46,6 +46,10 @@ const MAX_PIXEL_RATIO = 3;
 // to be resized for it. The ones most recently looked at are kept
 const KEPT_PHOTOS = 6;
 
+// How long an original takes to fade in over the card's own copy, in ms.
+// Swapped at once, the soft copy's edges seemed to jump as they sharpened
+const SHARPEN_MS = 200;
+
 // A print as print-card.tsx lays it out, in CSS pixels, and the colors from
 // global.css: the table is the page behind it
 const PAPER_RADIUS = 16;
@@ -88,6 +92,8 @@ interface Lying {
 interface Photo {
   image: HTMLImageElement;
   isReady: boolean;
+  // When it came in, for it to fade in from then
+  readyAt: number;
 }
 
 interface Props {
@@ -230,7 +236,7 @@ const Loupe = ({
 
     // A print's original photo, or null until it's in. Asked for the first
     // time it's under the lens
-    const sharpPhoto = (print: Print) => {
+    const sharpPhoto = (print: Print): Photo | null => {
       let photo = photos.get(print.id);
       if (photo) {
         photos.delete(print.id);
@@ -244,10 +250,11 @@ const Loupe = ({
         const source = new URL(print.image, location.href);
         source.searchParams.set("loupe", "");
         image.src = source.href;
-        const loading: Photo = { image, isReady: false };
+        const loading: Photo = { image, isReady: false, readyAt: 0 };
         image.decode().then(
           () => {
             loading.isReady = true;
+            loading.readyAt = performance.now();
             needsDraw = true;
           },
           // The card's own photo stays in its place
@@ -261,7 +268,7 @@ const Loupe = ({
         const oldest = photos.keys().next().value;
         if (oldest !== undefined) photos.delete(oldest);
       }
-      return photo.isReady ? photo.image : null;
+      return photo.isReady ? photo : null;
     };
 
     // The photo the card shows, already loaded, so the lens is never empty
@@ -365,15 +372,33 @@ const Loupe = ({
       context.clip();
       context.fillStyle = PHOTO_EMPTY;
       context.fill();
-      const image = sharpPhoto(print) ?? cardPhoto(card);
-      if (image) {
+      // The card's own copy until the original is in, which then fades in
+      // over it
+      const sharp = sharpPhoto(print);
+      const shown = sharp
+        ? Math.min((performance.now() - sharp.readyAt) / SHARPEN_MS, 1)
+        : 0;
+      const soft = shown < 1 ? cardPhoto(card) : null;
+      if (soft) {
         drawCover(
-          image,
+          soft,
           left + PAPER_BORDER,
           top + PAPER_BORDER,
           photoWidth,
           photoHeight,
         );
+      }
+      if (sharp) {
+        context.globalAlpha = shown;
+        drawCover(
+          sharp.image,
+          left + PAPER_BORDER,
+          top + PAPER_BORDER,
+          photoWidth,
+          photoHeight,
+        );
+        // Drawn again until it's all the way in
+        if (shown < 1) needsDraw = true;
       }
       context.restore();
 

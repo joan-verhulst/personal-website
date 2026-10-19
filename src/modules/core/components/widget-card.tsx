@@ -10,9 +10,6 @@ type WidgetCardProps = {
   label: string;
   src?: string;
   alt?: string;
-  // How wide the picture shows, for Next to send a copy that size: a column
-  // of the home grid, or the screen less the page's padding on a phone
-  sizes?: string;
   className?: string;
   imgClassName?: string;
   children?: React.ReactNode;
@@ -23,7 +20,6 @@ const WidgetCard = ({
   label,
   src,
   alt = "",
-  sizes = "(min-width: 768px) 240px, calc(100vw - 8rem)",
   className = "",
   imgClassName = "object-cover",
   children,
@@ -132,7 +128,6 @@ const WidgetCard = ({
             src={src}
             alt={alt}
             fill
-            sizes={sizes}
             className={cn(imgClassName, "pointer-events-none rounded-4xl")}
           />
         </div>

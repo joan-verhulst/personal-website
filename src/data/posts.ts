@@ -13,7 +13,7 @@ export const postSections = {
   shaders: {
     title: "Shaders",
     description:
-      "Effects drawn by the graphics card, pixel by pixel, from a sky built out of noise to a print look that started in Photoshop.",
+      "Visual effects I built as shaders, how each one works and how I got there, with demos you can play with along the way.",
   },
 };
 

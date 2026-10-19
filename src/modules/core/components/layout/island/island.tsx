@@ -4,9 +4,9 @@ import { Undo2 } from "lucide-react";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  type PropsWithChildren,
   type FocusEvent as ReactFocusEvent,
   type PointerEvent as ReactPointerEvent,
-  type PropsWithChildren,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -14,14 +14,7 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
-import IslandButton from "~components/layout/island/island-button";
-import IslandContact, {
-  CONTACT_ROOM,
-} from "~components/layout/island/island-contact";
-import IslandCounter from "~components/layout/island/island-counter";
-import IslandDial from "~components/layout/island/island-dial";
-import IslandTicker from "~components/layout/island/island-ticker";
-import IslandTray from "~components/layout/island/island-tray";
+import { ownPages } from "~/data/pages";
 import { getSections, sectionOf } from "~/data/sections";
 import { siteData } from "~/data/site";
 import { useContent } from "~/modules/content/components/content-provider";
@@ -36,6 +29,14 @@ import {
   subscribe,
 } from "~/utils/island-controls";
 import { openWidget } from "~/utils/open-widget";
+import IslandButton from "~components/layout/island/island-button";
+import IslandContact, {
+  CONTACT_ROOM,
+} from "~components/layout/island/island-contact";
+import IslandCounter from "~components/layout/island/island-counter";
+import IslandDial from "~components/layout/island/island-dial";
+import IslandTicker from "~components/layout/island/island-ticker";
+import IslandTray from "~components/layout/island/island-tray";
 
 // Made from the headshot by scripts/make-icons.mts, like the favicon
 const HEADSHOT = "/icons/icon-192.png";
@@ -139,6 +140,18 @@ const Island = () => {
       if (lingerRef.current) clearTimeout(lingerRef.current);
       lingerRef.current = setTimeout(fold, DIAL_LINGER);
     } else fold();
+  };
+
+  // One level up. A post goes back to the blog it's in, which takes its
+  // place like one section takes another's, and the blog to home
+  const goBack = () => {
+    if (!pathname.startsWith(`${ownPages.blog.path}/`)) {
+      visit("/");
+      return;
+    }
+    haptic.onClick();
+    visitApp(ownPages.blog.path, router, "blog");
+    fold();
   };
 
   const openFromTray = (id: string) => {
@@ -248,7 +261,7 @@ const Island = () => {
         <Layer isActive={!isOpen}>
           <div className="flex h-9 items-center gap-1.5 px-1.5">
             {!isHome && (
-              <IslandButton label="Go back" onClick={() => visit("/")}>
+              <IslandButton label="Go back" onClick={goBack}>
                 <Undo2 className="size-3" />
               </IslandButton>
             )}
@@ -309,6 +322,7 @@ const Island = () => {
               isOpen={isOpen}
               onVisit={visit}
               onWidget={openFromTray}
+              onBack={goBack}
               onClose={fold}
             />
           )}

@@ -163,11 +163,20 @@ interface Props {
   isOpen: boolean;
   onVisit: (href: string) => void;
   onWidget: (id: string) => void;
+  // One level up: from a post to the blog, from a section to home
+  onBack: () => void;
   onClose: () => void;
 }
 
 /** The home screen in miniature: pick a widget to go there. */
-const IslandTray = ({ pathname, isOpen, onVisit, onWidget, onClose }: Props) => {
+const IslandTray = ({
+  pathname,
+  isOpen,
+  onVisit,
+  onWidget,
+  onBack,
+  onClose,
+}: Props) => {
   const haptic = useHapticSound();
   const content = useContent();
   const tiles = useMemo(() => getTiles(content), [content]);
@@ -182,7 +191,7 @@ const IslandTray = ({ pathname, isOpen, onVisit, onWidget, onClose }: Props) => 
     <div className="flex size-full flex-col gap-2 px-3 pt-3 pb-3.5">
       <div className="flex h-7.5 shrink-0 items-center gap-2 whitespace-nowrap text-[13px]">
         {!isHome && (
-          <IslandButton label="Go back" onClick={() => onVisit("/")}>
+          <IslandButton label="Go back" onClick={onBack}>
             <Undo2 className="size-3" />
           </IslandButton>
         )}

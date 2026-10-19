@@ -18,11 +18,12 @@ export type Events = {
   // in touch, then reaching out
 
   // A section opening, and how: its card on home, the island's tray, the
-  // footer, or directly, by a link from elsewhere or the browser's history.
+  // footer, a post's way back to the blog, a link in the about page's
+  // story, or directly, by a link from elsewhere or the browser's history.
   // Pageviews alone miss a switch from one section to another, see AppLayer
   "Section Opened": {
     section: SectionKey;
-    from: "home" | "island" | "footer" | "direct";
+    from: "home" | "island" | "footer" | "blog" | "about" | "direct";
   };
   // The ways to get in touch coming up: the contact modal, from the pill
   // next to the island, the contact widget on home or its tile in the
@@ -35,13 +36,18 @@ export type Events = {
     from: "modal" | "footer";
   };
 
-  // A widget opening over the home screen, from its card or from the
-  // island's tray. They're modals, not pages, so pageviews miss them
-  "Widget Opened": { widget: string; from: "home" | "island" };
-  // A product's link in the products widget
+  // On Rotation or the gear book opening in its modal: from its tile on home
+  // or in the island's tray, or from the room on the about page. Modals
+  // aren't pages, so pageviews miss them
+  "Widget Opened": {
+    widget: "on-rotation" | "gear";
+    from: "home" | "island" | "room";
+  };
+  // A product's link on the products page
   "Product Visited": { product: string };
-  // An experiment's link in the experiments widget
-  "Experiment Visited": { experiment: string };
+  // A blog post opening. Going from one post to another replaces the URL,
+  // which pageviews miss, like a section taking another's place
+  "Post Opened": { post: string };
   // A piece on the UI/UX wall, opened in its modal
   "UI/UX Item Opened": { item: string };
   // A print on the photography table, opened up close

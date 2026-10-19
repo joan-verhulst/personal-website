@@ -146,9 +146,10 @@ export const conditionOf = ({
 const PARTLY_FROM = 0.2;
 const CLOUDY_FROM = 0.65;
 
-// How far the reported cover pulls a sky's coverage from its look's, and
-// how much of the sky rain covers at the least
-const LIVE_COVER = 0.5;
+// How far the reported cover pulls a sky's coverage from its look's: all
+// the way, so an overcast report closes the deck, and how much of the sky
+// rain covers at the least
+const LIVE_COVER = 1;
 const RAIN_COVER_AT_LEAST = 0.7;
 
 // Until the weather is in, or when it can't be had: a south-westerly breeze
@@ -297,13 +298,39 @@ const isReport = (value: unknown): value is WeatherReport =>
   (value as WeatherReport).hours.every(isHour);
 
 /** The weather at home now, or null when it can't be had. */
-export const fetchWeather = async (): Promise<WeatherReport | null> => {
+// How often the weather is asked for again, as often as the radar changes.
+// Until then the last report serves
+export const WEATHER_MS = 5 * 60_000;
+
+// The last report and when it came, and the request on its way, if one is.
+// The footers and the blog's cover ask at the same time, and a section's
+// footer asks again as it opens: one request serves them all
+let last: { report: WeatherReport; at: number } | null = null;
+let pending: Promise<WeatherReport | null> | null = null;
+
+const requestWeather = async (): Promise<WeatherReport | null> => {
   try {
     const response = await fetch("/api/weather");
     if (!response.ok) return null;
     const report: unknown = await response.json();
-    return isReport(report) ? report : null;
+    if (!isReport(report)) return null;
+    last = { report, at: Date.now() };
+    return report;
   } catch {
     return null;
   }
+};
+
+/**
+ * The weather at home: the last report while it's fresh, or a new one.
+ * Null when it couldn't be had.
+ */
+export const fetchWeather = (): Promise<WeatherReport | null> => {
+  if (last && Date.now() - last.at < WEATHER_MS) {
+    return Promise.resolve(last.report);
+  }
+  pending ??= requestWeather().finally(() => {
+    pending = null;
+  });
+  return pending;
 };

@@ -1,23 +1,23 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
 import { gsap } from "gsap";
 import {
   Settings2,
-  Volume2,
-  VolumeOff,
   Sparkles,
   SparklesIcon,
+  Volume2,
+  VolumeOff,
 } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  ANIMATION_PREFERENCE_EVENT,
+  useAnimationPreference,
+} from "~/modules/core/context/animation-preference-context";
 import {
   isSoundEnabled,
-  setSoundEnabled,
   PREFERENCE_EVENT,
+  setSoundEnabled,
 } from "~/modules/core/hooks/use-haptic-sound";
-import {
-  useAnimationPreference,
-  ANIMATION_PREFERENCE_EVENT,
-} from "~/modules/core/context/animation-preference-context";
 import { track } from "~/utils/eyes";
 
 const SettingsFab = () => {
@@ -122,12 +122,12 @@ const SettingsFab = () => {
             {animationsEnabled ? (
               <>
                 Disable animations
-                <Sparkles className="w-3 h-3" />
+                <Sparkles className="h-3 w-3" />
               </>
             ) : (
               <>
                 Enable animations
-                <Sparkles className="w-3 h-3" />
+                <Sparkles className="h-3 w-3" />
               </>
             )}
           </button>
@@ -140,12 +140,12 @@ const SettingsFab = () => {
             {muted ? (
               <>
                 Enable sound
-                <Volume2 className="w-3 h-3" />
+                <Volume2 className="h-3 w-3" />
               </>
             ) : (
               <>
                 Disable sound
-                <VolumeOff className="w-3 h-3" />
+                <VolumeOff className="h-3 w-3" />
               </>
             )}
           </button>
@@ -155,10 +155,10 @@ const SettingsFab = () => {
       {/* Settings icon */}
       <button
         onClick={handleFabClick}
-        className="w-10 h-10 flex items-center justify-center shrink-0 cursor-pointer text-neutral-950/40 hover:text-neutral-950 transition-colors"
+        className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center text-neutral-950/40 transition-colors hover:text-neutral-950"
         aria-label="Settings"
       >
-        <Settings2 className="w-4 h-4" />
+        <Settings2 className="h-4 w-4" />
       </button>
     </div>
   );

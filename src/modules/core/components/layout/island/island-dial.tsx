@@ -21,7 +21,11 @@ const DRAG_THRESHOLD = 4;
 const getStops = (sections: Section[]) =>
   [
   { href: "/", label: "Home", count: Object.keys(widgets).length },
-  ...sections.map(({ href, short, count }) => ({ href, label: short, count })),
+  ...sections.map(({ href, short, count = 0 }) => ({
+    href,
+    label: short,
+    count,
+  })),
 ].map((stop, index, all) => ({
   ...stop,
   x: EDGE + (index * (100 - EDGE * 2)) / (all.length - 1),
@@ -157,7 +161,7 @@ const IslandDial = ({ pathname, onVisit }: Props) => {
             }}
             onMouseEnter={haptic.onMouseEnter}
             className={cn(
-              "absolute top-[9px] -translate-x-1/2 cursor-pointer whitespace-nowrap px-1.5 py-0.5 text-[10.5px] uppercase tracking-wider transition-colors",
+              "absolute top-2.25 -translate-x-1/2 cursor-pointer whitespace-nowrap px-1.5 py-0.5 text-[10.5px] uppercase tracking-wider transition-colors",
               index === shown
                 ? "font-medium text-neutral-50"
                 : "text-neutral-50/60 hover:text-neutral-50",
@@ -171,13 +175,13 @@ const IslandDial = ({ pathname, onVisit }: Props) => {
         {/* The cursor of a slide rule: a glass window with a hairline */}
         <div
           className={cn(
-            "pointer-events-none absolute top-[5px] bottom-0 -ml-[29px] w-[58px] rounded-t-[7px] border border-neutral-50/30 border-b-0 bg-neutral-50/15",
+            "pointer-events-none absolute top-1.25 bottom-0 -ml-7.25 w-14.5 rounded-t-[7px] border border-neutral-50/30 border-b-0 bg-neutral-50/15",
             dragX === null &&
               "transition-[left] duration-700 ease-[cubic-bezier(0.34,1.4,0.64,1)] motion-reduce:transition-none",
           )}
           style={{ left: `${dragX ?? stops[shown].x}%` }}
         >
-          <span className="absolute bottom-0 left-1/2 h-[13px] w-[1.5px] bg-primary" />
+          <span className="absolute bottom-0 left-1/2 h-3.25 w-[1.5px] bg-primary" />
         </div>
       </div>
 

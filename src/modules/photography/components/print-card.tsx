@@ -14,7 +14,7 @@ import cn from "~/utils/cn";
 
 export type PhotoView = "table" | "grid";
 
-const formatNumber = (value: number) => String(value).padStart(2, "0");
+export const formatNumber = (value: number) => String(value).padStart(2, "0");
 
 interface Props {
   print: Print;
@@ -24,8 +24,10 @@ interface Props {
   sizes: string;
   haptic: ReturnType<typeof useHapticSound>;
   cardRef: (element: HTMLButtonElement | null) => void;
-  onOpen: () => void;
-  onFocus: (event: FocusEvent<HTMLButtonElement>) => void;
+  // Without it, the print only lies there: picked up, but not opened, and
+  // left out of the tab order
+  onOpen?: () => void;
+  onFocus?: (event: FocusEvent<HTMLButtonElement>) => void;
 }
 
 /**
@@ -52,13 +54,15 @@ const PrintCard = ({
       ref={cardRef}
       type="button"
       data-print
-      aria-label={`Open ${print.title}`}
+      aria-label={onOpen && `Open ${print.title}`}
+      tabIndex={onOpen ? undefined : -1}
       // The table decides whether it was a click or the end of a drag
       onClick={onOpen}
       onMouseEnter={haptic.onMouseEnter}
       onFocus={onFocus}
       className={cn(
-        "group flex cursor-pointer items-center justify-center [container-type:size] focus-visible:outline-2 focus-visible:outline-neutral-950 focus-visible:outline-offset-4",
+        "group @container-[size] flex items-center justify-center focus-visible:outline-2 focus-visible:outline-neutral-950 focus-visible:outline-offset-4",
+        onOpen && "cursor-pointer",
         isGrid
           ? "relative aspect-square rounded-2xl p-[6%]"
           : "absolute top-0 left-0 hover:z-10 focus-visible:z-10",

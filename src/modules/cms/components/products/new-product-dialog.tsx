@@ -22,7 +22,7 @@ interface DialogProps {
 
 /**
  * The dialog that adds a product: its details and its media in one go. It's
- * added at the end of the products modal.
+ * added at the end of the products page.
  */
 export const NewProductDialog = ({
   open,
@@ -61,7 +61,7 @@ export const NewProductDialog = ({
       onOpenChange={handleOpenChange}
       trigger={trigger}
       title="New product"
-      description="Something people can try right now. It's added at the end of the products modal."
+      description="Something people can try right now. It's added at the end of the products page."
       formId={formId}
       submitLabel="Add product"
       isPending={isPending}

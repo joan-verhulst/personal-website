@@ -1,7 +1,9 @@
 import { ImageResponse } from "next/og";
+import { posts } from "~/data/posts";
 import { siteData } from "~/data/site";
 import { widgets } from "~/data/widgets";
 import { getContent } from "~/modules/content/utils/get-content";
+import { skyGradient } from "~/modules/core/utils/sky-gradient";
 import HomeScreenCard, {
   OG_SIZE,
   type OgTile,
@@ -20,7 +22,7 @@ const LABELS: Record<OgTile, string> = {
   "ui-ux": widgets.uiux.label,
   "digital-art": widgets.digitalArt.label,
   photography: widgets.photography.label,
-  experiments: widgets.experiments.label,
+  blog: widgets.blog.label,
   contact: widgets.contact.label,
 };
 
@@ -29,21 +31,24 @@ const LABELS: Record<OgTile, string> = {
 const flatBackground = (background: string) =>
   background.match(/linear-gradient\(.*\)$/)?.[0] ?? "#faf9f9";
 
+// The blog's sky card at golden hour, without the sun's glow, which is a
+// radial gradient too
+const SKY = flatBackground(skyGradient(6, 0.5, 50));
+const POST_COVER = posts.find((post) => post.cover)?.cover;
+
 /**
  * The home screen as a link preview, from what's in the CMS. With a section,
  * its tile stays lit and the others are greyed out.
  */
 export const renderHomeOg = async (active?: OgTile) => {
-  const { about, contact, covers, experiments, highlights, records } =
-    await getContent();
+  const { about, contact, covers, highlights, records } = await getContent();
   const [firstHighlight, secondHighlight = firstHighlight] = highlights;
-  const [shaderExperiment, navExperiment] = experiments;
-  const experimentLabel = `${experiments.length} pieces`;
+  const postLabel = `${posts.length} ${posts.length === 1 ? "post" : "posts"}`;
   const tags = [firstHighlight?.tag?.label, secondHighlight?.tag?.label].filter(
     (tag): tag is string => Boolean(tag),
   );
 
-  const [avatar, aboutImage, record, gear, highlight, digitalArt, photography, experiment, reel, font] =
+  const [avatar, aboutImage, record, gear, highlight, digitalArt, photography, blog, font] =
     await Promise.all([
       loadPublicImage("icons/icon-192.png"),
       loadImage(about.image),
@@ -52,14 +57,9 @@ export const renderHomeOg = async (active?: OgTile) => {
       loadImage(firstHighlight?.media.src),
       loadImage(covers.digitalArt),
       loadImage(covers.photography),
-      loadImage(shaderExperiment?.media.src),
-      loadImage(
-        navExperiment?.media.type === "image"
-          ? navExperiment.media.src
-          : undefined,
-      ),
+      POST_COVER ? loadPublicImage(POST_COVER) : undefined,
       loadFont(
-        [siteData.owner.name, ...Object.values(LABELS), ...tags, experimentLabel].join(""),
+        [siteData.owner.name, ...Object.values(LABELS), ...tags, postLabel].join(""),
       ),
     ]);
 
@@ -76,15 +76,8 @@ export const renderHomeOg = async (active?: OgTile) => {
         highlight,
         digitalArt,
         photography,
-        experiment,
-        reel:
-          reel && navExperiment
-            ? {
-                src: reel,
-                width: navExperiment.media.width,
-                height: navExperiment.media.height,
-              }
-            : undefined,
+        blog,
+        sky: SKY,
       }}
       highlightBackground={
         firstHighlight
@@ -92,7 +85,7 @@ export const renderHomeOg = async (active?: OgTile) => {
           : "#faf9f9"
       }
       highlightTags={tags}
-      experimentCount={experiments.length}
+      postCount={posts.length}
       contact={{
         instagram: Boolean(contact.instagram),
         email: Boolean(contact.email),

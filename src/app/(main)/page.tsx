@@ -1,38 +1,26 @@
 "use client";
 
-import Image from "next/image";
-import TransitionLink from "~components/utils/TransitionLink";
-import PageWithFooter from "~components/layout/footer";
-import WidgetCard from "~components/widget-card";
-import { Dot } from "lucide-react";
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
 import { gsap } from "gsap";
+import { Dot } from "lucide-react";
+import Image from "next/image";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { ownPages } from "~/data/pages";
 import { siteData } from "~/data/site";
 import { widgets } from "~/data/widgets";
-import AboutModal from "~/modules/about/components/about-modal";
+import BlogWidget from "~/modules/blog/components/blog-widget";
 import { getContactLinks } from "~/modules/contact/components/contact-modal";
-import FavoritesModal from "~/modules/favorites/components/favorites-modal";
-import Gear from "~/modules/favorites/components/gear";
-import OnRotation from "~/modules/favorites/components/on-rotation";
-import Vinyl from "~/modules/favorites/components/vinyl";
-import ItemsModal from "~/modules/ui-ux/components/items-modal";
-import WallMedia from "~/modules/ui-ux/components/wall-media";
-import { getWallBackground } from "~/modules/ui-ux/utils/wall-backgrounds";
 import { useContent } from "~/modules/content/components/content-provider";
-import { useAnimationPreference } from "~/modules/core/context/animation-preference-context";
-import { track } from "~/utils/eyes";
+import Vinyl from "~/modules/favorites/components/vinyl";
+import ProductsWidget from "~/modules/products/components/products-widget";
+import { getWallBackground } from "~/modules/ui-ux/utils/wall-backgrounds";
 import { openContact } from "~/utils/open-contact";
-import { OPEN_WIDGET_EVENT } from "~/utils/open-widget";
+import { openWidget } from "~/utils/open-widget";
+import PageWithFooter from "~components/layout/footer";
+import TransitionLink from "~components/utils/TransitionLink";
+import WidgetCard from "~components/widget-card";
 
 const Page = () => {
   const gridRef = useRef<HTMLDivElement>(null);
-  const { animationsEnabled } = useAnimationPreference();
   const projectsSlideRef = useRef<HTMLDivElement>(null);
   const snippetsSlideRef = useRef<HTMLDivElement>(null);
   const indicator1Ref = useRef<HTMLDivElement>(null);
@@ -41,60 +29,13 @@ const Page = () => {
   const snippetsTextRef = useRef<HTMLSpanElement>(null);
   const slideTimelineRef = useRef<gsap.core.Timeline | null>(null);
   const [activeSlide, setActiveSlide] = useState(0); // 0 for projects, 1 for snippets
-  const [isAboutOpen, setIsAboutOpen] = useState(false);
-  const [isExperimentsOpen, setIsExperimentsOpen] = useState(false);
-  const [isOnRotationOpen, setIsOnRotationOpen] = useState(false);
-  const [isGearOpen, setIsGearOpen] = useState(false);
-  const [isProductsOpen, setIsProductsOpen] = useState(false);
 
-  const { about, contact, covers, experiments, highlights, products, records } =
+  const { about, contact, covers, highlights, products, records } =
     useContent();
   // Two pieces from the UI/UX wall rotate in the widget
   const [firstHighlight, secondHighlight = firstHighlight] = highlights;
-  // The shader fills the experiments widget, the nav reel peeks over it
-  const [shaderExperiment, navExperiment] = experiments;
-  // The first product fills its widget. Without one, contact keeps the spot
-  // Named for the modal's cards and the widget's media, which go by title
-  const productItems = products.map(({ name, ...product }) => ({
-    ...product,
-    title: name,
-  }));
-  const [firstProduct] = productItems;
   // The record that's on spins on the On Rotation widget
   const [currentRecord] = records;
-
-  // Opens a widget, from its card or from the island, and tells Eyes which
-  // one. Returns whether there's a widget by that name. Contact isn't one of
-  // them: its modal is on every page, see ContactHost
-  const showWidget = useCallback(
-    (widget: string, from: "home" | "island") => {
-      const open: Record<string, (isOpen: boolean) => void> = {
-        about: setIsAboutOpen,
-        "on-rotation": setIsOnRotationOpen,
-        gear: setIsGearOpen,
-        experiments: setIsExperimentsOpen,
-        products: setIsProductsOpen,
-      };
-      if (!open[widget]) return false;
-      track("Widget Opened", { widget, from });
-      open[widget](true);
-      return true;
-    },
-    [],
-  );
-
-  // The island can open these too, from any page
-  useEffect(() => {
-    const handleOpen = (event: Event) => {
-      // Tells the island it was taken care of
-      if (showWidget((event as CustomEvent<string>).detail, "island")) {
-        event.preventDefault();
-      }
-    };
-
-    window.addEventListener(OPEN_WIDGET_EVENT, handleOpen);
-    return () => window.removeEventListener(OPEN_WIDGET_EVENT, handleOpen);
-  }, [showWidget]);
 
   // The intro, once per visit: the grid zooms out into place while the
   // widgets come in one by one. The script in the root layout decides whether
@@ -268,6 +209,7 @@ const Page = () => {
   };
 
   // Slide animation every 5 seconds
+  // biome-ignore lint/correctness/useExhaustiveDependencies: animateToSlide is new every render. The timer starts over with each slide, which is when what it reads changes
   useEffect(() => {
     const interval = setInterval(() => {
       const nextSlide = activeSlide === 0 ? 1 : 0;
@@ -284,35 +226,38 @@ const Page = () => {
     <PageWithFooter className="min-h-screen">
       {/* The widgets say what's here, this says whose it is, for search */}
       <h1 className="sr-only">{siteData.owner.name}</h1>
-      <div className="flex z-10 justify-center items-center min-h-screen py-24 px-16 md:px-0 md:py-0 md:h-screen">
+      <div className="z-10 flex min-h-screen items-center justify-center px-16 py-24 md:h-screen md:px-0 md:py-0">
         <div className="w-full md:w-3xl">
           {/* Main grid - mobile: single column, desktop: 2 equal-height rows */}
           <div
             ref={gridRef}
             data-intro-grid
-            className="grid grid-cols-1 md:grid-rows-2 md:h-full"
+            className="grid grid-cols-1 md:h-full md:grid-rows-2"
             style={{ gap: "3rem" }}
           >
             {/* TOP ROW WRAPPER */}
             <div
-              className="grid grid-cols-1 md:grid-cols-3 md:h-full"
+              className="grid grid-cols-1 md:h-full md:grid-cols-3"
               style={{ gap: "2rem" }}
             >
-              {/* TOP ROW - Column 1: About + On Rotation/Gear subgrid */}
+              {/* TOP ROW - Column 1: About + On Rotation/Gear subgrid. About
+                  opens its page, the record and the gear their modals */}
               <div
-                className="grid grid-cols-1 w-full aspect-square "
+                className="grid aspect-square w-full grid-cols-1"
                 style={{ gap: "2rem" }}
               >
                 {/* About */}
-                <div className="aspect-2/1 md:h-full">
+                <TransitionLink
+                  href={ownPages.about.path}
+                  className="block aspect-2/1 md:h-full"
+                >
                   <WidgetCard
                     label={widgets.about.label}
                     src={about.image}
                     alt={widgets.about.alt}
-                    className="bg-neutral-400 h-full"
-                    onClick={() => showWidget("about", "home")}
+                    className="h-full bg-neutral-400"
                   />
-                </div>
+                </TransitionLink>
 
                 {/* On Rotation + Gear in a row */}
                 <div
@@ -323,10 +268,10 @@ const Page = () => {
                   <div className="aspect-square md:aspect-auto md:h-full">
                     <WidgetCard
                       label={widgets.onRotation.label}
-                      className="bg-linear-to-b from-[#EBCA10] to-[#EB7E10] h-full"
-                      onClick={() => showWidget("on-rotation", "home")}
+                      className="h-full bg-linear-to-b from-[#EBCA10] to-[#EB7E10]"
+                      onClick={() => openWidget("on-rotation", "home")}
                     >
-                      <div className="flex h-full items-center justify-center pointer-events-none">
+                      <div className="pointer-events-none flex h-full items-center justify-center">
                         {currentRecord && (
                           <Vinyl
                             covers={[
@@ -350,8 +295,8 @@ const Page = () => {
                   <div className="aspect-square md:aspect-auto md:h-full">
                     <WidgetCard
                       label={widgets.gear.label}
-                      className="bg-linear-to-b from-[#626D77] to-[#1E2D3C] h-full"
-                      onClick={() => showWidget("gear", "home")}
+                      className="h-full bg-linear-to-b from-[#626D77] to-[#1E2D3C]"
+                      onClick={() => openWidget("gear", "home")}
                     >
                       <div className="relative h-full overflow-hidden rounded-4xl">
                         <Image
@@ -370,14 +315,14 @@ const Page = () => {
               {/* TOP ROW - Columns 2-3: UI/UX spanning 2 columns */}
               <TransitionLink
                 href="/ui-ux"
-                className="aspect-2/1 md:h-full md:col-span-2 relative block"
+                className="relative block aspect-2/1 md:col-span-2 md:h-full"
               >
                 <WidgetCard
                   label={widgets.uiux.label}
                   className="h-full bg-neutral-50"
                 >
                   {/* Slides wrapper with overflow hidden */}
-                  <div className="relative w-full h-full overflow-hidden rounded-2xl">
+                  <div className="relative h-full w-full overflow-hidden rounded-2xl">
                     {/* First highlight slide */}
                     <div
                       ref={projectsSlideRef}
@@ -386,15 +331,15 @@ const Page = () => {
                         background: firstHighlight && getWallBackground(firstHighlight),
                       }}
                     >
-                      <div className="absolute pt-8 px-12 inset-0">
-                        <div className="relative inset-border overflow-hidden rounded-t-2xl h-full">
+                      <div className="absolute inset-0 px-12 pt-8">
+                        <div className="relative inset-border h-full overflow-hidden rounded-t-2xl">
                           {firstHighlight && (
                             <Image
                               src={firstHighlight.media.src}
                               alt={firstHighlight.title}
                               fill
                               sizes="(min-width: 768px) 512px, 100vw"
-                              className="object-cover object-top pointer-events-none"
+                              className="pointer-events-none object-cover object-top"
                             />
                           )}
                         </div>
@@ -409,15 +354,15 @@ const Page = () => {
                         background: secondHighlight && getWallBackground(secondHighlight),
                       }}
                     >
-                      <div className="absolute pt-8 px-12 inset-0">
-                        <div className="relative inset-border overflow-hidden rounded-t-2xl h-full">
+                      <div className="absolute inset-0 px-12 pt-8">
+                        <div className="relative inset-border h-full overflow-hidden rounded-t-2xl">
                           {secondHighlight && (
                             <Image
                               src={secondHighlight.media.src}
                               alt={secondHighlight.title}
                               fill
                               sizes="(min-width: 768px) 512px, 100vw"
-                              className="object-cover object-top pointer-events-none"
+                              className="pointer-events-none object-cover object-top"
                             />
                           )}
                         </div>
@@ -425,18 +370,18 @@ const Page = () => {
                     </div>
                   </div>
 
-                  <div className="absolute left-0 right-0 bottom-4 flex justify-center pointer-events-none">
-                    <div className="h-6 px-2 flex items-center rounded-[0.625rem] backdrop-blur-lg bg-neutral-950/33">
+                  <div className="pointer-events-none absolute right-0 bottom-4 left-0 flex justify-center">
+                    <div className="flex h-6 items-center rounded-[0.625rem] bg-neutral-950/33 px-2 backdrop-blur-lg">
                       <span
                         ref={projectsTextRef}
-                        className="text-sm text-neutral-50"
+                        className="text-neutral-50 text-sm"
                       >
                         {firstHighlight?.tag?.label}
                       </span>
-                      <Dot className="w-4 h-4 text-neutral-50" />
+                      <Dot className="h-4 w-4 text-neutral-50" />
                       <span
                         ref={snippetsTextRef}
-                        className="text-sm text-neutral-50 opacity-66"
+                        className="text-neutral-50 text-sm opacity-66"
                       >
                         {secondHighlight?.tag?.label}
                       </span>
@@ -445,7 +390,7 @@ const Page = () => {
                 </WidgetCard>
 
                 {/* Slide Indicators */}
-                <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 flex flex-col gap-1">
+                <div className="absolute top-1/2 right-0 flex translate-x-4 -translate-y-1/2 flex-col gap-1">
                   <div
                     ref={indicator1Ref}
                     onClick={(e) => {
@@ -453,7 +398,7 @@ const Page = () => {
                       e.stopPropagation();
                       animateToSlide(0);
                     }}
-                    className="w-1 h-1 rounded-full bg-neutral-950 cursor-pointer"
+                    className="h-1 w-1 cursor-pointer rounded-full bg-neutral-950"
                   />
                   <div
                     ref={indicator2Ref}
@@ -462,7 +407,7 @@ const Page = () => {
                       e.stopPropagation();
                       animateToSlide(1);
                     }}
-                    className="w-1 h-1 rounded-full bg-neutral-950/33 cursor-pointer"
+                    className="h-1 w-1 cursor-pointer rounded-full bg-neutral-950/33"
                   />
                 </div>
               </TransitionLink>
@@ -470,123 +415,51 @@ const Page = () => {
 
             {/* BOTTOM ROW WRAPPER */}
             <div
-              className="grid grid-cols-1 md:grid-cols-3 md:h-full"
+              className="grid grid-cols-1 md:h-full md:grid-cols-3"
               style={{ gap: "2rem" }}
             >
               {/* BOTTOM ROW - Column 1: Digital Art */}
               <TransitionLink
                 href="/digital-art"
-                className="aspect-2/1 md:aspect-square w-full block"
+                className="block aspect-2/1 w-full md:aspect-square"
               >
                 <WidgetCard
                   label={widgets.digitalArt.label}
                   src={covers.digitalArt}
                   alt={widgets.digitalArt.alt}
-                  className="bg-neutral-400 h-full"
+                  className="h-full bg-neutral-400"
                 />
               </TransitionLink>
 
               {/* BOTTOM ROW - Column 2: Photography */}
               <TransitionLink
                 href="/photography"
-                className="aspect-2/1 md:aspect-square w-full md:h-full"
+                className="aspect-2/1 w-full md:aspect-square md:h-full"
               >
                 <WidgetCard
                   label={widgets.photography.label}
                   src={covers.photography}
                   alt={widgets.photography.alt}
-                  className="bg-neutral-500 "
+                  className="bg-neutral-500"
                 />
               </TransitionLink>
 
               {/* BOTTOM ROW - Column 3: Experiments + Contact subgrid */}
               <div
-                className="grid grid-cols-1 md:grid-rows-2 aspect-square"
+                className="grid aspect-square grid-cols-1 md:grid-rows-2"
                 style={{ gap: "2rem" }}
               >
-                {/* Experiments */}
+                {/* The blog, in the experiments' old spot */}
                 <div className="aspect-2/1 md:aspect-auto md:h-full">
-                  <WidgetCard
-                    label={widgets.experiments.label}
-                    className="bg-neutral-50 h-full"
-                    onClick={() => showWidget("experiments", "home")}
-                  >
-                    <div className="relative w-full h-full overflow-hidden rounded-4xl">
-                      {shaderExperiment && (
-                        <Image
-                          src={shaderExperiment.media.src}
-                          alt={shaderExperiment.title}
-                          fill
-                          sizes="(min-width: 768px) 256px, 100vw"
-                          className="object-cover scale-125 pointer-events-none"
-                        />
-                      )}
-
-                      {/* Tilted reel peeking up from the bottom edge */}
-                      {navExperiment && (
-                      <div
-                        className="absolute right-[8%] bottom-0 w-[44%] translate-y-[28%] rotate-[-6deg] overflow-hidden rounded-xl border-4 border-neutral-50 bg-neutral-50 shadow-lg pointer-events-none"
-                        style={{
-                          aspectRatio:
-                            navExperiment.media.width /
-                            navExperiment.media.height,
-                        }}
-                      >
-                        <WallMedia
-                          item={navExperiment}
-                          sizes="(min-width: 768px) 128px, 50vw"
-                        />
-                      </div>
-                      )}
-
-                      <div className="absolute left-4 bottom-4 h-6 px-2 flex items-center rounded-[0.625rem] backdrop-blur-lg bg-neutral-950/33 pointer-events-none">
-                        <span className="text-sm text-neutral-50">
-                          {experiments.length} pieces
-                        </span>
-                      </div>
-                    </div>
-                  </WidgetCard>
+                  <BlogWidget />
                 </div>
 
                 {/* Products, in contact's old spot: contact is next to the
                     island on every page now. Until there's a product to try,
                     contact keeps it */}
                 <div className="aspect-2/1 md:aspect-auto md:h-full">
-                  {firstProduct ? (
-                    <WidgetCard
-                      label={widgets.products.label}
-                      className="h-full"
-                      onClick={() => showWidget("products", "home")}
-                    >
-                      <div
-                        className="pointer-events-none relative h-full w-full overflow-hidden rounded-4xl"
-                        style={{ background: getWallBackground(firstProduct) }}
-                      >
-                        {/* A reel fills the card, a screenshot sits in it
-                            like on the UI/UX widget */}
-                        {firstProduct.bare ? (
-                          <WallMedia
-                            item={firstProduct}
-                            sizes="(min-width: 768px) 256px, 100vw"
-                          />
-                        ) : (
-                          <div className="absolute inset-0 px-6 pt-4">
-                            <div className="relative inset-border h-full overflow-hidden rounded-t-xl">
-                              <WallMedia
-                                item={firstProduct}
-                                sizes="(min-width: 768px) 256px, 100vw"
-                              />
-                            </div>
-                          </div>
-                        )}
-
-                        <div className="absolute bottom-4 left-4 flex h-6 items-center rounded-[0.625rem] bg-neutral-950/33 px-2 backdrop-blur-lg">
-                          <span className="text-neutral-50 text-sm">
-                            {products.length} to try
-                          </span>
-                        </div>
-                      </div>
-                    </WidgetCard>
+                  {products.length > 0 ? (
+                    <ProductsWidget products={products} />
                   ) : (
                     // The icons are a picture, the modal has the links
                     <WidgetCard
@@ -610,39 +483,6 @@ const Page = () => {
           </div>
         </div>
       </div>
-      <AboutModal isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
-      <FavoritesModal
-        title={widgets.onRotation.label}
-        isOpen={isOnRotationOpen}
-        onClose={() => setIsOnRotationOpen(false)}
-      >
-        <OnRotation />
-      </FavoritesModal>
-      <FavoritesModal
-        title={widgets.gear.label}
-        isOpen={isGearOpen}
-        onClose={() => setIsGearOpen(false)}
-      >
-        <Gear />
-      </FavoritesModal>
-      <ItemsModal
-        title={widgets.experiments.label}
-        intro={widgets.experiments.intro}
-        items={experiments}
-        isOpen={isExperimentsOpen}
-        onClose={() => setIsExperimentsOpen(false)}
-        onVisit={({ title }) =>
-          track("Experiment Visited", { experiment: title })
-        }
-      />
-      <ItemsModal
-        title={widgets.products.label}
-        intro={widgets.products.intro}
-        items={productItems}
-        isOpen={isProductsOpen}
-        onClose={() => setIsProductsOpen(false)}
-        onVisit={({ title }) => track("Product Visited", { product: title })}
-      />
     </PageWithFooter>
   );
 };

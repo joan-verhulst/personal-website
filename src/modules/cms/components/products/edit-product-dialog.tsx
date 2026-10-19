@@ -22,8 +22,6 @@ export const DELETE_WARNING =
 
 interface Props {
   row: ProductRow;
-  /** True for the product on the home page widget. */
-  isFirst: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -32,7 +30,7 @@ interface Props {
  * A product's edit dialog: the same fields as a new one. Mount it with a new
  * key for every opening, so the form starts from what's saved.
  */
-const EditProductDialog = ({ row, isFirst, open, onOpenChange }: Props) => {
+const EditProductDialog = ({ row, open, onOpenChange }: Props) => {
   const id = useId();
   const formId = `${id}-form`;
   const confirm = useConfirm();
@@ -89,7 +87,7 @@ const EditProductDialog = ({ row, isFirst, open, onOpenChange }: Props) => {
       open={open}
       onOpenChange={handleOpenChange}
       title="Edit product"
-      description={`Shown in the products modal${isFirst ? " and on the home page widget" : ""}. Changes go live as soon as they're saved.`}
+      description="Shown on the products page and in the home page widget. Changes go live as soon as they're saved."
       formId={formId}
       isPending={isPending}
       isDirty={isDirty}

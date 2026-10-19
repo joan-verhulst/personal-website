@@ -84,23 +84,24 @@ const createRandom = (seed: number) => {
 
 /**
  * A loose pile: prints land in random cells of a grid shaped like the
- * screen, nudged and turned a little so the grid doesn't show.
+ * screen, nudged and turned a little so the grid doesn't show. A table that
+ * only pans sideways sets its own columns instead.
  */
 export const scatterLayout = (
   prints: Print[],
   base: number,
   viewport: Size,
   seed: number,
-): TableLayout => {
-  const random = createRandom(seed);
-  const cell = base * 1.1;
-  const padding = base * 0.4;
-  const columns = Math.max(
+  columns = Math.max(
     2,
     Math.round(
       Math.sqrt(prints.length * (viewport.width / viewport.height)) * 1.05,
     ),
-  );
+  ),
+): TableLayout => {
+  const random = createRandom(seed);
+  const cell = base * 1.1;
+  const padding = base * 0.4;
   const rows = Math.ceil(prints.length / columns);
 
   // Fisher-Yates over the cells, so which photo lands where is random too

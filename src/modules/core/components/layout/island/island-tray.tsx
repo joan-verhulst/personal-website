@@ -1,15 +1,28 @@
 import { Undo2, X } from "lucide-react";
+import dynamic from "next/dynamic";
 import Image from "next/image";
-import { type CSSProperties, useMemo, useState } from "react";
-import IslandButton from "~components/layout/island/island-button";
-import { getSections, type Section } from "~/data/sections";
+import { type CSSProperties, type ReactNode, useMemo, useState } from "react";
+import { ownPages, pathOf } from "~/data/pages";
+import { posts } from "~/data/posts";
+import {
+  getSections,
+  type Section,
+  sectionHint,
+  sectionOf,
+} from "~/data/sections";
 import { siteData } from "~/data/site";
 import { widgets } from "~/data/widgets";
 import { useContent } from "~/modules/content/components/content-provider";
 import type { Content } from "~/modules/content/types";
 import { useHapticSound } from "~/modules/core/hooks/use-haptic-sound";
+import WallMedia from "~/modules/ui-ux/components/wall-media";
 import { getWallBackground } from "~/modules/ui-ux/utils/wall-backgrounds";
 import cn from "~/utils/cn";
+import IslandButton from "~components/layout/island/island-button";
+
+// A post's cover can be its shader drawn live. The island is on every page,
+// so that code only loads once the tray opens
+const PostCover = dynamic(() => import("~/modules/blog/components/post-cover"));
 
 interface Tile {
   id: string;
@@ -23,29 +36,34 @@ interface Tile {
   className?: string;
   style?: CSSProperties;
   image?: string;
+  // What its widget on home shows, in place of an image: a post's cover or
+  // a product's reel. Only there while the tray is open
+  live?: ReactNode;
   // Sits inside the tile instead of filling it
   inset?: "screen" | "record" | "cutout";
 }
 
+// The newest post, on the blog's tile as on home
+const [latest] = posts;
+
 const getTiles = ({
   about,
   covers,
-  experiments,
   highlights,
   products,
   records,
 }: Content): Tile[] => {
   const [highlight] = highlights;
-  const [experiment] = experiments;
   const [product] = products;
   const [record] = records;
 
   return [
+  // About opens its page, the record and the gear their modals, as on home
   {
     id: "about",
     label: widgets.about.label,
     area: "1 / 1 / 2 / 3",
-    widget: "about",
+    href: ownPages.about.path,
     className: "bg-neutral-400",
     image: about.image,
   },
@@ -93,22 +111,32 @@ const getTiles = ({
     image: covers.photography,
   },
   {
-    id: "experiments",
-    label: widgets.experiments.label,
+    id: "blog",
+    label: widgets.blog.label,
     area: "3 / 5 / 4 / 7",
-    widget: "experiments",
-    className: "bg-neutral-50",
-    image: experiment?.media.src,
+    href: "/blog",
+    className: "bg-neutral-900",
+    live: latest && <PostCover post={latest} isSmall isStill />,
   },
   // Products took contact's spot on the home screen, once there's one
   product
     ? {
         id: "products",
         label: widgets.products.label,
-        widget: "products",
+        href: "/products",
         area: "4 / 5 / 5 / 7",
         style: { background: getWallBackground(product) },
-        image: product.media.type === "image" ? product.media.src : undefined,
+        // A video plays, like on home, where a still would leave it empty
+        live: (
+          <WallMedia
+            item={{
+              title: product.name,
+              media: product.media,
+              bare: product.bare,
+            }}
+            sizes="160px"
+          />
+        ),
         inset: product.bare ? undefined : "screen",
       }
     : {
@@ -122,8 +150,10 @@ const getTiles = ({
 };
 
 const getHint = (tile: Tile, sections: Section[]) => {
-  const section = sections.find(({ href }) => href === tile.href);
-  if (section) return `${section.count} ${section.unit}`;
+  const section =
+    tile.href !== undefined &&
+    sections.find(({ href }) => href === pathOf(tile.href ?? ""));
+  if (section) return sectionHint(section);
   return tile.widget ? "opens here" : "";
 };
 
@@ -145,12 +175,12 @@ const IslandTray = ({ pathname, isOpen, onVisit, onWidget, onClose }: Props) => 
   // The header line names the tile under the pointer
   const [pointed, setPointed] = useState<Tile | null>(null);
 
-  const current = sections.find(({ href }) => href === pathname);
+  const current = sectionOf(sections, pathname);
   const isHome = pathname === "/";
 
   return (
     <div className="flex size-full flex-col gap-2 px-3 pt-3 pb-3.5">
-      <div className="flex h-[30px] shrink-0 items-center gap-2 whitespace-nowrap text-[13px]">
+      <div className="flex h-7.5 shrink-0 items-center gap-2 whitespace-nowrap text-[13px]">
         {!isHome && (
           <IslandButton label="Go back" onClick={() => onVisit("/")}>
             <Undo2 className="size-3" />
@@ -172,7 +202,8 @@ const IslandTray = ({ pathname, isOpen, onVisit, onWidget, onClose }: Props) => 
         onMouseLeave={() => setPointed(null)}
       >
         {tiles.map((tile, index) => {
-          const isCurrent = tile.href === pathname;
+          const isCurrent =
+            tile.href !== undefined && pathOf(tile.href) === current?.href;
           const className = cn(
             "relative overflow-hidden rounded-[10px] ring-1 ring-neutral-50/25 ring-inset transition duration-300 ease-[cubic-bezier(0.34,1.4,0.64,1)] motion-reduce:transition-none",
             // Tiles pop in one after another as the island unfolds
@@ -186,10 +217,26 @@ const IslandTray = ({ pathname, isOpen, onVisit, onWidget, onClose }: Props) => 
             transitionDelay: isOpen ? `${120 + index * 30}ms` : "0ms",
           };
 
-          const picture = tile.image && (
+          const cover = tile.live
+            ? isOpen && tile.live
+            : tile.image && (
+                <Image
+                  src={tile.image}
+                  alt=""
+                  fill
+                  sizes="160px"
+                  className={cn(
+                    "pointer-events-none",
+                    tile.inset === "cutout"
+                      ? "object-contain"
+                      : "object-cover object-top",
+                  )}
+                />
+              );
+          const picture = cover && (
             <span
               className={cn(
-                "absolute overflow-hidden",
+                "pointer-events-none absolute overflow-hidden",
                 !tile.inset && "inset-0",
                 tile.inset === "screen" &&
                   "inset-x-[14%] top-[18%] bottom-0 rounded-t-md",
@@ -197,18 +244,7 @@ const IslandTray = ({ pathname, isOpen, onVisit, onWidget, onClose }: Props) => 
                 tile.inset === "cutout" && "inset-[14%]",
               )}
             >
-              <Image
-                src={tile.image}
-                alt=""
-                fill
-                sizes="160px"
-                className={cn(
-                  "pointer-events-none",
-                  tile.inset === "cutout"
-                    ? "object-contain"
-                    : "object-cover object-top",
-                )}
-              />
+              {cover}
             </span>
           );
 

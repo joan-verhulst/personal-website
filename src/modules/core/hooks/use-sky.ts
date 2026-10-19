@@ -3,14 +3,20 @@
 import { gsap } from "gsap";
 import { type RefObject, useEffect, useRef, useState } from "react";
 import { siteData } from "~/data/site";
+import {
+  claimSky,
+  hasSky,
+  isSkyReady,
+  registerSkyHost,
+  type SkyHost,
+  unregisterSkyHost,
+} from "~/modules/core/utils/shared-sky";
 import { skyGradient } from "~/modules/core/utils/sky-gradient";
 import {
   type Bolt,
-  createSkyRenderer,
   type GlassShape,
   SKY_DEFAULTS,
   type SkyFrame,
-  type SkyRenderer,
 } from "~/modules/core/utils/sky-shader";
 import { sunAt } from "~/modules/core/utils/sun";
 import {
@@ -20,6 +26,7 @@ import {
   type SkyCondition,
   type SkyWeather,
   skyWeather,
+  WEATHER_MS,
   type WeatherReport,
 } from "~/modules/core/utils/weather";
 
@@ -42,10 +49,9 @@ const EDGE = 0.42;
 // pixel ratio. Below that it matches the screen
 const PIXEL_BUDGET = 3_000_000;
 
-// How often the weather is asked for again, as often as the radar changes,
-// and how soon after an answer that didn't come, doubling each time it
-// doesn't until it's as long as the usual wait
-const WEATHER_MS = 5 * 60_000;
+// How soon the weather is asked for again after an answer that didn't come,
+// doubling each time it doesn't until it's as long as the usual wait, see
+// WEATHER_MS
 const WEATHER_RETRY_MS = 30_000;
 
 // How long the sky takes to settle into new weather, in seconds, and in a
@@ -97,10 +103,10 @@ const savesData = () =>
 let holdsStill: boolean | undefined;
 
 interface Options {
-  // Takes the gradient as its background, with the canvas over it. Elements
-  // marked data-glass next to it, in the footer, are drawn as glass
+  // Takes the gradient as its background, and the sky's canvas while this
+  // footer draws, see shared-sky.ts. Elements marked data-glass next to it,
+  // in the footer, are drawn as glass
   skyRef: RefObject<HTMLElement | null>;
-  canvasRef: RefObject<HTMLCanvasElement | null>;
   // Shows the sky's time, kept up to date without rendering
   clockRef: RefObject<HTMLElement | null>;
   // Without them, the weather holds still and there's no lightning
@@ -117,6 +123,11 @@ interface Options {
  * while the footer shows as often as the weather moves. `play` runs it
  * through the last 24 hours, back to now. Only the time moves: the weather
  * stays today's, so the clouds keep their look while the light goes round.
+ *
+ * One renderer draws the sky for every footer, see shared-sky.ts: its
+ * shaders compile once, in the background, and the gradient stands in until
+ * they're ready. The canvas comes to the footer that draws, which is the
+ * one on the page that's open.
  *
  * Nothing is drawn while the page covers the footer, and the weather only
  * moves while the footer shows. When the page drops frames, with animations
@@ -135,7 +146,6 @@ interface Options {
  */
 export const useSky = ({
   skyRef,
-  canvasRef,
   clockRef,
   animationsEnabled,
   onHour,
@@ -158,9 +168,8 @@ export const useSky = ({
 
   useEffect(() => {
     const sky = skyRef.current;
-    const canvas = canvasRef.current;
     const footer = sky?.parentElement;
-    if (!sky || !canvas || !footer) return;
+    if (!sky || !footer) return;
 
     holdsStill ??= savesData();
     stillRef.current = holdsStill;
@@ -176,13 +185,21 @@ export const useSky = ({
       timeZone: home.timeZone,
     });
 
-    let renderer: SkyRenderer | null = null;
+    // Only the shader has weather and glass. It's shared with every
+    // footer, so it's ready as soon as it has compiled once
+    const useShader = SKY === "shader";
+    const isReady = () => useShader && isSkyReady();
+    // The canvas, in pixels: what it's sized to when this footer draws
     let pixelRatio = 1;
+    let canvasWidth = 1;
+    let canvasHeight = 1;
     let lastFrame: SkyFrame | null = null;
     let isShown = false;
     // Whether the sky has changed since it was drawn. Nothing is drawn while
     // the page covers the footer: it's drawn when the footer shows
     let isDirty = true;
+    // The first draw has had its turn, see FIRST_DRAW_MS
+    let isSettledIn = false;
 
     const isMoving = () =>
       isShown && animateRef.current && !stillRef.current;
@@ -208,9 +225,21 @@ export const useSky = ({
     };
 
     // The glass elements as the shader takes them: canvas pixels, from the
-    // bottom left
+    // bottom left. Their corners are read from their styles once, and again
+    // when they're laid out anew, see resize
+    let radii = new WeakMap<HTMLElement, number>();
+    const radiusOf = (element: HTMLElement) => {
+      let radius = radii.get(element);
+      if (radius === undefined) {
+        radius =
+          Number.parseFloat(getComputedStyle(element).borderTopLeftRadius) || 0;
+        radii.set(element, radius);
+      }
+      return radius;
+    };
+
     const measureGlass = () => {
-      const bounds = canvas.getBoundingClientRect();
+      const bounds = sky.getBoundingClientRect();
       const shapes: GlassShape[] = [];
       for (const element of footer.querySelectorAll<HTMLElement>(
         "[data-glass]",
@@ -219,15 +248,13 @@ export const useSky = ({
         if (rect.width === 0 || rect.height === 0) continue;
         const halfWidth = (rect.width / 2) * pixelRatio;
         const halfHeight = (rect.height / 2) * pixelRatio;
-        const radius =
-          Number.parseFloat(getComputedStyle(element).borderTopLeftRadius) *
-          pixelRatio;
+        const radius = radiusOf(element) * pixelRatio;
         shapes.push({
           centerX: (rect.left + rect.width / 2 - bounds.left) * pixelRatio,
           centerY: (bounds.bottom - rect.top - rect.height / 2) * pixelRatio,
           halfWidth,
           halfHeight,
-          radius: Math.min(radius || 0, halfWidth, halfHeight),
+          radius: Math.min(radius, halfWidth, halfHeight),
         });
       }
       return shapes;
@@ -275,12 +302,22 @@ export const useSky = ({
     };
 
     // Only the shader has clouds to draw the weather with. Asked for again
-    // and again, sooner when an answer didn't come
+    // and again, sooner when an answer didn't come. Not while the tab is
+    // hidden: a tab left open would ask every five minutes for nobody, each
+    // a request on Vercel. It asks once it shows again instead
     let weatherTimer: ReturnType<typeof setTimeout> | undefined;
     let retryIn = WEATHER_RETRY_MS;
+    let isWeatherDue = false;
+    // Gone: an answer still on its way doesn't ask again
+    let isStopped = false;
 
     const updateWeather = async () => {
+      if (document.hidden) {
+        isWeatherDue = true;
+        return;
+      }
       const next = await fetchWeather();
+      if (isStopped) return;
       if (next) {
         const isFirst = report === null;
         report = next;
@@ -355,19 +392,26 @@ export const useSky = ({
 
     // ── Drawing ──────────────────────────────────────────────────────────────
 
+    // Draws a frame on the shared canvas, which comes to this footer for
+    // it. Nothing is drawn while another footer, on a page over this one,
+    // has the sky: it's drawn again when this one is back on top. True when
+    // it drew
     const render = (frame: SkyFrame, clouds: boolean) => {
-      renderer?.draw(frame, measureGlass(), SKY_DEFAULTS, { clouds });
+      const { renderer, isCleared } = claimSky(host, canvasWidth, canvasHeight);
+      if (!renderer) return false;
+      return renderer.draw(frame, measureGlass(), SKY_DEFAULTS, {
+        clouds: clouds || isCleared,
+      });
     };
 
     const draw = () => {
-      isDirty = false;
       const now = new Date(Date.now() + time.offset);
       const sun = sunAt(now, home);
       const sunX =
         0.5 + EDGE * Math.min(Math.max((sun.azimuth - 180) / REACH, -1), 1);
 
       settle();
-      if (renderer) {
+      if (isReady()) {
         advance();
         lastFrame = {
           sunElevation: sun.elevation,
@@ -382,8 +426,11 @@ export const useSky = ({
           bolt,
           pixelRatio,
         };
-        render(lastFrame, true);
+        isDirty = !render(lastFrame, true);
+        if (!isDirty) sky.style.background = "";
       } else {
+        // Until the shaders are ready, and for good where there are none
+        isDirty = false;
         sky.style.background = skyGradient(
           sun.elevation,
           sunX,
@@ -463,7 +510,7 @@ export const useSky = ({
     };
 
     const updateLoop = () => {
-      const shouldRun = isMoving() && renderer !== null;
+      const shouldRun = isMoving() && isReady();
       if (shouldRun && !frameRequest) {
         lastTick = performance.now();
         frameRequest = requestAnimationFrame(loop);
@@ -487,28 +534,40 @@ export const useSky = ({
       if (isShown) redraw(false);
     };
 
-    // The GPU dropped the canvas: the gradient takes over, without weather
-    // or glass
+    // No sky from the shaders, after the GPU dropped the canvas or they
+    // didn't compile: the gradient takes over, without weather or glass
     const fallBack = () => {
-      renderer?.destroy();
-      renderer = null;
-      canvas.hidden = true;
       setGlass(false);
       updateLoop();
       draw();
     };
 
-    if (SKY === "shader") renderer = createSkyRenderer(canvas, fallBack);
-    canvas.hidden = !renderer;
-    setGlass(renderer !== null);
+    // This footer's turn with the shared sky, see shared-sky.ts
+    const host: SkyHost = {
+      element: sky,
+      onReady: () => {
+        setGlass(true);
+        isDirty = true;
+        updateLoop();
+        // Drawn now if it's needed, or once the first draw has had its turn
+        if (isShown || isSettledIn) draw();
+      },
+      onInvalidate: () => {
+        isDirty = true;
+        if (isShown) draw();
+      },
+      onLost: fallBack,
+    };
+    if (useShader) registerSkyHost(host);
+    setGlass(isReady());
 
     // The status, before the first sky is drawn
     showClock(new Date());
     showNight(sunAt(new Date(), home).elevation);
     showCondition(goalWeather());
 
-    // Setting the canvas's size clears it, so it's only set when it
-    // changed, and drawn again right away if it shows
+    // The canvas is sized to the footer when this one draws, see claimSky.
+    // The glass can change size inside it, and is drawn again where it is
     const resize = () => {
       const width = sky.clientWidth;
       const height = sky.clientHeight;
@@ -516,16 +575,11 @@ export const useSky = ({
         window.devicePixelRatio || 1,
         Math.sqrt(PIXEL_BUDGET / Math.max(1, width * height)),
       );
-      const canvasWidth = Math.max(1, Math.round(width * pixelRatio));
-      const canvasHeight = Math.max(1, Math.round(height * pixelRatio));
-      if (canvasWidth !== canvas.width || canvasHeight !== canvas.height) {
-        canvas.width = canvasWidth;
-        canvas.height = canvasHeight;
-        isDirty = true;
-        if (isShown) draw();
-      } else if (isShown) {
-        redraw(false);
-      }
+      canvasWidth = Math.max(1, Math.round(width * pixelRatio));
+      canvasHeight = Math.max(1, Math.round(height * pixelRatio));
+      radii = new WeakMap();
+      if (isShown) redraw(false);
+      else isDirty = true;
     };
     // The footer, and the glass, which can change size inside it
     const resizeObserver = new ResizeObserver(resize);
@@ -537,6 +591,7 @@ export const useSky = ({
 
     // The first sky, before the page is pulled off the footer
     const firstDrawTimer = setTimeout(() => {
+      isSettledIn = true;
       if (isDirty && !isShown) draw();
     }, FIRST_DRAW_MS);
 
@@ -551,7 +606,14 @@ export const useSky = ({
     };
     minuteTimer = setTimeout(tick, 60_000 - (Date.now() % 60_000) + 50);
 
-    if (renderer) updateWeather();
+    const handleVisibility = () => {
+      if (document.hidden || !isWeatherDue) return;
+      isWeatherDue = false;
+      updateWeather();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    if (useShader && hasSky()) updateWeather();
 
     playRef.current = () => {
       if (playing) return;
@@ -581,15 +643,17 @@ export const useSky = ({
       clearTimeout(firstDrawTimer);
       clearTimeout(minuteTimer);
       clearTimeout(weatherTimer);
+      isStopped = true;
+      document.removeEventListener("visibilitychange", handleVisibility);
       cancelAnimationFrame(frameRequest);
       gsap.killTweensOf(time);
       resizeObserver.disconnect();
-      renderer?.destroy();
+      if (useShader) unregisterSkyHost(host);
       sky.style.background = "";
       playRef.current = null;
       refreshRef.current = null;
     };
-  }, [skyRef, canvasRef, clockRef]);
+  }, [skyRef, clockRef]);
 
   // Animations turned on or off: the weather starts or stops
   useEffect(() => {

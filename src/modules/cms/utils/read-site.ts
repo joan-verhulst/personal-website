@@ -2,7 +2,7 @@ import { adminClient } from "~/modules/cms/utils/require-admin";
 import { isTableToCome } from "~/modules/cms/utils/shared";
 import type { SiteRow } from "~/modules/content/utils/rows";
 
-/** The single site row with the about modal and contact links. */
+/** The single site row with the about page's words and the contact links. */
 export const readSite = async (): Promise<SiteRow> => {
   const supabase = await adminClient();
   const { data, error } = await supabase

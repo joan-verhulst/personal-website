@@ -1,10 +1,10 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
 import { gsap } from "gsap";
+import { useEffect, useRef, useState } from "react";
+import { useHapticSound } from "~/modules/core/hooks/use-haptic-sound";
 import cn from "~/utils/cn";
 import SliderLabel from "./slider-label";
-import { useHapticSound } from "~/modules/core/hooks/use-haptic-sound";
 
 interface Props {
   totalSlides: number;
@@ -109,14 +109,14 @@ const SliderIndicator = ({
       className={cn(
         "fixed z-40",
         isHorizontal
-          ? "bottom-16 left-1/2 -translate-x-1/2 flex flex-row gap-3"
-          : "left-16 top-1/2 -translate-y-1/2 flex flex-col gap-3",
+          ? "bottom-16 left-1/2 flex -translate-x-1/2 flex-row gap-3"
+          : "top-1/2 left-16 flex -translate-y-1/2 flex-col gap-3",
         className,
       )}
     >
       <div
         ref={dotRef}
-        className="absolute w-0.75 h-0.75 rounded-full bg-primary-500"
+        className="absolute h-0.75 w-0.75 rounded-full bg-primary-500"
         style={
           isHorizontal
             ? { bottom: "-8px", left: 0, opacity: 0 }
@@ -138,7 +138,7 @@ const SliderIndicator = ({
           onMouseLeave={() => setHoveredIndex(null)}
           className={cn(
             "relative flex cursor-pointer",
-            isHorizontal ? "px-2 -mx-2 items-end" : "py-2 -my-2 items-center",
+            isHorizontal ? "-mx-2 items-end px-2" : "-my-2 items-center py-2",
           )}
         >
           <div
@@ -159,7 +159,7 @@ const SliderIndicator = ({
           position={labelPosition}
           orientation={orientation}
           className={cn(
-            "absolute text-sm border border-neutral-950/10 bg-neutral-50/66 backdrop-blur-3xl rounded-xl",
+            "absolute rounded-xl border border-neutral-950/10 bg-neutral-50/66 text-sm backdrop-blur-3xl",
             isHorizontal
               ? "bottom-16 -translate-x-1/2"
               : "left-16 -translate-y-1/2",

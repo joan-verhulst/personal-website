@@ -1,3 +1,10 @@
+import {
+  buildProgram,
+  checkProgram,
+  deleteProgram,
+  releaseLater,
+  whenLinked,
+} from "~/modules/core/utils/gl-program";
 import { sunTransmittance } from "~/modules/core/utils/sky-light";
 import type { CloudLook, SkyWeather } from "~/modules/core/utils/weather";
 
@@ -133,12 +140,13 @@ export const SKY_DEFAULTS: SkyParams = {
       veil: 0.3,
       fall: 0,
     },
-    // Cloudy: a soft deck of stratus
+    // Cloudy: a soft deck of stratus. The weather sets its coverage, see
+    // skyWeather, this is for when there's none
     {
       coverage: 0.78,
       scale: 1,
       height: 0.8,
-      thickness: 5,
+      thickness: 7,
       billow: 0,
       ragged: 0,
       softness: 0.2,
@@ -193,17 +201,19 @@ export interface DrawOptions {
 }
 
 export interface SkyRenderer {
+  /** Whether the shaders have compiled. Drawing before that does nothing. */
+  isReady: () => boolean;
   /**
    * Draws the sky with clouds, rain or snow and glass over it. The costly
    * scattering is only drawn again when the sun or the size changed, so
-   * everything else moving is cheap.
+   * everything else moving is cheap. True when it drew.
    */
   draw: (
     frame: SkyFrame,
     glass: GlassShape[],
     params: SkyParams,
     options: DrawOptions,
-  ) => void;
+  ) => boolean;
   destroy: () => void;
 }
 
@@ -527,6 +537,11 @@ uniform vec3 uSunTVeil;
 // Kilometers across one repeat of the noise at scale 1, for the clouds and
 // for the veil's long streaks, and how high the veil hangs
 const float TILE = 30.0;
+// Where the viewer stands in the clouds' noise before the wind has carried
+// them, in kilometers. The deck is measured against the patch it's under,
+// see main, so any spot gives the coverage asked for: this is where the
+// looks were tuned
+const vec2 START = vec2(5.0, 16.0);
 const float VEIL_TILE = 60.0;
 const float VEIL_HEIGHT = ${VEIL_HEIGHT.toFixed(1)};
 
@@ -643,24 +658,43 @@ float threshold(float coverage, vec2 stats) {
   return stats.x + stats.y * log((1.0 - share) / share) / 1.7;
 }
 
+// How far ahead of the viewer the middle of the view lies, in kilometers,
+// and the level of the noise's mips that averages it over about as much
+// around that: what the deck's density is measured against, see main
+const float AHEAD = 1.0;
+const float LOCAL_LOD = 6.0;
+
+// A read of the noise: as the pixel sees it, with a level below zero, or
+// from the level of its mips that averages it over a wide area, for the
+// mean around a point
+vec4 noiseAt(vec2 t, float lod) {
+  return lod < 0.0 ? texture(uNoise, t) : textureLod(uNoise, t, lod);
+}
+
+// The level for a read at this many times the scale, so it averages over
+// the same area
+float finer(float lod, float times) {
+  return lod < 0.0 ? lod : lod + log2(times);
+}
+
 // The shapes, at a point in tiles. A soft sheet of two scales of noise, the
 // way stratus hangs, and heaps gathered in groups for cumulus
-float sheetAt(vec2 t) {
+float sheetAt(vec2 t, float lod) {
   vec2 r = mat2(0.8, 0.6, -0.6, 0.8) * t * 5.0 + vec2(0.37, 0.71);
-  return texture(uNoise, t).r * 0.6 + texture(uNoise, r).r * 0.4;
+  return noiseAt(t, lod).r * 0.6 + noiseAt(r, finer(lod, 5.0)).r * 0.4;
 }
 
-float heapsAt(vec2 t) {
-  return texture(uNoise, t * 0.6).r * 0.45
-    + texture(uNoise, t * 3.0).g * 0.45
-    + texture(uNoise, t * 6.0).a * 0.1;
+float heapsAt(vec2 t, float lod) {
+  return noiseAt(t * 0.6, finer(lod, 0.6)).r * 0.45
+    + noiseAt(t * 3.0, finer(lod, 3.0)).g * 0.45
+    + noiseAt(t * 6.0, finer(lod, 6.0)).a * 0.1;
 }
 
-float shapeAt(vec2 t) {
-  float shape = sheetAt(t);
-  if (uBillow > 0.0) shape = mix(shape, heapsAt(t), uBillow);
+float shapeAt(vec2 t, float lod) {
+  float shape = sheetAt(t, lod);
+  if (uBillow > 0.0) shape = mix(shape, heapsAt(t, lod), uBillow);
   if (uRagged > 0.0) {
-    shape += uRagged * 0.25 * (texture(uNoise, t * 4.0 + 0.5).b - 0.5);
+    shape += uRagged * 0.25 * (noiseAt(t * 4.0 + 0.5, finer(lod, 4.0)).b - 0.5);
   }
   return shape;
 }
@@ -733,11 +767,17 @@ void main() {
     float away = sphere(origin, dir, EARTH + uHeight).y;
     vec2 ground = (origin + dir * away).xz;
     float tile = TILE * uScale;
-    vec2 t = (ground - uDrift) / tile;
+    vec2 t = (ground - uDrift - START) / tile;
 
-    float shape = shapeAt(t);
+    float shape = shapeAt(t, -1.0);
     vec2 stats = mix(SHEET_STATS, HEAPS_STATS, uBillow);
-    float edge = threshold(uCoverage, stats);
+    // The threshold is for the whole tile, and the patch under the viewer
+    // can run far thinner or thicker than that. Measured against the
+    // shape's mean over the view instead, from the noise's mips, the deck
+    // is as dense as its coverage says wherever the wind has carried it
+    vec2 middle = (vec2(0.0, AHEAD) - uDrift - START) / tile;
+    float shift = shapeAt(middle, LOCAL_LOD) - stats.x;
+    float edge = threshold(uCoverage, stats) + shift;
     float soft = uSoftness * 0.5;
     // A full cover closes up, whatever the noise
     float mask = mix(
@@ -752,7 +792,7 @@ void main() {
     // that way, this is that side. Flat sheets face nowhere
     float facing = 0.5;
     if (uBillow > 0.0) {
-      float ahead = shapeAt(t + toSun * (0.35 / tile));
+      float ahead = shapeAt(t + toSun * (0.35 / tile), -1.0);
       facing = clamp(0.5 + (shape - ahead) * 6.0 * cos(uSunElevation) * uBillow, 0.0, 1.0);
     }
     // Whether a low sun can reach this underside: open sky a way toward it
@@ -1071,37 +1111,6 @@ void main() {
   outColor = vec4(color, 1.0);
 }`;
 
-const compile = (gl: WebGL2RenderingContext, type: number, source: string) => {
-  const shader = gl.createShader(type);
-  if (!shader) return null;
-  gl.shaderSource(shader, source);
-  gl.compileShader(shader);
-  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    console.error(gl.getShaderInfoLog(shader));
-    gl.deleteShader(shader);
-    return null;
-  }
-  return shader;
-};
-
-const link = (gl: WebGL2RenderingContext, fragmentSource: string) => {
-  const vertex = compile(gl, gl.VERTEX_SHADER, VERTEX);
-  const fragment = compile(gl, gl.FRAGMENT_SHADER, fragmentSource);
-  const program = gl.createProgram();
-  if (!vertex || !fragment || !program) return null;
-  gl.attachShader(program, vertex);
-  gl.attachShader(program, fragment);
-  gl.linkProgram(program);
-  gl.deleteShader(vertex);
-  gl.deleteShader(fragment);
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    console.error(gl.getProgramInfoLog(program));
-    gl.deleteProgram(program);
-    return null;
-  }
-  return program;
-};
-
 // A texture a pass draws into, to be scaled up by the next
 interface Target {
   texture: WebGLTexture | null;
@@ -1113,12 +1122,19 @@ interface Target {
 /**
  * Sets a canvas up to draw the sky. Null where WebGL2 isn't there or the
  * shaders don't compile, and the footer keeps its gradient. The canvas's
- * own size is up to the caller. `onLost` is called when the GPU drops the
- * canvas, after which drawing does nothing.
+ * own size is up to the caller.
+ *
+ * Compiling the shaders takes a while. Where the browser can do that in the
+ * background it does, see gl-program.ts, and the renderer isn't ready until
+ * it's done: drawing before that does nothing, and `onReady` is called once
+ * it can. Where it can't, they compile here and now, and the renderer comes
+ * back ready. `onLost` is called when the GPU drops the canvas, or a shader
+ * turns out not to compile, after which drawing does nothing.
  */
 export const createSkyRenderer = (
   canvas: HTMLCanvasElement,
   onLost: () => void,
+  onReady?: () => void,
 ): SkyRenderer | null => {
   const gl = canvas.getContext("webgl2", {
     alpha: false,
@@ -1129,49 +1145,27 @@ export const createSkyRenderer = (
   });
   if (!gl) return null;
 
-  const noiseProgram = link(gl, NOISE_PASS);
-  const skyProgram = link(gl, SKY_PASS);
-  const cloudProgram = link(gl, CLOUD_PASS);
-  const composeProgram = link(gl, COMPOSE_PASS);
-  if (!noiseProgram || !skyProgram || !cloudProgram || !composeProgram) {
-    return null;
-  }
+  const builds = [NOISE_PASS, SKY_PASS, CLOUD_PASS, COMPOSE_PASS].map(
+    (source) => buildProgram(gl, VERTEX, source),
+  );
+  const [noiseBuild, skyBuild, cloudBuild, composeBuild] = builds;
+  if (!noiseBuild || !skyBuild || !cloudBuild || !composeBuild) return null;
+  const programs = [noiseBuild, skyBuild, cloudBuild, composeBuild];
+  const noiseProgram = noiseBuild.program;
+  const skyProgram = skyBuild.program;
+  const cloudProgram = cloudBuild.program;
+  const composeProgram = composeBuild.program;
 
+  // Found once the programs have linked: asking before would wait for them
   const locate = (program: WebGLProgram, names: string[]) =>
     Object.fromEntries(
       names.map((name) => [name, gl.getUniformLocation(program, name)]),
     );
   const shared = ["uResolution", "uRadiansPerPixel", "uSunElevation", "uSunX"];
-  const noiseUniforms = locate(noiseProgram, ["uResolution"]);
-  const skyUniforms = locate(skyProgram, shared);
-  const cloudUniforms = locate(cloudProgram, [
-    ...shared,
-    "uSky",
-    "uNoise",
-    "uDrift",
-    "uWind",
-    "uSunT",
-    "uSunTVeil",
-    ...Object.values(LOOK_UNIFORMS),
-  ]);
-  const composeUniforms = locate(composeProgram, [
-    ...shared,
-    "uSky",
-    "uClouds",
-    "uStarTurn",
-    "uPixelRatio",
-    "uFalling",
-    "uFall",
-    "uLean",
-    "uTime",
-    "uFlash",
-    "uBolt",
-    "uBoltOn",
-    "uGlass",
-    "uGlassRadius",
-    "uGlassCount",
-    ...Object.values(GLASS_UNIFORMS),
-  ]);
+  let noiseUniforms: Record<string, WebGLUniformLocation | null> = {};
+  let skyUniforms: Record<string, WebGLUniformLocation | null> = {};
+  let cloudUniforms: Record<string, WebGLUniformLocation | null> = {};
+  let composeUniforms: Record<string, WebGLUniformLocation | null> = {};
   const glassShapes = new Float32Array(MAX_GLASS * 4);
   const glassRadii = new Float32Array(MAX_GLASS);
 
@@ -1225,16 +1219,91 @@ export const createSkyRenderer = (
   const skyTarget = createTarget(gl.CLAMP_TO_EDGE);
   const cloudTarget = createTarget(gl.CLAMP_TO_EDGE);
 
-  // The noise, once, with its mip levels: those average it out where the
-  // layer runs away toward the horizon
-  fit(noiseTarget, NOISE_SIZE * NOISE_SIZE, NOISE_SIZE, NOISE_SIZE);
-  gl.viewport(0, 0, NOISE_SIZE, NOISE_SIZE);
-  // biome-ignore lint/correctness/useHookAtTopLevel: WebGL's, not a React hook
-  gl.useProgram(noiseProgram);
-  gl.uniform2f(noiseUniforms.uResolution, NOISE_SIZE, NOISE_SIZE);
-  gl.drawArrays(gl.TRIANGLES, 0, 3);
-  gl.bindTexture(gl.TEXTURE_2D, noiseTarget.texture);
-  gl.generateMipmap(gl.TEXTURE_2D);
+  let isReady = false;
+  let isLost = false;
+  let isDisposed = false;
+
+  const dispose = () => {
+    if (isDisposed) return;
+    isDisposed = true;
+    for (const build of programs) deleteProgram(gl, build);
+    for (const target of [noiseTarget, skyTarget, cloudTarget]) {
+      gl.deleteTexture(target.texture);
+      gl.deleteFramebuffer(target.framebuffer);
+    }
+  };
+
+  // The programs have linked: finds their uniforms, and draws the noise,
+  // once, with its mip levels: those average it out where the layer runs
+  // away toward the horizon. False when a shader didn't compile
+  const finish = () => {
+    if (!programs.every((build) => checkProgram(gl, build))) return false;
+    noiseUniforms = locate(noiseProgram, ["uResolution"]);
+    skyUniforms = locate(skyProgram, shared);
+    cloudUniforms = locate(cloudProgram, [
+      ...shared,
+      "uSky",
+      "uNoise",
+      "uDrift",
+      "uWind",
+      "uSunT",
+      "uSunTVeil",
+      ...Object.values(LOOK_UNIFORMS),
+    ]);
+    composeUniforms = locate(composeProgram, [
+      ...shared,
+      "uSky",
+      "uClouds",
+      "uStarTurn",
+      "uPixelRatio",
+      "uFalling",
+      "uFall",
+      "uLean",
+      "uTime",
+      "uFlash",
+      "uBolt",
+      "uBoltOn",
+      "uGlass",
+      "uGlassRadius",
+      "uGlassCount",
+      ...Object.values(GLASS_UNIFORMS),
+    ]);
+
+    fit(noiseTarget, NOISE_SIZE * NOISE_SIZE, NOISE_SIZE, NOISE_SIZE);
+    gl.viewport(0, 0, NOISE_SIZE, NOISE_SIZE);
+    // biome-ignore lint/correctness/useHookAtTopLevel: WebGL's, not a React hook
+    gl.useProgram(noiseProgram);
+    gl.uniform2f(noiseUniforms.uResolution, NOISE_SIZE, NOISE_SIZE);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.bindTexture(gl.TEXTURE_2D, noiseTarget.texture);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    isReady = true;
+    return true;
+  };
+
+  const handleLost = (event: Event) => {
+    event.preventDefault();
+    isLost = true;
+    onLost();
+  };
+  canvas.addEventListener("webglcontextlost", handleLost);
+
+  // In the background, when the browser can: ready in a while. Otherwise
+  // ready, or not, right away
+  const stopWaiting = whenLinked(gl, programs, () => {
+    if (isLost) return;
+    if (finish()) {
+      onReady?.();
+    } else {
+      dispose();
+      onLost();
+    }
+  });
+  if (!stopWaiting && !finish()) {
+    canvas.removeEventListener("webglcontextlost", handleLost);
+    dispose();
+    return null;
+  }
 
   // What the sky's texture holds now, so the same sky isn't drawn twice, and
   // whether the clouds' texture holds any
@@ -1267,18 +1336,11 @@ export const createSkyRenderer = (
     gl.bindTexture(gl.TEXTURE_2D, skyTarget.texture);
   };
 
-  let isLost = false;
-  const handleLost = (event: Event) => {
-    event.preventDefault();
-    isLost = true;
-    onLost();
-  };
-  canvas.addEventListener("webglcontextlost", handleLost);
-
   return {
+    isReady: () => isReady && !isLost,
     draw(frame, glass, values, options) {
       const { width, height } = canvas;
-      if (isLost || width === 0 || height === 0) return;
+      if (isLost || !isReady || width === 0 || height === 0) return false;
       const { weather } = frame;
       const { look } = weather;
 
@@ -1375,17 +1437,16 @@ export const createSkyRenderer = (
       gl.uniform1fv(composeUniforms.uGlassRadius, glassRadii);
       gl.uniform1i(composeUniforms.uGlassCount, shapes.length);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
+      return true;
     },
     destroy() {
+      stopWaiting?.();
       canvas.removeEventListener("webglcontextlost", handleLost);
       if (isLost) return;
-      for (const program of [noiseProgram, skyProgram, cloudProgram, composeProgram]) {
-        gl.deleteProgram(program);
-      }
-      for (const target of [noiseTarget, skyTarget, cloudTarget]) {
-        gl.deleteTexture(target.texture);
-        gl.deleteFramebuffer(target.framebuffer);
-      }
+      dispose();
+      // The context too, once the canvas is off the page. Its loss isn't
+      // listened for any more, so it isn't taken for the GPU dropping it
+      releaseLater(gl);
     },
   };
 };

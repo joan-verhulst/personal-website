@@ -12,6 +12,7 @@ import { getContent } from "~/modules/content/utils/get-content";
 import { AnimationPreferenceProvider } from "~/modules/core/context/animation-preference-context";
 import { HeaderColorProvider } from "~/modules/core/context/header-color-context";
 import SlideWarmer from "~/modules/digital-art/components/slide-warmer";
+import FavoritesHost from "~/modules/favorites/components/favorites-host";
 import { FIRST_SLIDES } from "~/modules/digital-art/utils/slide-image";
 import { pageMetadata } from "~/utils/page-metadata";
 import { structuredData, toJsonLd } from "~/utils/structured-data";
@@ -52,6 +53,8 @@ const MainLayout = async ({ children, app }: Props) => {
             <SlideWarmer artworks={content.artworks.slice(0, FIRST_SLIDES)} />
             {/* One contact modal for every page, see openContact */}
             <ContactHost />
+            {/* On Rotation's and Gear's, see openWidget */}
+            <FavoritesHost />
 
             {/* Global settings controls — fixed bottom-right */}
             <div className="pointer-events-none fixed right-8 bottom-8 z-50 flex flex-col items-end gap-2">

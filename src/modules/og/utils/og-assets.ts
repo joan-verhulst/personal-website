@@ -27,7 +27,7 @@ export const loadImage = async (url: string | undefined) => {
 export const loadPublicImage = async (file: string) => {
   try {
     const data = await readFile(path.join(process.cwd(), "public", file));
-    return toDataUri("image/png", data);
+    return toDataUri(/\.jpe?g$/i.test(file) ? "image/jpeg" : "image/png", data);
   } catch {
     return undefined;
   }

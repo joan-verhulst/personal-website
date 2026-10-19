@@ -14,7 +14,7 @@ export type OgTile =
   | "ui-ux"
   | "digital-art"
   | "photography"
-  | "experiments"
+  | "blog"
   | "contact";
 
 export const OG_SIZE = { width: 1200, height: 630 };
@@ -34,7 +34,7 @@ const PAPER = "#faf9f9";
 const WARM = "linear-gradient(to bottom, #EBCA10, #EB7E10)";
 const SLATE = "linear-gradient(to bottom, #626D77, #1E2D3C)";
 const GREEN = "linear-gradient(to bottom, #B1EB10, #2FC72F)";
-// The chips over the UI/UX and Experiments widgets. No blur behind them here
+// The chips over the UI/UX and Blog widgets. No blur behind them here
 const CHIP = "rgba(15, 15, 15, 0.33)";
 // Laid over the tiles of the other sections when one is shared
 const DIM = "rgba(216, 216, 216, 0.85)";
@@ -53,14 +53,16 @@ export interface HomeScreenCardProps {
     highlight?: string;
     digitalArt?: string;
     photography?: string;
-    experiment?: string;
-    reel?: { src: string; width: number; height: number };
+    // The newest post's cover, and the sky card that peeks over it, as a
+    // CSS gradient
+    blog?: string;
+    sky?: string;
   };
   // The background behind the UI/UX widget's screenshot
   highlightBackground: string;
   // The project labels on the UI/UX widget
   highlightTags: string[];
-  experimentCount: number;
+  postCount: number;
   contact: { instagram: boolean; email: boolean; linkedin: boolean };
 }
 
@@ -282,15 +284,15 @@ const HomeScreenCard = ({
   images,
   highlightBackground,
   highlightTags,
-  experimentCount,
+  postCount,
   contact,
 }: HomeScreenCardProps) => {
   const isDimmed = (tile: OgTile) => active !== undefined && tile !== active;
   const wide = CELL * 2 + COLUMN_GAP;
   const [firstTag, secondTag] = highlightTags;
-  const reel = images.reel;
-  const reelWidth = CELL * 0.44;
-  const reelHeight = reel ? (reelWidth * reel.height) / reel.width : 0;
+  // A 4:3 card, like on the site
+  const skyWidth = CELL * 0.44;
+  const skyHeight = skyWidth * 0.75;
 
   return (
     <div
@@ -489,7 +491,7 @@ const HomeScreenCard = ({
           </Tile>
         </div>
 
-        {/* Digital Art, Photography, then Experiments over Contact */}
+        {/* Digital Art, Photography, then the blog over Contact */}
         <div style={{ display: "flex", gap: COLUMN_GAP }}>
           <Tile
             label={labels["digital-art"]}
@@ -511,16 +513,16 @@ const HomeScreenCard = ({
           </Tile>
           <div style={{ display: "flex", flexDirection: "column", gap: COLUMN_GAP }}>
             <Tile
-              label={labels.experiments}
+              label={labels.blog}
               width={CELL}
               height={HALF}
               background={PAPER}
-              isDimmed={isDimmed("experiments")}
+              isDimmed={isDimmed("blog")}
             >
               {/* Scaled up a quarter, like on the site */}
-              {images.experiment && (
+              {images.blog && (
                 <img
-                  src={images.experiment}
+                  src={images.blog}
                   alt=""
                   width={CELL * 1.25}
                   height={HALF * 1.25}
@@ -534,27 +536,23 @@ const HomeScreenCard = ({
                   }}
                 />
               )}
-              {/* The tilted reel peeking up from the bottom edge */}
-              {reel && (
+              {/* The tilted sky card peeking up from the bottom edge */}
+              {images.sky && (
                 <div
                   style={{
                     display: "flex",
                     position: "absolute",
                     right: CELL * 0.08,
                     // Sunk past the bottom edge by 28% of its height
-                    top: HALF - reelHeight * 0.72,
-                    width: reelWidth,
-                    height: reelHeight,
-                    overflow: "hidden",
+                    top: HALF - skyHeight * 0.72,
+                    width: skyWidth,
+                    height: skyHeight,
                     borderRadius: s(12),
                     border: `${s(4)}px solid ${PAPER}`,
-                    background: PAPER,
+                    backgroundImage: images.sky,
                     transform: "rotate(-6deg)",
-                    boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
                   }}
-                >
-                  <Cover src={reel.src} width={reelWidth} height={reelHeight} />
-                </div>
+                />
               )}
               <div
                 style={{
@@ -564,7 +562,7 @@ const HomeScreenCard = ({
                   bottom: s(16),
                 }}
               >
-                <Chip>{`${experimentCount} pieces`}</Chip>
+                <Chip>{`${postCount} ${postCount === 1 ? "post" : "posts"}`}</Chip>
               </div>
             </Tile>
             <Tile

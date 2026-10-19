@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import ContactModal from "~/modules/contact/components/contact-modal";
 import { track } from "~/utils/eyes";
 import { OPEN_CONTACT_EVENT, type OpenContactDetail } from "~/utils/open-contact";
-import { OPEN_WIDGET_EVENT } from "~/utils/open-widget";
+import { OPEN_WIDGET_EVENT, type OpenWidgetDetail } from "~/utils/open-widget";
 
 /**
  * The one contact modal, for every page. Opened by the pill next to the
@@ -22,7 +22,8 @@ const ContactHost = () => {
     };
 
     const handleWidget = (event: Event) => {
-      if ((event as CustomEvent<string>).detail !== "contact") return;
+      if ((event as CustomEvent<OpenWidgetDetail>).detail.id !== "contact")
+        return;
       // Tells the island it was taken care of, so it stays on this page
       event.preventDefault();
       track("Contact Opened", { from: "island" });

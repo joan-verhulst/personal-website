@@ -73,12 +73,10 @@ const PageWithFooter = ({
   const footerRef = useRef<HTMLElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const skyRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const clockRef = useRef<HTMLSpanElement>(null);
 
   const sky = useSky({
     skyRef,
-    canvasRef,
     clockRef,
     animationsEnabled,
     // The hover click: softer, and sound only, never a buzz on a phone
@@ -152,10 +150,9 @@ const PageWithFooter = ({
         data-glass-on={sky.hasGlass ? "" : undefined}
         className="fixed inset-x-0 bottom-0 z-0 overflow-hidden bg-neutral-900 text-neutral-50"
       >
-        {/* The sky as it is now at home, see useSky */}
-        <div ref={skyRef} className="absolute inset-0 bg-neutral-900">
-          <canvas ref={canvasRef} aria-hidden className="block size-full" />
-        </div>
+        {/* The sky as it is now at home, see useSky, which puts its canvas
+            here while this footer draws */}
+        <div ref={skyRef} className="absolute inset-0 bg-neutral-900" />
 
         {/* The top padding holds CURTAIN_ROOM over the visible 64px, which
             the page's corners and its spring show. The bottom padding keeps
@@ -253,9 +250,33 @@ const PageWithFooter = ({
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-4 text-neutral-50/70 text-sm">
-            <span>
-              © {new Date().getFullYear()} {siteData.owner.name}
-            </span>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+              <span>
+                © {new Date().getFullYear()} {siteData.owner.name}
+              </span>
+              {/* Credited where it can be seen and followed: Buienradar's
+                  free data asks for a link, Open-Meteo's for a mention */}
+              <span>
+                Weather from{" "}
+                <a
+                  href="https://www.buienradar.nl"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline-offset-3 hover:underline"
+                >
+                  Buienradar
+                </a>{" "}
+                and{" "}
+                <a
+                  href="https://open-meteo.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline-offset-3 hover:underline"
+                >
+                  Open-Meteo
+                </a>
+              </span>
+            </div>
             <div className="flex gap-2">
               {/* The sky's status. With animations, it plays the last 24
                   hours, back to now, with the status following along */}

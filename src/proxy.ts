@@ -67,8 +67,8 @@ export async function proxy(request: NextRequest) {
     // after the prefix is the admin's as much as a slash is
     const underAdmin = hasPrefix || pathname.startsWith(`${ADMIN_ROOT}.`);
 
-    // The public site. This runs for each of its pages, so it stops before
-    // anything that costs time
+    // The public site. The matcher only sends /admin here from other hosts,
+    // see config, so this is a guard rather than the way its pages go
     if (!underAdmin) return NextResponse.next();
 
     // The admin has its own host, and this isn't it. Next answers a path
@@ -176,8 +176,15 @@ export const config = {
     // The admin host serves the CMS from its root, so every page passes
     // through here. Not what Next serves by itself, a file with an extension
     // (images, fonts, icons, the manifest) or a route handler under /api.
-    // isProxiedPath in utils/admin-path.ts has to say the same
-    "/",
-    "/((?!api/|_next/|.*\\.\\w+$).*)",
+    // isProxiedPath in utils/admin-path.ts has to say the same.
+    // Only on the admin host: on the public site this ran for every page and
+    // every prefetch, each a function call on Vercel, just to let it through.
+    // Next only reads a literal here, so the admin host is any host starting
+    // with "admin.", which env.ts holds NEXT_PUBLIC_ADMIN_HOST to
+    { source: "/", has: [{ type: "host", value: "admin\\..+" }] },
+    {
+      source: "/((?!api/|_next/|.*\\.\\w+$).*)",
+      has: [{ type: "host", value: "admin\\..+" }],
+    },
   ],
 };

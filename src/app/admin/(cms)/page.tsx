@@ -15,7 +15,7 @@ const plural = (total: number, one: string, many: string) =>
 
 const descriptions: Record<string, string> = {
   "/admin/ui-ux": "The wall of projects: screenshots, videos and their tags.",
-  "/admin/products": "Things people can try right now, in the products modal.",
+  "/admin/products": "Things people can try right now, on the products page.",
   "/admin/digital-art": "Artworks in the digital art gallery.",
   "/admin/photography": "Photos in the table on the photography page.",
   "/admin/on-rotation": "Records on the favorites shelf.",

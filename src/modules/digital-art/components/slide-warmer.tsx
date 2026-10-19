@@ -12,7 +12,7 @@ interface Props {
  * Starts loading the first slides when a link to the page is hovered or
  * touched, so the page has its pictures by the time it opens. Listens on the
  * document, which covers the tile on the home screen and the link in the
- * about modal alike.
+ * footer alike.
  */
 const SlideWarmer = ({ artworks }: Props) => {
   useEffect(() => {

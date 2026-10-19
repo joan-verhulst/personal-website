@@ -68,14 +68,25 @@ export const signUpload = async (path: string, type: string, size: number) => {
   }
 };
 
-/** Stores a file the server has in hand, like a record's cover. */
+/**
+ * Stores a file the server has in hand, like a record's cover. Signed here,
+ * then sent with the body as it is: client.fetch hands fetch a Request, which
+ * Next rebuilds inside a server action with its body as a stream, sent
+ * without a length, and R2 refuses an upload without one.
+ */
 export const putMedia = async (path: string, body: ArrayBuffer, type: string) => {
   try {
     const { client, endpoint } = getBucket();
-    const response = await client.fetch(objectUrl(endpoint, path), {
+    const signed = await client.sign(objectUrl(endpoint, path), {
       method: "PUT",
       body,
       headers: { "content-type": type, "cache-control": CACHE_CONTROL },
+    });
+    const response = await fetch(signed.url, {
+      method: "PUT",
+      headers: signed.headers,
+      body,
+      cache: "no-store",
     });
     return { error: response.ok ? null : await refused(response) };
   } catch (error) {

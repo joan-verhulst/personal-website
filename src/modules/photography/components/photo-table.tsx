@@ -12,14 +12,15 @@ import {
   useRef,
   useState,
 } from "react";
-import IslandControls from "~components/layout/island/island-controls";
 import ImagePopover from "~/modules/core/components/image-popover";
 import { useAnimationPreference } from "~/modules/core/context/animation-preference-context";
 import { useHapticSound } from "~/modules/core/hooks/use-haptic-sound";
+import Loupe from "~/modules/photography/components/loupe";
 import PrintCard, {
   type PhotoView,
 } from "~/modules/photography/components/print-card";
 import ViewSwitcher from "~/modules/photography/components/view-switcher";
+import { canDrawLoupe } from "~/modules/photography/utils/loupe-glass";
 import {
   getDragBounds,
   getPrintBase,
@@ -31,6 +32,7 @@ import {
 import cn from "~/utils/cn";
 import { track } from "~/utils/eyes";
 import { isFooterClosed, openFooter } from "~/utils/footer";
+import IslandControls from "~components/layout/island/island-controls";
 
 gsap.registerPlugin(Draggable, Flip, InertiaPlugin);
 
@@ -78,14 +80,22 @@ const PhotoTable = ({ prints }: Props) => {
   const [hasDragged, setHasDragged] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  // The loupe needs WebGL2, which nearly every browser has. Where it's
+  // missing, the table goes without it
+  const [canLoupe, setCanLoupe] = useState(true);
   const { animationsEnabled } = useAnimationPreference();
-  // One instance for every print, each instance opens its own AudioContext
+  // One instance for every print
   const haptic = useHapticSound();
 
   const isTable = view === "table";
   const ordered = useMemo(
     () => order?.map((index) => prints[index]) ?? prints,
     [order, prints],
+  );
+  // Each print keeps its number, wherever it's dealt
+  const numbers = useMemo(
+    () => ordered.map((_, index) => (order?.[index] ?? index) + 1),
+    [order, ordered],
   );
 
   // ── Viewport and saved view ─────────────────────────────────────────────────
@@ -292,6 +302,12 @@ const PhotoTable = ({ prints }: Props) => {
     return () => stage.removeEventListener("wheel", handleWheel);
   }, [isTable]);
 
+  // ── Loupe ───────────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (!canDrawLoupe()) setCanLoupe(false);
+  }, []);
+
   // ── Actions ─────────────────────────────────────────────────────────────────
 
   // Records where every print is, so the next layout can fly them from there
@@ -395,8 +411,7 @@ const PhotoTable = ({ prints }: Props) => {
               <PrintCard
                 key={print.id}
                 print={print}
-                // Each print keeps its number, wherever it's dealt
-                number={(order?.[index] ?? index) + 1}
+                number={numbers[index]}
                 view={view}
                 sizes={isTable ? getTableImageSizes(print) : GRID_IMAGE_SIZES}
                 haptic={haptic}
@@ -408,6 +423,20 @@ const PhotoTable = ({ prints }: Props) => {
               />
             ))}
           </div>
+
+          {/* Lies on the table, and is taken off it for the grid. If the
+              lens couldn't be made, or the GPU dropped it, it's gone for
+              this visit to the page */}
+          {canLoupe && (
+            <Loupe
+              stageRef={stageRef}
+              cardRefs={cardRefs}
+              prints={ordered}
+              numbers={numbers}
+              isOn={isTable}
+              onLost={() => setCanLoupe(false)}
+            />
+          )}
 
           {isTable && (
             <span

@@ -15,7 +15,6 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "~/modules/cms/components/primitives/dropdown-menu";
-import { homeProduct } from "~/modules/cms/components/products/config";
 import EditProductDialog, {
   DELETE_WARNING,
 } from "~/modules/cms/components/products/edit-product-dialog";
@@ -44,11 +43,10 @@ const linkHost = (href: string | null) => {
 
 interface CardProps {
   row: ProductRow;
-  isFirst: boolean;
   onEdit: () => void;
 }
 
-const ProductCard = ({ row, isFirst, onEdit }: CardProps) => {
+const ProductCard = ({ row, onEdit }: CardProps) => {
   const confirm = useConfirm();
   const { run, isPending } = useAction();
   // Set by a menu item, acted on once the menu has closed
@@ -77,13 +75,8 @@ const ProductCard = ({ row, isFirst, onEdit }: CardProps) => {
       }
       meta={linkHost(row.link_href)}
       badge={
-        (isFirst || !row.media) && (
-          <>
-            {isFirst && <Badge tone="primary">Home widget</Badge>}
-            {/* Deleted from Media: off the site until another is picked */}
-            {!row.media && <Badge tone="warning">No media</Badge>}
-          </>
-        )
+        // Deleted from Media: off the site until another is picked
+        !row.media && <Badge tone="warning">No media</Badge>
       }
       actions={
         <CardMenu
@@ -133,7 +126,7 @@ const ProductCard = ({ row, isFirst, onEdit }: CardProps) => {
 };
 
 /**
- * The products as cards, in the order the products modal shows them. A card
+ * The products as cards, in the order the products page shows them. A card
  * opens its product in the edit dialog.
  */
 const ProductsGrid = ({ rows }: { rows: ProductRow[] }) => {
@@ -142,7 +135,6 @@ const ProductsGrid = ({ rows }: { rows: ProductRow[] }) => {
   const [isNewOpen, setIsNewOpen] = useState(false);
   // A new key for every opening, so the form starts from what's saved
   const [editKey, setEditKey] = useState(0);
-  const homeId = homeProduct(rows)?.id;
 
   const handleEdit = (row: ProductRow) => {
     setEditing(row);
@@ -174,7 +166,6 @@ const ProductsGrid = ({ rows }: { rows: ProductRow[] }) => {
             <ProductCard
               key={row.id}
               row={row}
-              isFirst={row.id === homeId}
               onEdit={() => handleEdit(row)}
             />
           ))}
@@ -189,7 +180,6 @@ const ProductsGrid = ({ rows }: { rows: ProductRow[] }) => {
         <EditProductDialog
           key={editKey}
           row={editingRow}
-          isFirst={editingRow.id === homeId}
           open={isEditOpen}
           onOpenChange={setIsEditOpen}
         />

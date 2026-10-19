@@ -80,7 +80,7 @@ const Turntable = ({
   return (
     <div className="@container w-full">
       <div
-        className="relative aspect-[100/90] rounded-[5.5cqw] shadow-[inset_0_1px_0_rgb(255_255_255/0.14),inset_0_-2px_0_rgb(0_0_0/0.5),0_18px_26px_-18px_rgb(0_0_0/0.6)] max-md:aspect-square"
+        className="relative aspect-100/90 rounded-[5.5cqw] shadow-[inset_0_1px_0_rgb(255_255_255/0.14),inset_0_-2px_0_rgb(0_0_0/0.5),0_18px_26px_-18px_rgb(0_0_0/0.6)] max-md:aspect-square"
         style={{ background: PLINTH }}
       >
         <div
@@ -138,8 +138,8 @@ const Turntable = ({
             "pointer-events-none absolute top-[17cqw] left-[85cqw] size-0 transition-[filter] duration-500",
             // Lifted off the record, its shadow falls further away
             isPlaying
-              ? "[filter:drop-shadow(0.4cqw_0.7cqw_0.5cqw_rgb(0_0_0/0.55))]"
-              : "[filter:drop-shadow(1cqw_1.8cqw_1.1cqw_rgb(0_0_0/0.4))]",
+              ? "filter-[drop-shadow(0.4cqw_0.7cqw_0.5cqw_rgb(0_0_0/0.55))]"
+              : "filter-[drop-shadow(1cqw_1.8cqw_1.1cqw_rgb(0_0_0/0.4))]",
           )}
           style={{ transform: `rotate(${ARM.rest}deg)` }}
         >
@@ -158,7 +158,7 @@ const Turntable = ({
             style={{ background: CHROME }}
           />
           {/* Headshell, angled so the cartridge sits square in the groove */}
-          <div className="absolute top-[37.5cqw] left-0 size-0 rotate-[22deg]">
+          <div className="absolute top-[37.5cqw] left-0 size-0 rotate-22">
             <div className="absolute top-0 left-[-2.3cqw] h-[8.6cqw] w-[4.6cqw] rounded-[0.9cqw] bg-linear-to-b from-[#4a4a4d] to-[#161618] shadow-[inset_0_1px_0_rgb(255_255_255/0.2)]">
               {/* Cartridge */}
               <div className="absolute inset-x-[0.7cqw] bottom-[0.7cqw] h-[4.2cqw] rounded-[0.5cqw] bg-linear-to-b from-primary-400 to-primary-600" />

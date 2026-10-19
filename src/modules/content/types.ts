@@ -151,9 +151,9 @@ export interface About {
   intro: string;
   // On the About widget, the island's tile and the link preview
   image?: string;
-  // At the top of the about modal
+  // In the text of the about page
   modalImage?: string;
-  // Where I work now, linked from the bottom of the about modal
+  // Where I work now: a card on the about page, a line in the footer
   currently?: {
     name: string;
     since?: string;
@@ -201,11 +201,11 @@ export interface Content {
   artworks: Artwork[];
   records: RotationRecord[];
   wall: WallBlock[];
-  // Side projects and motion studies, shown in the experiments modal on the
-  // home page. The first two fill the home page widget: an image, then a video.
+  // Side projects and motion studies, edited in the CMS. The blog took their
+  // place on the home page, so the site doesn't show them for now
   experiments: WallItem[];
-  // Things people can try right now, shown in the products modal. The first
-  // fills the home page widget. Empty, home shows the contact widget instead
+  // Things people can try right now, on the products page and one after
+  // another on its home widget. Empty, home shows the contact widget instead
   products: Product[];
   // The two wall items that rotate in the home page widget, always images
   highlights: WallItem[];

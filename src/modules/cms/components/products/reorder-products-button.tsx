@@ -6,7 +6,7 @@ import ReorderButton from "~/modules/cms/components/reorder-button";
 import { useAction } from "~/modules/cms/hooks/use-action";
 import type { ProductRow } from "~/modules/content/utils/rows";
 
-/** The "Reorder" button and its dialog, for the order the modal shows. */
+/** The "Reorder" button and its dialog, for the order the products page shows. */
 const ReorderProductsButton = ({ rows }: { rows: ProductRow[] }) => {
   const { run, isPending } = useAction();
 

@@ -3,7 +3,7 @@
 import { gsap } from "gsap";
 import { ArrowUpRight } from "lucide-react";
 import Image from "next/image";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { RotationTrack } from "~/data/favorites";
 import { useContent } from "~/modules/content/components/content-provider";
 import { useAnimationPreference } from "~/modules/core/context/animation-preference-context";
@@ -32,10 +32,21 @@ const UNMUTE_LEVEL = 0.5;
 const MINI_GROOVES =
   "repeating-radial-gradient(circle at center, #101010 0 1px, #222 1px 2px)";
 
+// One record plays at a time: the about page has a player of its own, and
+// the modal's can open over it. The one that starts says so, the others stop
+const PLAYING_EVENT = "on-rotation-playing";
+
 const prefersReducedMotion = () =>
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-const OnRotation = () => {
+interface Props {
+  // Whether the record plays as soon as it's shown. On a page, rather than
+  // in a modal someone opened, it waits for a press
+  autoPlay?: boolean;
+}
+
+const OnRotation = ({ autoPlay = true }: Props) => {
+  const id = useId();
   const { records: onRotation } = useContent();
   const covers = useMemo(
     () =>
@@ -47,7 +58,7 @@ const OnRotation = () => {
     [onRotation],
   );
   const [activeIndex, setActiveIndex] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(autoPlay);
   const [tracks, setTracks] = useState<Record<number, RotationTrack>>({});
   const [level, setLevel] = useState(START_LEVEL);
   const recordRef = useRef<HTMLDivElement>(null);
@@ -272,6 +283,21 @@ const OnRotation = () => {
     sideRef.current?.paused(!isPlaying);
   }, [isPlaying]);
 
+  // Stops for another player, and stops the others when it starts
+  useEffect(() => {
+    const handlePlaying = (event: Event) => {
+      if ((event as CustomEvent<string>).detail !== id) setIsPlaying(false);
+    };
+
+    window.addEventListener(PLAYING_EVENT, handlePlaying);
+    return () => window.removeEventListener(PLAYING_EVENT, handlePlaying);
+  }, [id]);
+
+  useEffect(() => {
+    if (isPlaying)
+      window.dispatchEvent(new CustomEvent(PLAYING_EVENT, { detail: id }));
+  }, [isPlaying, id]);
+
   const togglePlaying = () => {
     haptic.onClick();
     setIsPlaying((playing) => !playing);
@@ -328,7 +354,7 @@ const OnRotation = () => {
 
             {/* How far the needle is across the record */}
             <div className="mt-4 flex items-center gap-3">
-              <div className="relative h-[3px] flex-1 rounded-full bg-neutral-950/10">
+              <div className="relative h-0.75 flex-1 rounded-full bg-neutral-950/10">
                 {animationsEnabled && (
                   <div
                     ref={progressRef}

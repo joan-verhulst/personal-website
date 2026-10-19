@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
 import { gsap } from "gsap";
 import { VolumeOff } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import {
   FIRST_PLAY_EVENT,
   setSoundEnabled,
@@ -79,16 +79,16 @@ const SoundToast = () => {
   return (
     <div
       ref={toastRef}
-      className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl border border-neutral-950/10 bg-neutral-50 opacity-0 pointer-events-auto"
+      className="pointer-events-auto flex items-center gap-2.5 rounded-2xl border border-neutral-950/10 bg-neutral-50 px-3.5 py-2.5 opacity-0"
     >
-      <span className="text-xs text-neutral-950/50 whitespace-nowrap">
+      <span className="whitespace-nowrap text-neutral-950/50 text-xs">
         Sound effects on
       </span>
       <button
         onClick={handleDisable}
         className="flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg bg-neutral-950 px-2.5 py-1 text-neutral-50 text-xs transition-colors hover:bg-neutral-800"
       >
-        <VolumeOff className="w-3 h-3" />
+        <VolumeOff className="h-3 w-3" />
         Disable
       </button>
     </div>

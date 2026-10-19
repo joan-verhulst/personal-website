@@ -22,7 +22,7 @@ import IslandCounter from "~components/layout/island/island-counter";
 import IslandDial from "~components/layout/island/island-dial";
 import IslandTicker from "~components/layout/island/island-ticker";
 import IslandTray from "~components/layout/island/island-tray";
-import { getSections } from "~/data/sections";
+import { getSections, sectionOf } from "~/data/sections";
 import { siteData } from "~/data/site";
 import { useContent } from "~/modules/content/components/content-provider";
 import { useAnimationPreference } from "~/modules/core/context/animation-preference-context";
@@ -109,7 +109,7 @@ const Island = () => {
   const store = useSyncExternalStore(subscribe, getState, getServerState);
 
   const content = useContent();
-  const section = getSections(content).find(({ href }) => href === pathname);
+  const section = sectionOf(getSections(content), pathname);
   const isHome = !section;
   // A section that's closing keeps its controls until it's gone, home has none
   const controls = isHome ? null : store.controls;
@@ -143,8 +143,8 @@ const Island = () => {
 
   const openFromTray = (id: string) => {
     haptic.onClick();
-    // These live on the home screen. Without one under this page, go there
-    if (!openWidget(id)) router.push("/");
+    // Their modals are on every page. Should one not be, go home
+    if (!openWidget(id, "island")) router.push("/");
     fold();
   };
 
@@ -236,7 +236,7 @@ const Island = () => {
           // Over the open section (z-5), under modals (z-50)
           "fixed top-3 left-1/2 z-10 -translate-x-1/2 overflow-hidden rounded-[22px] bg-neutral-950 text-neutral-50",
           animationsEnabled &&
-            "transition-[width,height] duration-[550ms] ease-[cubic-bezier(0.34,1.4,0.64,1)] motion-reduce:transition-none",
+            "transition-[width,height] duration-550 ease-[cubic-bezier(0.34,1.4,0.64,1)] motion-reduce:transition-none",
         )}
         style={{ width, height: size.height }}
         onPointerEnter={handlePointerEnter}

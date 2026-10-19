@@ -3,13 +3,13 @@
 import { Maximize } from "lucide-react";
 import Image from "next/image";
 import { memo } from "react";
-import cn from "~/utils/cn";
 import { useHapticSound } from "~/modules/core/hooks/use-haptic-sound";
 import {
   type Artwork,
   FIRST_SLIDES,
   getSlideSizes,
 } from "~/modules/digital-art/utils/slide-image";
+import cn from "~/utils/cn";
 
 interface SlideCardProps {
   item: Artwork;
@@ -22,7 +22,8 @@ interface SlideCardProps {
   imgRef: (index: number, el: HTMLImageElement | null) => void;
   onSelect: (index: number) => void;
   onHover: (index: number | null) => void;
-  onOpenPopover: (index: number) => void;
+  // Without it, the slide has no button to open it full size
+  onOpenPopover?: (index: number) => void;
 }
 
 const SlideCard = ({
@@ -59,7 +60,7 @@ const SlideCard = ({
       onMouseLeave={() => onHover(null)}
     >
       <div
-        className={cn("h-full", !isActive ? "w-[130%] -ml-[15%]" : "w-full")}
+        className={cn("h-full", !isActive ? "-ml-[15%] w-[130%]" : "w-full")}
       >
         <Image
           ref={(el) => imgRef(index, el)}
@@ -72,7 +73,7 @@ const SlideCard = ({
           // load as they come near
           loading={index < FIRST_SLIDES ? "eager" : "lazy"}
           className={cn(
-            "w-full h-full object-cover pointer-events-none transition-[filter] duration-300",
+            "pointer-events-none h-full w-full object-cover transition-[filter] duration-300",
             !isActive && !isHovered && "grayscale",
             !isActive && isHovered && "grayscale-40",
           )}
@@ -81,22 +82,24 @@ const SlideCard = ({
       </div>
 
       {isActive && (
-        <div className="absolute bottom-0 left-0 right-0 px-5 py-5 bg-linear-to-t from-black/60 to-transparent flex items-center justify-between">
-          <p className="text-white text-sm font-medium truncate">
+        <div className="absolute right-0 bottom-0 left-0 flex items-center justify-between bg-linear-to-t from-black/60 to-transparent px-5 py-5">
+          <p className="truncate font-medium text-sm text-white">
             {item.title}
           </p>
-          <button
-            onClick={() => {
-              haptic.onClick();
-              onOpenPopover(index);
-            }}
-            onMouseEnter={haptic.onMouseEnter}
-          >
-            <Maximize
-              className="mt-1 text-neutral-50 duration-200 hover:scale-90 hover:text-neutral-300"
-              size={18}
-            />
-          </button>
+          {onOpenPopover && (
+            <button
+              onClick={() => {
+                haptic.onClick();
+                onOpenPopover(index);
+              }}
+              onMouseEnter={haptic.onMouseEnter}
+            >
+              <Maximize
+                className="mt-1 text-neutral-50 duration-200 hover:scale-90 hover:text-neutral-300"
+                size={18}
+              />
+            </button>
+          )}
         </div>
       )}
     </div>

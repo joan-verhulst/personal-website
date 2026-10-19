@@ -20,8 +20,17 @@ interface Props {
   title?: ReactNode;
   children: ReactNode;
   className?: string;
+  // When the modal is far enough in for its content to animate in
   onOpenComplete?: () => void;
 }
+
+// Opening: the backdrop dims while the modal rises into place and grows to
+// size, slowing down all the way, with no overshoot. It fades in over the
+// first part of the rise, slow enough not to flash. Its content follows
+// once it's mostly there. Closing is the same, sinking, a little quicker
+const OPEN = { dim: 0.45, fade: 0.35, rise: 0.65, contentAt: 0.25 };
+const CLOSE = { dim: 0.35, fade: 0.25, sink: 0.3 };
+const FROM = { y: 48, scale: 0.96 };
 
 const Modal = ({
   isOpen,
@@ -52,27 +61,40 @@ const Modal = ({
       window.matchMedia("(prefers-reduced-motion: reduce)").matches
     ) {
       gsap.set(overlayRef.current, { opacity: 1 });
-      gsap.set(modalRef.current, { scale: 1, y: 0 });
+      gsap.set(modalRef.current, { opacity: 1, scale: 1, y: 0 });
       onOpenComplete?.();
       return;
     }
 
-    const tl = gsap.timeline({
-      onComplete: onOpenComplete,
-    });
+    const tl = gsap.timeline();
     timelineRef.current = tl;
 
     tl.fromTo(
       overlayRef.current,
       { opacity: 0 },
-      { opacity: 1, duration: 0.2 },
+      { opacity: 1, duration: OPEN.dim, ease: "power2.out" },
+      0,
     );
-
     tl.fromTo(
       modalRef.current,
-      { scale: 4, y: "200vh" },
-      { scale: 1, y: 0, duration: 0.5, ease: "power2.inOut" },
+      { opacity: 0 },
+      { opacity: 1, duration: OPEN.fade, ease: "power1.inOut" },
+      0,
     );
+    tl.fromTo(
+      modalRef.current,
+      { y: FROM.y, scale: FROM.scale },
+      {
+        y: 0,
+        scale: 1,
+        duration: OPEN.rise,
+        ease: "power3.out",
+        // A transform left on would keep fixed elements inside off the page
+        clearProps: "transform",
+      },
+      0,
+    );
+    tl.call(() => onOpenComplete?.(), [], OPEN.contentAt);
   }, [onOpenComplete, animationsEnabled]);
 
   const animateClose = useCallback(() => {
@@ -93,14 +115,26 @@ const Modal = ({
     });
     timelineRef.current = tl;
 
-    tl.to(modalRef.current, {
-      scale: 4,
-      y: "200vh",
-      duration: 0.5,
-      ease: "power2.inOut",
-    });
-
-    tl.to(overlayRef.current, { opacity: 0, duration: 0.2 }, "-=0.3");
+    tl.to(
+      modalRef.current,
+      {
+        y: FROM.y / 2,
+        scale: (1 + FROM.scale) / 2,
+        duration: CLOSE.sink,
+        ease: "power2.in",
+      },
+      0,
+    );
+    tl.to(
+      modalRef.current,
+      { opacity: 0, duration: CLOSE.fade, ease: "power1.in" },
+      CLOSE.sink - CLOSE.fade,
+    );
+    tl.to(
+      overlayRef.current,
+      { opacity: 0, duration: CLOSE.dim, ease: "power2.inOut" },
+      0,
+    );
   }, [onClose, animationsEnabled]);
 
   useEffect(() => {
@@ -154,7 +188,8 @@ const Modal = ({
           "relative flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border border-neutral-950/10 bg-neutral-50",
           className,
         )}
-        style={{ transform: "translateY(100dvh) scale(4)" }}
+        // Hidden until the open animation takes it, see animateOpen
+        style={{ opacity: 0 }}
       >
         {/* Header */}
         <div className="z-10 flex shrink-0 items-center justify-between rounded-t-3xl border-neutral-950/10 border-b bg-neutral-50 py-4 pr-4 pl-6">

@@ -3,7 +3,7 @@ import type { Content } from "~/modules/content/types";
 
 /**
  * Who the site is by, for search engines: schema.org's Person and WebSite,
- * from what the about modal and contact links already say.
+ * from what the about page and contact links already say.
  */
 export const structuredData = (content: Content, url: string) => {
   const { about, contact } = content;

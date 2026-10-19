@@ -47,7 +47,7 @@ const ProductsAdmin = async () => {
               <House aria-hidden />
               <span className="truncate">
                 {first
-                  ? `Home widget: ${first.name}`
+                  ? "Home widget: every product, in turn"
                   : "Home widget: contact, until there's a product"}
               </span>
             </span>

@@ -137,6 +137,7 @@ export const useCurtain = ({
     // Where the page is now, animated through gsap
     const position = { lift: 0 };
     let radius = -1;
+    let isShown: boolean | null = null;
 
     const draw = () => {
       const { lift } = position;
@@ -153,7 +154,17 @@ export const useCurtain = ({
         radius = next;
         page.style.setProperty("--curtain-radius", `${next}px`);
       }
-      onDrawRef.current?.(lift > 0.5);
+
+      // Not drawn at all while the page covers it. Chrome on macOS can drop
+      // a frame of the page while it repaints, and the dark sky flashed
+      // through. Transparent rather than hidden, so tabbing into it still
+      // lifts the page
+      const nextShown = lift > 0.5;
+      if (nextShown !== isShown) {
+        isShown = nextShown;
+        footer.style.opacity = nextShown ? "" : "0";
+      }
+      onDrawRef.current?.(nextShown);
     };
 
     const moveTo = (lift: number, vars: gsap.TweenVars) => {
@@ -440,6 +451,7 @@ export const useCurtain = ({
       page.removeEventListener(OPEN_FOOTER_EVENT, handleOpenRequest);
       page.style.transform = "";
       page.style.removeProperty("--curtain-radius");
+      footer.style.opacity = "";
       delete page.dataset.footer;
       delete document.documentElement.dataset.footer;
       controls.current = null;

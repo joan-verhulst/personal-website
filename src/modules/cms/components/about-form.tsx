@@ -179,7 +179,7 @@ const AboutForm = ({ site }: { site: SiteRow }) => {
     <Page width="form">
       <Header
         title="About"
-        description="The about modal on the home page: the headline, the intro, your photos and the Currently card."
+        description="The about page: the headline, the intro, your photos and the Currently card. The rest of the page is written in code, like the blog."
       />
 
       <form
@@ -195,7 +195,7 @@ const AboutForm = ({ site }: { site: SiteRow }) => {
           <Input.Root error={errors.headline}>
             <Input.Label htmlFor="headline">Headline</Input.Label>
             <Input.Textarea id="headline" {...register("headline")} />
-            <Input.Hint>The big line at the top of the about modal.</Input.Hint>
+            <Input.Hint>The title of the about page.</Input.Hint>
             <Input.Error error={errors.headline} />
           </Input.Root>
           <Input.Root error={errors.intro}>
@@ -224,8 +224,8 @@ const AboutForm = ({ site }: { site: SiteRow }) => {
         />
 
         <PhotoSection
-          title="Modal photo"
-          description="At the top of the about modal, cropped to 16:9."
+          title="Page photo"
+          description="In the text of the about page, cropped to 16:9."
           aspect="aspect-video"
           path={modalImage}
           isDirty={dirtyFields.modalImage}
@@ -236,7 +236,7 @@ const AboutForm = ({ site }: { site: SiteRow }) => {
 
         <FormSection
           title="Currently"
-          description="The card at the bottom of the modal. Leave the name empty to hide it."
+          description="The card in the about page and the line in the footer. Leave the name empty to hide it."
         >
           <Input.Root error={errors.currentlyName}>
             <Input.Label htmlFor="currently-name">

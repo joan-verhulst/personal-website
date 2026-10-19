@@ -1,41 +1,42 @@
 "use client";
 
+import { gsap } from "gsap";
 import {
-  useRef,
+  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
+  useRef,
   useState,
-  useCallback,
 } from "react";
-import { gsap } from "gsap";
-import SlideCard from "./slider-card";
-import cn from "~/utils/cn";
-import { isFooterClosed, openFooter } from "~/utils/footer";
 import { useAnimationPreference } from "~/modules/core/context/animation-preference-context";
 import {
   type Artwork,
   SLIDE_HEIGHT,
 } from "~/modules/digital-art/utils/slide-image";
+import cn from "~/utils/cn";
+import { isFooterClosed, openFooter } from "~/utils/footer";
+import SlideCard from "./slider-card";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const GAP = 20;
-const INACTIVE_SIZE = 128;
+// The mini slider on the about page shares the exported ones, scaled down
+export const GAP = 20;
+export const INACTIVE_SIZE = 128;
 const FIXED_HEIGHT = SLIDE_HEIGHT;
 const VERTICAL_PADDING = 48 * 2; // 3rem each side, matches `px-12`
 const MD_BREAKPOINT = 768;
-const CLICK_THRESHOLD = 5;
+export const CLICK_THRESHOLD = 5;
 // How far a flick carries on after the finger lets go, in ms of its speed. A
 // fast flick passes several slides, a slow one settles on the nearest
-const MOMENTUM = 220;
+export const MOMENTUM = 220;
 // Past the first or last slide a drag only follows at this share, so it
 // stretches a little and springs back instead of running off
-const OVERDRAG = 0.25;
+export const OVERDRAG = 0.25;
 // How far past the last piece a finger has to pull to open the footer
 const PULL_TO_FOOTER = 160;
 // The settle after a drag or flick: long and soft, so it glides into place
-const SETTLE = { duration: 0.7, ease: "power3.out" };
+export const SETTLE = { duration: 0.7, ease: "power3.out" };
 
 // ─── Hooks ────────────────────────────────────────────────────────────────────
 

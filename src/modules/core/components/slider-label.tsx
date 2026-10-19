@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useEffect, useCallback } from "react";
 import { gsap } from "gsap";
+import { useCallback, useEffect, useRef } from "react";
 
 interface Props {
   labels: string[];
@@ -111,7 +111,7 @@ const SliderLabel = ({
             ref={(el) => {
               itemRefs.current[index] = el;
             }}
-            className="flex items-center shrink-0 pl-2 pr-3 whitespace-nowrap"
+            className="flex shrink-0 items-center whitespace-nowrap pr-3 pl-2"
             style={{
               height: LABEL_HEIGHT,
             }}

@@ -106,46 +106,40 @@ interface HapticSoundHandlers {
   onClick: () => void;
 }
 
+// One audio graph for the whole page. Every card, tile and button uses this
+// hook, and each used to open its own AudioContext: dozens of them, all
+// rendering silence on real-time threads once the first click resumed them
+let sharedNodes: AudioNodes | null = null;
+
+// Get or create the graph synchronously, so it stays within the user gesture
+function getAudio(): AudioNodes {
+  sharedNodes ??= buildAudioGraph();
+  if (sharedNodes.ctx.state === "suspended") sharedNodes.ctx.resume();
+  return sharedNodes;
+}
+
+// Resumes the context on the first pointer interaction anywhere on the page.
+// Browsers require a click/pointerdown (not mouseenter) to allow audio
+let isPrewarming = false;
+function prewarm(): void {
+  if (isPrewarming) return;
+  isPrewarming = true;
+  sharedNodes ??= buildAudioGraph();
+  document.addEventListener("pointerdown", () => getAudio(), { once: true });
+}
+
 export function useHapticSound(): HapticSoundHandlers {
   const { trigger } = useWebHaptics();
-  const nodesRef = useRef<AudioNodes | null>(null);
   const touchDevice = useRef<boolean>(false);
 
   useEffect(() => {
     touchDevice.current = isTouchDevice();
-    if (touchDevice.current) return;
-
-    // Build graph eagerly so it's ready when needed
-    nodesRef.current = buildAudioGraph();
-
-    // Pre-warm: resume context on the first pointer interaction anywhere on the
-    // page. Browsers require a click/pointerdown (not mouseenter) to allow audio.
-    const prewarm = () => {
-      if (nodesRef.current?.ctx.state === "suspended") {
-        nodesRef.current.ctx.resume();
-      }
-      document.removeEventListener("pointerdown", prewarm);
-    };
-    document.addEventListener("pointerdown", prewarm);
-
-    return () => {
-      document.removeEventListener("pointerdown", prewarm);
-    };
+    if (!touchDevice.current) prewarm();
   }, []);
 
-  // Get or create audio graph synchronously — must stay within user gesture context
   const ensureAudio = useCallback((): AudioNodes | null => {
     if (touchDevice.current) return null;
-
-    if (!nodesRef.current) {
-      nodesRef.current = buildAudioGraph();
-    }
-
-    if (nodesRef.current.ctx.state === "suspended") {
-      nodesRef.current.ctx.resume();
-    }
-
-    return nodesRef.current;
+    return getAudio();
   }, []);
 
   const onMouseEnter = useCallback(() => {
@@ -176,14 +170,6 @@ export function useHapticSound(): HapticSoundHandlers {
       dispatchFirstPlay();
     }
   }, [ensureAudio, trigger]);
-
-  // Cleanup AudioContext on unmount
-  useEffect(() => {
-    return () => {
-      nodesRef.current?.ctx.close();
-      nodesRef.current = null;
-    };
-  }, []);
 
   return { onMouseEnter, onMouseLeave, onClick };
 }

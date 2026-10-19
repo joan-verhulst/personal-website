@@ -194,7 +194,7 @@ export const ExperimentsEditor = (props: ListEditorProps) => (
   <OrderedListEditor
     {...props}
     title="Experiments"
-    description="Side projects and motion studies, in the experiments modal. The first two fill the home page widget: an image, then a video."
+    description="Side projects and motion studies. The site doesn't show them for now: the blog took their widget's spot on home."
     noun="experiments"
     widgetSlots={["image", "video"]}
   />

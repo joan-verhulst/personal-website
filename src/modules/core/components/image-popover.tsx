@@ -1,16 +1,16 @@
 "use client";
 
-import { useRef, useEffect, useCallback, useState } from "react";
-import { createPortal } from "react-dom";
 import { gsap } from "gsap";
-import { X, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { DigitalArtProject } from "~/modules/content/types";
 import AnimatedText, {
   type AnimatedTextHandle,
 } from "~/modules/core/components/utils/AnimatedText";
-import cn from "~/utils/cn";
-import { useHapticSound } from "~/modules/core/hooks/use-haptic-sound";
 import { useAnimationPreference } from "~/modules/core/context/animation-preference-context";
+import { useHapticSound } from "~/modules/core/hooks/use-haptic-sound";
+import cn from "~/utils/cn";
 
 // Width and height are optional, without them the size is known once the image has preloaded
 type PopoverItem = DigitalArtProject & { width?: number; height?: number };
@@ -461,13 +461,13 @@ const ImagePopover = ({
   return createPortal(
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-50 h-screen "
+      className="fixed inset-0 z-50 h-screen"
       onClick={(e) => {
         if (e.target === overlayRef.current) animateClose();
       }}
       style={{ opacity: 0, display: "none" }}
     >
-      <div className="absolute inset-0 flex items-center justify-center p-6 md:p-8 bg-neutral-950/75">
+      <div className="absolute inset-0 flex items-center justify-center bg-neutral-950/75 p-6 md:p-8">
         <div
           ref={contentRef}
           className="flex flex-col items-center gap-5"
@@ -475,27 +475,27 @@ const ImagePopover = ({
         >
           <div
             ref={containerRef}
-            className="relative overflow-hidden rounded-2xl inset-border [--inset-border-color:color-mix(in_oklab,var(--color-neutral-50)_20%,transparent)]"
+            className="relative inset-border overflow-hidden rounded-2xl [--inset-border-color:color-mix(in_oklab,var(--color-neutral-50)_20%,transparent)]"
           >
             <img
               ref={imgARef}
               alt=""
-              className="absolute inset-0 w-full h-full object-cover"
+              className="absolute inset-0 h-full w-full object-cover"
               draggable={false}
             />
             <img
               ref={imgBRef}
               alt=""
-              className="absolute inset-0 w-full h-full object-cover"
+              className="absolute inset-0 h-full w-full object-cover"
               style={{ opacity: 0 }}
               draggable={false}
             />
-            <div className="absolute inset-0 bg-linear-to-t from-neutral-950/75 from-10% to-transparent to-40% pointer-events-none" />
+            <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-10% from-neutral-950/75 to-40% to-transparent" />
             <div className="absolute bottom-8 left-8 flex flex-col gap-1">
               <AnimatedText
                 ref={titleRef}
                 as="h2"
-                className="text-neutral-50 text-lg font-medium"
+                className="font-medium text-lg text-neutral-50"
                 trigger="manual"
               >
                 {item.title}
@@ -504,7 +504,7 @@ const ImagePopover = ({
                 <AnimatedText
                   ref={descriptionRef}
                   as="p"
-                  className="text-neutral-50/75 text-sm font-light max-w-md"
+                  className="max-w-md font-light text-neutral-50/75 text-sm"
                   trigger="manual"
                 >
                   {item.description}
@@ -517,7 +517,7 @@ const ImagePopover = ({
 
       <div
         ref={actionBarRef}
-        className="fixed z-50 bottom-8 left-1/2 -translate-x-1/2 border border-neutral-50/10 flex items-center gap-1.5 bg-neutral-50 rounded-xl px-1 py-1"
+        className="fixed bottom-8 left-1/2 z-50 flex -translate-x-1/2 items-center gap-1.5 rounded-xl border border-neutral-50/10 bg-neutral-50 px-1 py-1"
       >
         <button
           onClick={() => {
@@ -529,18 +529,18 @@ const ImagePopover = ({
           onMouseEnter={haptic.onMouseEnter}
           disabled={!hasPrev || isAnimatingState}
           className={cn(
-            "flex items-center justify-center w-8 h-8 rounded-lg text-neutral-950 transition-all duration-200",
-            !hasPrev && "opacity-25 cursor-not-allowed",
-            isAnimatingState && hasPrev && "opacity-25 cursor-progress",
+            "flex h-8 w-8 items-center justify-center rounded-lg text-neutral-950 transition-all duration-200",
+            !hasPrev && "cursor-not-allowed opacity-25",
+            isAnimatingState && hasPrev && "cursor-progress opacity-25",
             hasPrev &&
               !isAnimatingState &&
-              "hover:bg-neutral-950/10 cursor-pointer",
+              "cursor-pointer hover:bg-neutral-950/10",
           )}
         >
           <ChevronLeft size={14} />
         </button>
 
-        <span className="text-neutral-950/50 text-xs tabular-nums px-1">
+        <span className="px-1 text-neutral-950/50 text-xs tabular-nums">
           {activeIndex + 1} / {items.length}
         </span>
 
@@ -554,18 +554,18 @@ const ImagePopover = ({
           onMouseEnter={haptic.onMouseEnter}
           disabled={!hasNext || isAnimatingState}
           className={cn(
-            "flex items-center justify-center w-8 h-8 rounded-lg text-neutral-950 transition-all duration-200",
-            !hasNext && "opacity-25 cursor-not-allowed",
-            isAnimatingState && hasNext && "opacity-25 cursor-progress",
+            "flex h-8 w-8 items-center justify-center rounded-lg text-neutral-950 transition-all duration-200",
+            !hasNext && "cursor-not-allowed opacity-25",
+            isAnimatingState && hasNext && "cursor-progress opacity-25",
             hasNext &&
               !isAnimatingState &&
-              "hover:bg-neutral-950/10 cursor-pointer",
+              "cursor-pointer hover:bg-neutral-950/10",
           )}
         >
           <ChevronRight size={14} />
         </button>
 
-        <div className="w-px h-5 bg-neutral-950/10" />
+        <div className="h-5 w-px bg-neutral-950/10" />
 
         <button
           onClick={() => {

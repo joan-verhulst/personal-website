@@ -1,15 +1,18 @@
 "use client";
-import Image from "next/image";
-import { useRef, useEffect } from "react";
 import { gsap } from "gsap";
-import cn from "~utils/cn";
-import { useHapticSound } from "~/modules/core/hooks/use-haptic-sound";
+import Image from "next/image";
+import { useEffect, useRef } from "react";
 import { useAnimationPreference } from "~/modules/core/context/animation-preference-context";
+import { useHapticSound } from "~/modules/core/hooks/use-haptic-sound";
+import cn from "~utils/cn";
 
 type WidgetCardProps = {
   label: string;
   src?: string;
   alt?: string;
+  // How wide the picture shows, for Next to send a copy that size: a column
+  // of the home grid, or the screen less the page's padding on a phone
+  sizes?: string;
   className?: string;
   imgClassName?: string;
   children?: React.ReactNode;
@@ -20,6 +23,7 @@ const WidgetCard = ({
   label,
   src,
   alt = "",
+  sizes = "(min-width: 768px) 240px, calc(100vw - 8rem)",
   className = "",
   imgClassName = "object-cover",
   children,
@@ -116,18 +120,19 @@ const WidgetCard = ({
       }}
       className={cn(
         // inset-border sits over the image, so it reaches the rounded edge
-        "relative w-full aspect-square rounded-4xl inset-border select-none cursor-pointer",
+        "relative inset-border aspect-square w-full cursor-pointer select-none rounded-4xl",
         !animationsEnabled &&
-          "hover:scale-90 transition-transform duration-300",
+          "transition-transform duration-300 hover:scale-90",
         className,
       )}
     >
       {src && !children && (
-        <div className="relative w-full h-full overflow-hidden rounded-4xl">
+        <div className="relative h-full w-full overflow-hidden rounded-4xl">
           <Image
             src={src}
             alt={alt}
             fill
+            sizes={sizes}
             className={cn(imgClassName, "pointer-events-none rounded-4xl")}
           />
         </div>

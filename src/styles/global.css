@@ -97,6 +97,16 @@
       transform: scaleY(0.3);
     }
   }
+
+  /* Text coming up into place as the page opens */
+  --animate-rise-in: rise-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  @keyframes rise-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+  }
 }
 
 /*

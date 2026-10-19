@@ -225,7 +225,7 @@ const AboutForm = ({ site }: { site: SiteRow }) => {
 
         <PhotoSection
           title="Page photo"
-          description="In the text of the about page, cropped to 16:9."
+          description="At the end of the about page, cropped to 16:9."
           aspect="aspect-video"
           path={modalImage}
           isDirty={dirtyFields.modalImage}

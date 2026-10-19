@@ -1,0 +1,286 @@
+{
+  "camera": {
+    "position": [
+      1.2,
+      2.1,
+      1.7
+    ],
+    "target": [
+      -0.2,
+      0.8,
+      -1
+    ],
+    "fov": 87
+  },
+  "room": {
+    "width": 3.75,
+    "depth": 4,
+    "height": 2.65,
+    "nearWallFaces": 163,
+    "hallway": 1.65,
+    "window": {
+      "wall": "near",
+      "from": -1.85,
+      "to": 1,
+      "bottom": 0.9,
+      "top": 3.05
+    },
+    "door": {
+      "from": -1.6,
+      "to": -0.7,
+      "height": 2.17,
+      "open": 26
+    }
+  },
+  "pieces": {
+    "bed": {
+      "position": [
+        0.1,
+        0,
+        1
+      ],
+      "rotation": 0
+    },
+    "desk": {
+      "position": [
+        0.15,
+        0,
+        -1.55
+      ],
+      "rotation": 0
+    },
+    "chair": {
+      "position": [
+        0.25,
+        0,
+        -0.72
+      ],
+      "rotation": 0
+    },
+    "rug": {
+      "position": [
+        0.35,
+        0,
+        -1
+      ],
+      "rotation": 0
+    },
+    "shelves": {
+      "position": [
+        -1.85,
+        0,
+        -1.6
+      ],
+      "rotation": 90
+    },
+    "guitarNatural": {
+      "position": [
+        -1.85,
+        1.3,
+        1.05
+      ],
+      "rotation": 90
+    },
+    "guitarSunburst": {
+      "position": [
+        -1.75,
+        1.3,
+        -0.2
+      ],
+      "rotation": 90
+    },
+    "electric": {
+      "position": [
+        -1.7,
+        0,
+        -1.8
+      ],
+      "rotation": 45
+    },
+    "plant": {
+      "position": [
+        1.45,
+        0,
+        -1.7
+      ],
+      "rotation": 0
+    },
+    "lamp": {
+      "position": [
+        0.1,
+        2.65,
+        -0.2
+      ],
+      "rotation": 0
+    },
+    "walkway": {
+      "position": [
+        1.45,
+        0,
+        -0.3
+      ],
+      "rotation": 0
+    },
+    "headphones": {
+      "position": [
+        0.75,
+        0.765,
+        -1.45
+      ],
+      "rotation": 20
+    },
+    "turntable": {
+      "position": [
+        -1.875,
+        0,
+        -0.85
+      ],
+      "rotation": 90
+    },
+    "frameLarge": {
+      "position": [
+        -0.35,
+        1.72,
+        -2
+      ],
+      "rotation": 0
+    },
+    "framePortrait": {
+      "position": [
+        0.45,
+        1.68,
+        -2
+      ],
+      "rotation": 0
+    },
+    "frameSmall": {
+      "position": [
+        0.95,
+        1.95,
+        -2
+      ],
+      "rotation": 0
+    },
+    "frameSquare": {
+      "position": [
+        0.95,
+        1.5,
+        -2
+      ],
+      "rotation": 0
+    },
+    "frameLeftTall": {
+      "position": [
+        -1.875,
+        1.95,
+        0.42
+      ],
+      "rotation": 90
+    },
+    "frameLeftSmall": {
+      "position": [
+        -1.875,
+        1.3,
+        0.42
+      ],
+      "rotation": 90
+    },
+    "frameNear": {
+      "position": [
+        -1.875,
+        1.65,
+        1.6
+      ],
+      "rotation": 90
+    },
+    "frameRight": {
+      "position": [
+        1.875,
+        1.6,
+        0.7
+      ],
+      "rotation": -90
+    },
+    "shelfBooks": {
+      "position": [
+        -0.35,
+        2.22,
+        -2
+      ],
+      "rotation": 0
+    },
+    "shelfTrinkets": {
+      "position": [
+        -1.875,
+        2.22,
+        1.55
+      ],
+      "rotation": 90
+    },
+    "plantTall": {
+      "position": [
+        -1.5,
+        0,
+        1.7
+      ],
+      "rotation": 0
+    },
+    "plantHanging": {
+      "position": [
+        -1.25,
+        2.65,
+        -0.9
+      ],
+      "rotation": 0
+    },
+    "plantDesk": {
+      "position": [
+        0.95,
+        0.765,
+        -1.4
+      ],
+      "rotation": 0
+    }
+  },
+  "colors": {
+    "walls": "#76856e",
+    "hallway": "#d9d2c4",
+    "duvet": "#9c4521",
+    "sheets": "#f1ece2",
+    "floor": "#ffffff",
+    "wood": "#ffffff",
+    "chair": "#2a2a2e",
+    "deskLamps": "#ffb46a",
+    "ledStrip": "#ffc890",
+    "trim": "#f2eee6",
+    "outline": "#21140d"
+  },
+  "light": {
+    "sun": 21.7,
+    "beams": 0,
+    "bounce": 3.2,
+    "window": 7,
+    "sky": 0.26,
+    "ambient": 0,
+    "lamp": 8,
+    "deskLamps": 1.2,
+    "ledStrip": 15,
+    "screens": 2.25,
+    "gi": 0,
+    "ao": 1.5,
+    "reflections": 1.58,
+    "toneMapping": "aces",
+    "exposure": 0.69,
+    "bloom": 0.03,
+    "bloomRadius": 0,
+    "bloomThreshold": 1.74
+  },
+  "paint": {
+    "smooth": true,
+    "detail": 1,
+    "bands": 8,
+    "softness": 0.5,
+    "outline": 1
+  },
+  "stills": 1792425251829
+}

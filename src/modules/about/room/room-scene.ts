@@ -239,10 +239,20 @@ const KEPT_OCCLUSION = {
 // drawn, so it ends where it settles. What eases on its own, my joints and
 // what grows under the pointer, counts as moving itself
 const SETTLE_FRAMES = 4;
-// While nothing moves, the room is drawn this often a second: enough for
-// the breathing and the typing, which move a pixel or two, at a fraction of
-// the work. Anything that moves brings the full rate back
-const IDLE_FPS = 6;
+// While nothing moves, the room is drawn again this often, in ms: once a
+// minute, for the sun, a quarter of a degree further, and the lamps, which
+// go by the clock. In between the graphics card has nothing to do. I sit
+// still meanwhile, see the loop. Anything that moves, a hover, a walk, the
+// day played, brings the full rate back
+const IDLE_EVERY = 60_000;
+// While the day plays, everything moves fast and the eye can tell little
+// apart: drawn this often a second, as sharp as ever, with the lamps' and
+// the sky's shadows every this many frames. The sun's, which is what sweeps
+// across the room, every frame
+const PLAY_FPS = 30;
+const PLAY_SHADOWS_EVERY = 3;
+// Playing, until this long after the clock was last moved, in ms
+const PLAY_LINGERS = 250;
 
 const TONE_MAPPINGS: Record<RoomLayout["light"]["toneMapping"], ToneMapping> = {
   aces: ACESFilmicToneMapping,
@@ -797,7 +807,8 @@ export const createRoom = async (
     if (layout.light.gi <= 0) {
       if (grid.parent) scene.remove(grid);
       bake = null;
-      if (lightingKey === bakedKey) return;
+      // Captured again once the day has played, not on the way
+      if (lightingKey === bakedKey || isPlayingDay) return;
       // Once the lamps are done fading, and not more often than every so
       // often while a day is played: each capture draws the room six times
       const now = performance.now();
@@ -981,7 +992,9 @@ export const createRoom = async (
     // or shade a frame old trails behind me as I walk
     const hasSunMoved = sun.position.distanceToSquared(sunAtShadow) > 1e-4;
     for (const light of shadowLights) {
-      if (isMoving || (light === sun && hasSunMoved)) {
+      // While the day plays, the lamps' and the sky's every few frames
+      const isDue = light === sun || !isPlayingDay || playFrames % PLAY_SHADOWS_EVERY === 0;
+      if ((isMoving && isDue) || (light === sun && hasSunMoved)) {
         light.userData.isShadowStale = true;
       }
       // A light that's off still needs a shadow map, drawn at least once:
@@ -1007,7 +1020,8 @@ export const createRoom = async (
     // The shade is worked out again every frame while things move, and kept
     // otherwise
     const hasOcclusion = settings.ao > 0;
-    occlusion.enabled = hasOcclusion && (isMoving || !isOcclusionFresh);
+    // Not while the day plays: the shade from before is kept meanwhile
+    occlusion.enabled = hasOcclusion && (isMoving || !isOcclusionFresh) && !isPlayingDay;
     keptOcclusion.enabled = hasOcclusion && !occlusion.enabled;
     occlusion.blendIntensity = settings.ao;
     keptOcclusion.uniforms.uIntensity.value = settings.ao;
@@ -1245,13 +1259,17 @@ export const createRoom = async (
   // something, or left it
   let needsDraw = true;
   let lastDrawn = Number.NEGATIVE_INFINITY;
+  // Whether the day is playing, see setOffset, until when, and its frames
+  let isPlayingDay = false;
+  let playingUntil = 0;
+  let playFrames = 0;
   // Whether something under the pointer is still growing or shrinking
   let isGrowing = false;
   const isTuning = () =>
     frameCallback !== null || walkway.visible || overlay.children.length > 0;
 
   const loop = (time: number) => {
-    // While nothing moves, most frames are left out, see IDLE_FPS. The time
+    // While nothing moves, frames are left out, see IDLE_EVERY. The time
     // carries over: the next frame drawn takes the whole gap
     const isIdle =
       isReady &&
@@ -1259,10 +1277,20 @@ export const createRoom = async (
       !capture &&
       !bake &&
       lightingKey === bakedKey &&
+      !isLightEasing &&
       stillFrames >= SETTLE_FRAMES &&
       !isGrowing &&
+      !isPlayingDay &&
       !isTuning();
-    if (isIdle && time - lastDrawn < 1000 / IDLE_FPS) return;
+    if (isIdle && time - lastDrawn < IDLE_EVERY) return;
+    // The day playing, or done
+    const isPlaying = time < playingUntil;
+    if (isPlaying !== isPlayingDay) {
+      isPlayingDay = isPlaying;
+      playFrames = 0;
+    }
+    if (isPlaying && time - lastDrawn < 1000 / PLAY_FPS) return;
+    if (isPlaying) playFrames += 1;
     lastDrawn = time;
     needsDraw = false;
 
@@ -1280,19 +1308,20 @@ export const createRoom = async (
     light(now, hour, dtReal, activity ?? "sleep");
 
     const seconds = time / 1000;
-    // While my joints are on their way somewhere, like a stretch at the
-    // desk, the room counts as moving: drawn at full rate, shadows too
+    // At rest I sit or lie still: no typing, no breathing, no stretching at
+    // the desk, so there's nothing to draw between the minutes, see
+    // IDLE_EVERY. I still walk, sit down and get up, which the room draws
+    // in full while it happens
     const isMovingJoints = figure.update(pose, dt, {
       walk: walkPhase,
       stepping,
-      breath: seconds * 1.6,
+      breath: 0,
       strum: 0,
       seconds,
       realDt: dtReal,
-      isWorking: resting === "desk" && plan.length === 0,
+      isWorking: false,
     });
     if (isMovingJoints) moved();
-    duvet.scale.y = resting === "bed" ? 1 + Math.sin(seconds * 1.2) * 0.03 : 1;
 
     // What the pointer is on grows a little, and shrinks back after. The
     // room counts as moving only while a size is changing, not while
@@ -1622,6 +1651,7 @@ export const createRoom = async (
       else stop();
     },
     setOffset: (ms) => {
+      if (ms !== offset) playingUntil = performance.now() + PLAY_LINGERS;
       // A played day: the sun and the shadows move every frame
       if (ms !== offset) moved();
       offset = ms;

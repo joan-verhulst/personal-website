@@ -9,7 +9,7 @@ import {
   useRef,
   useSyncExternalStore,
 } from "react";
-import { sectionAt } from "~/data/pages";
+import { ownPages, sectionAt } from "~/data/pages";
 import {
   closeLayer,
   connect,
@@ -77,6 +77,17 @@ const AppLayer = ({ children, slot }: PropsWithChildren<Props>) => {
     const section = sectionAt(pathname);
     if (section) {
       track("Section Opened", { section, from: opened?.from ?? "direct" });
+    } else if (
+      pathname.startsWith(`${ownPages.blog.path}/`) &&
+      opened?.from !== "blog"
+    ) {
+      // A post is in the blog. Coming in on one, from a search or another
+      // site, opens the blog as much as its tile does: the funnel's first
+      // step. Going from post to post, or from the list, stays in it
+      track("Section Opened", {
+        section: "blog",
+        from: opened?.from ?? "direct",
+      });
     }
   }, [pathname, page]);
 

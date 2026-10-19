@@ -20,6 +20,7 @@ export type Events = {
   // A section opening, and how: its card on home, the island's tray, the
   // footer, a post's way back to the blog, a link in the about page's
   // story, or directly, by a link from elsewhere or the browser's history.
+  // Coming in on a blog post counts as the blog opening, from where it came.
   // Pageviews alone miss a switch from one section to another, see AppLayer
   "Section Opened": {
     section: SectionKey;
@@ -45,8 +46,8 @@ export type Events = {
   };
   // A product's link on the products page
   "Product Visited": { product: string };
-  // A blog post opening. Going from one post to another replaces the URL,
-  // which pageviews miss, like a section taking another's place
+  // A blog post opening, by its slug: one report for which posts are read,
+  // however they were reached
   "Post Opened": { post: string };
   // A piece on the UI/UX wall, opened in its modal
   "UI/UX Item Opened": { item: string };

@@ -1,8 +1,7 @@
 "use client";
 
-import { gsap } from "gsap";
 import { ArrowUpRight } from "lucide-react";
-import { type CSSProperties, useLayoutEffect, useRef } from "react";
+import type { CSSProperties } from "react";
 import { useContent } from "~/modules/content/components/content-provider";
 import type { Product } from "~/modules/content/types";
 import { useAnimationPreference } from "~/modules/core/context/animation-preference-context";
@@ -12,7 +11,6 @@ import { TagLogo } from "~/modules/ui-ux/components/wall-tag";
 import { getWallBackground } from "~/modules/ui-ux/utils/wall-backgrounds";
 import cn from "~/utils/cn";
 import { track } from "~/utils/eyes";
-import { scrollerOf } from "~/utils/footer";
 
 // The same padding as the UI/UX wall's tiles, scaling with the card
 const PADDING_X = "px-[clamp(1.25rem,6cqw,3rem)]";
@@ -135,7 +133,7 @@ const ProductTile = ({ product }: { product: Product }) => {
 
   if (!link) {
     return (
-      <div data-product className={tileClassName} style={tileStyle}>
+      <div className={tileClassName} style={tileStyle}>
         {content}
       </div>
     );
@@ -143,7 +141,6 @@ const ProductTile = ({ product }: { product: Product }) => {
 
   return (
     <a
-      data-product
       href={link.href}
       target="_blank"
       rel="noopener noreferrer"
@@ -171,44 +168,16 @@ const ProductTile = ({ product }: { product: Product }) => {
  */
 const ProductShowcase = () => {
   const { products } = useContent();
-  const wallRef = useRef<HTMLDivElement>(null);
-  const { animationsEnabled } = useAnimationPreference();
   const rows = Array.from(
     { length: Math.ceil(products.length / 2) },
     (_, row) => products.slice(row * 2, row * 2 + 2),
   );
 
-  // The tiles rise into place, one after another, as the section opens over
-  // home. Loaded directly they've been on screen since the server's page,
-  // and hiding them to rise would flash them, so like the UI/UX wall they're
-  // just there
-  useLayoutEffect(() => {
-    const wall = wallRef.current;
-    if (
-      !wall ||
-      !scrollerOf(wall) ||
-      !animationsEnabled ||
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    )
-      return;
-
-    const tween = gsap.from(wall.querySelectorAll("[data-product]"), {
-      y: 48,
-      opacity: 0,
-      duration: 0.9,
-      ease: "power3.out",
-      stagger: 0.08,
-      delay: 0.2,
-      clearProps: "transform,opacity",
-    });
-    return () => {
-      tween.kill();
-    };
-  }, [animationsEnabled]);
-
+  // No entrance of its own: like the other sections, the tiles are there as
+  // the card opens around them
   return (
     <div className="px-3 pt-16 pb-3 md:px-4 lg:px-6">
-      <div ref={wallRef} className="@container flex flex-col gap-3">
+      <div className="@container flex flex-col gap-3">
         {rows.map((row) => (
           <div
             key={row[0].id}

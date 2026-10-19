@@ -1,8 +1,6 @@
 "use client";
 
-import { gsap } from "gsap";
 import { ArrowRight } from "lucide-react";
-import { useLayoutEffect, useRef } from "react";
 import { ownPages } from "~/data/pages";
 import {
   blogHero,
@@ -13,7 +11,6 @@ import {
 } from "~/data/posts";
 import PostCover from "~/modules/blog/components/post-cover";
 import PostLink from "~/modules/blog/components/post-link";
-import { useAnimationPreference } from "~/modules/core/context/animation-preference-context";
 import { useHapticSound } from "~/modules/core/hooks/use-haptic-sound";
 import cn from "~/utils/cn";
 
@@ -76,36 +73,12 @@ const sections = (
  * The blog: its title and what it's about, then a section per kind of post,
  * each with its posts stacked as wide tiles, newest first.
  */
+// No entrance of its own: like the other sections, the tiles are there as
+// the card opens around them
 const BlogIndex = () => {
-  const wallRef = useRef<HTMLDivElement>(null);
-  const { animationsEnabled } = useAnimationPreference();
-
-  // The tiles rise into place, one after another
-  useLayoutEffect(() => {
-    const wall = wallRef.current;
-    if (
-      !wall ||
-      !animationsEnabled ||
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    )
-      return;
-    const tween = gsap.from(wall.querySelectorAll("a"), {
-      y: 48,
-      opacity: 0,
-      duration: 0.9,
-      ease: "power3.out",
-      stagger: 0.08,
-      delay: 0.2,
-      clearProps: "transform,opacity",
-    });
-    return () => {
-      tween.kill();
-    };
-  }, [animationsEnabled]);
-
   return (
     <div className="px-3 pt-24 pb-64 md:px-4 md:pt-49 lg:px-6">
-      <div ref={wallRef} className="mx-auto max-w-6xl">
+      <div className="mx-auto max-w-6xl">
         <header className={TEXT}>
           <h1 className="text-balance text-2xl text-neutral-950 leading-tight tracking-[-0.01em] md:text-3xl">
             {blogHero.title}

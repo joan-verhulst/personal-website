@@ -8,8 +8,6 @@ interface Props {
   searchParams: Promise<{ list?: string | string[] }>;
 }
 
-// The same form as the edit page, empty. ?list=experiments comes from New item
-// on the Experiments tab, and puts the item at the end of that list too
 const NewItemAdmin = async ({ searchParams }: Props) => {
   const { list } = await searchParams;
   const { tags } = await readWall();

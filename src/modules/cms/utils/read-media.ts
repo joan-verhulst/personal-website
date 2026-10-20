@@ -11,9 +11,7 @@ type MediaTable = (typeof MEDIA_COLUMNS)[number][0];
 
 interface Owner {
   noun: string;
-  /** The column with the row's name, when it has one. */
   name?: string;
-  /** The CMS page that edits the row, as a canonical path. */
   href: (id: string) => string;
 }
 
@@ -35,33 +33,25 @@ const OWNERS: Record<MediaTable, Owner> = {
 
 const VIDEO = /\.(mp4|webm)$/i;
 
-// How many rows PostgREST hands out per request
 const PAGE = 1000;
 
 export interface MediaOwner {
-  /** Like "Photo · Sunset". */
   label: string;
-  /** Where it's edited, as a canonical admin path. */
   href: string;
 }
 
 export interface MediaFile {
   path: string;
   url: string;
-  /** The first part of the path, like "photography". Empty at the top. */
   folder: string;
-  /** In bytes. */
   size: number;
   createdAt: number;
   kind: "image" | "video";
-  /** The name it was uploaded with, or else one taken from what uses it. */
   name: string;
-  /** As measured on upload. Zero when Media doesn't know them. */
   width: number;
   height: number;
   hue: number;
   chroma: number;
-  /** Every row that shows the file. Empty when unused. */
   usedBy: MediaOwner[];
 }
 
@@ -75,10 +65,6 @@ interface DetailsRow {
   chroma: number;
 }
 
-/**
- * Which rows show each file, by path. Throws when a table can't be read
- * whole: a short list would mark media that's live as unused.
- */
 const readOwners = async (supabase: SupabaseClient) => {
   const reads = await Promise.all(
     MEDIA_COLUMNS.map(async ([table, column]) => {
@@ -94,9 +80,7 @@ const readOwners = async (supabase: SupabaseClient) => {
 
   const owners = new Map<string, MediaOwner[]>();
   for (const { table, column, data, error, count } of reads) {
-    // A table that isn't there yet has no rows to use a file
     if (isTableToCome(table, error)) continue;
-    // The API cuts a long read off at its row limit without saying so
     if (error || !data || count === null || count > data.length) {
       throw new Error(`Couldn't read the media ${table} uses`);
     }
@@ -109,7 +93,6 @@ const readOwners = async (supabase: SupabaseClient) => {
         href: href(String(row.id)),
       };
       const uses = owners.get(path) ?? [];
-      // About has two photos, often the same file. It's listed once
       if (uses.some((use) => use.label === owner.label && use.href === owner.href)) {
         continue;
       }
@@ -119,11 +102,6 @@ const readOwners = async (supabase: SupabaseClient) => {
   return owners;
 };
 
-/**
- * What the media table knows about each file, by path, and whether the
- * table is there at all. Before 0006_media_library.sql it isn't, and files
- * only have what the bucket says about them.
- */
 const readDetails = async (supabase: SupabaseClient) => {
   const details = new Map<string, DetailsRow>();
   for (let from = 0; ; from += PAGE) {
@@ -133,7 +111,6 @@ const readDetails = async (supabase: SupabaseClient) => {
       .order("path")
       .range(from, from + PAGE - 1);
     if (error) {
-      // Before 0006_media_library.sql has been run
       if (MISSING_TABLE.includes(error.code)) {
         return { details, hasTable: false };
       }
@@ -147,11 +124,6 @@ const readDetails = async (supabase: SupabaseClient) => {
 const fileName = (path: string) =>
   (path.split("/").pop() ?? path).replace(/\.[^.]+$/, "");
 
-/**
- * Every file in the media bucket, with its details and what shows it. Throws
- * when the bucket or a table can't be read, so the page says so instead of
- * showing half a library. hasDetails is false until the media table exists.
- */
 export const readMediaLibrary = async (supabase: SupabaseClient) => {
   const [files, owners, { details, hasTable }] = await Promise.all([
     listMedia(),

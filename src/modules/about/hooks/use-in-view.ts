@@ -2,10 +2,6 @@
 
 import { type RefObject, useEffect, useState } from "react";
 
-/**
- * Whether the element has come on screen yet, a little way past the bottom
- * edge so it's properly in view. Stays true after.
- */
 const useInView = (ref: RefObject<Element | null>) => {
   const [isInView, setInView] = useState(false);
 

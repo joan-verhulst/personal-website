@@ -20,14 +20,11 @@ interface Props {
   className?: string;
   "aria-describedby"?: string;
   children: ReactNode;
-  // Called once per file, after it's in Media
   onUploaded: (media: UploadedMedia) => Promise<void> | void;
   onError?: (message: string) => void;
-  // True from the first file until the last one is done, so a form can wait
   onUploadingChange?: (isUploading: boolean) => void;
 }
 
-/** Picks files and uploads them one by one, showing how far along it is. */
 const UploadButton = ({
   folder,
   accept,
@@ -89,7 +86,6 @@ const UploadButton = ({
         aria-describedby={describedBy}
         onClick={() => inputRef.current?.click()}
       >
-        {/* The spinner takes over from the icon while files go up */}
         {!isUploading && <Upload size={16} aria-hidden />}
         {progress ?? children}
       </Button>

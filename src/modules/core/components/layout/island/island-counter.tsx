@@ -1,7 +1,6 @@
 import cn from "~/utils/cn";
 
 const DIGITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-// Height of one digit on a wheel
 const STEP = 20;
 
 interface Props {
@@ -9,7 +8,6 @@ interface Props {
   className?: string;
 }
 
-/** Two wheels of digits that roll to the value, like an odometer. */
 const IslandCounter = ({ value, className }: Props) => {
   const digits = String(Math.min(Math.max(value, 0), 99)).padStart(2, "0");
 

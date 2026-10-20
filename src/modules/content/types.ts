@@ -1,8 +1,3 @@
-// Everything the CMS manages, in the shape the site renders it. Media paths
-// are full URLs by the time they get here, see get-content.
-
-// ── UI/UX ─────────────────────────────────────────────────────────────────────
-
 export const WALL_BACKGROUNDS = [
   "forest",
   "lime",
@@ -23,14 +18,12 @@ export type WallBackground = (typeof WALL_BACKGROUNDS)[number];
 export interface WallTag {
   label: string;
   color: string;
-  // Single color SVG, tinted to match the tag text
   logo?: string;
 }
 
 export interface WallMedia {
   type: "image" | "video";
   src: string;
-  // Source dimensions, used to keep the aspect ratio without cropping
   width: number;
   height: number;
 }
@@ -38,21 +31,13 @@ export interface WallMedia {
 export interface WallItem {
   id: string;
   title: string;
-  // Who it was for. Optional: an item without one shows only its title
   tag?: WallTag;
   media: WallMedia;
   background: WallBackground;
-  // Fills the whole card with no frame, for reels that bring their own
-  // background. Export reels at 4:3 so they fill a card without cropping.
-  // Its background then only picks the header: "neutral" for light reels,
-  // any other for dark ones.
   bare?: boolean;
-  // CSS object-position for the cropped card view, defaults to "left top".
-  // The modal always shows the full media.
   position?: string;
   // Scales the media up, e.g. to crop browser chrome out of a recording
   zoom?: number;
-  // Opens a modal only when it has text or a link
   description?: string;
   link?: { label: string; href: string };
 }
@@ -82,24 +67,16 @@ export const WALL_SLOTS: Record<WallLayout, number> = {
   double: 2,
 };
 
-// ── Products ──────────────────────────────────────────────────────────────────
-
-// Something people can try right now. Shown like a wall item, but described
-// for trying it: by name, not by what the shot shows
 export interface Product {
   id: string;
   name: string;
-  // Single color SVG, tinted like the name next to it
   logo?: string;
   description?: string;
   link?: { label: string; href: string };
   media: WallMedia;
   background: WallBackground;
-  // Fills the card with no frame, like a bare wall item
   bare?: boolean;
 }
-
-// ── Photography ───────────────────────────────────────────────────────────────
 
 export interface PhotographyProject {
   id: string;
@@ -111,12 +88,9 @@ export interface PhotographyProject {
 export interface Print extends PhotographyProject {
   width: number;
   height: number;
-  // Hue in degrees, and how colorful the photo is from 0 (black and white) up
   hue: number;
   chroma: number;
 }
-
-// ── Digital art ───────────────────────────────────────────────────────────────
 
 export interface DigitalArtProject {
   id: string;
@@ -130,30 +104,20 @@ export interface Artwork extends DigitalArtProject {
   height: number;
 }
 
-// ── On rotation ───────────────────────────────────────────────────────────────
-
 export interface RotationRecord {
   id: string;
   type: "album" | "song";
   title: string;
   artist: string;
-  // Square artwork, used as the record's label
   cover: string;
-  // The track I'd put on first. Its Apple Music ID fetches the real title,
-  // artist and a preview clip; the name is shown until that arrives.
   favoriteSong: { appleId: number; title: string };
 }
-
-// ── About and contact ─────────────────────────────────────────────────────────
 
 export interface About {
   headline: string;
   intro: string;
-  // On the About widget, the island's tile and the link preview
   image?: string;
-  // In the text of the about page
   modalImage?: string;
-  // Where I work now: a card on the about page, a line in the footer
   currently?: {
     name: string;
     since?: string;
@@ -165,51 +129,32 @@ export interface About {
 export interface Contact {
   instagram?: string;
   linkedin?: string;
-  // Plain address, without mailto:
   email?: string;
-  // The cards in the contact modal, which also show in their section's
-  // footer. Always filled: empty fields fall back, see data/contact-cards.ts
   cards: Record<ContactCardKey, ContactCard>;
 }
 
-// One per section. Photography and digital art open an email
 export type ContactCardKey = "uiUx" | "photography" | "digitalArt";
 
 export interface ContactCard {
   title: string;
   text: string;
   button: string;
-  // Where the button leads. Only the UI/UX card links out, the others open
-  // an email with the title as its subject
   href?: string;
 }
 
-// ── Search ────────────────────────────────────────────────────────────────────
-
-// The pages search engines index, see data/pages.ts
 export type PageKey = "home" | "uiUx" | "digitalArt" | "photography";
-
-// ── All of it ─────────────────────────────────────────────────────────────────
 
 export interface Content {
   about: About;
   contact: Contact;
-  // What search results and link previews show under each page's title.
-  // Missing, the page uses its fallback, see utils/page-metadata.ts
   descriptions: Partial<Record<PageKey, string>>;
   photos: Print[];
   artworks: Artwork[];
   records: RotationRecord[];
   wall: WallBlock[];
-  // Side projects and motion studies, edited in the CMS. The blog took their
-  // place on the home page, so the site doesn't show them for now
   experiments: WallItem[];
-  // Things people can try right now, on the products page and one after
-  // another on its home widget. Empty, home shows the contact widget instead
   products: Product[];
-  // The two wall items that rotate in the home page widget, always images
   highlights: WallItem[];
-  // Images on the home page widgets
   covers: {
     photography?: string;
     digitalArt?: string;

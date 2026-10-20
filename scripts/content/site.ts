@@ -1,5 +1,3 @@
-// About and contact as they were hard-coded, imported once by
-// scripts/import-content.mts
 
 export const about = {
   headline:
@@ -22,7 +20,6 @@ export const contact = {
   email: "verhulstjoan@gmail.com",
 };
 
-// Shown on the home page widgets
 export const covers = {
   photography: "/assets/images/photography/photog_thumbnail.jpg",
   digitalArt: "/assets/images/digital-art/tree.jpg",

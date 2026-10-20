@@ -18,9 +18,6 @@ import cn from "~/utils/cn";
 import { isFooterClosed, openFooter } from "~/utils/footer";
 import SlideCard from "./slider-card";
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-// The mini slider on the about page shares the exported ones, scaled down
 export const GAP = 20;
 export const INACTIVE_SIZE = 128;
 const FIXED_HEIGHT = SLIDE_HEIGHT;
@@ -30,15 +27,10 @@ export const CLICK_THRESHOLD = 5;
 // How far a flick carries on after the finger lets go, in ms of its speed. A
 // fast flick passes several slides, a slow one settles on the nearest
 export const MOMENTUM = 220;
-// Past the first or last slide a drag only follows at this share, so it
-// stretches a little and springs back instead of running off
 export const OVERDRAG = 0.25;
-// How far past the last piece a finger has to pull to open the footer
 const PULL_TO_FOOTER = 160;
 // The settle after a drag or flick: long and soft, so it glides into place
 export const SETTLE = { duration: 0.7, ease: "power3.out" };
-
-// ─── Hooks ────────────────────────────────────────────────────────────────────
 
 // Layout effect, so the size is known before the slider is first painted
 function useViewportSize(): { width: number; height: number } {
@@ -54,8 +46,6 @@ function useViewportSize(): { width: number; height: number } {
 
   return size;
 }
-
-// ─── Component ────────────────────────────────────────────────────────────────
 
 interface Props {
   items: Artwork[];
@@ -101,14 +91,11 @@ const HorizontalImageSlider = ({
       ),
     [items, crossAxisSize, isVertical],
   );
-  // Only the viewport is missing on the first render, and on the server
   const ready = viewportWidth > 0;
   const viewportCenter = isVertical ? viewportHeight / 2 : viewportWidth / 2;
 
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
-  // One tween per image, retargeted on every move. Starting a new one on every
-  // move piled up dozens per image, all writing the same transform
   const parallax = useRef(new Map<HTMLImageElement, gsap.QuickToFunc>());
   const shiftImage = useCallback((img: HTMLImageElement, x: number) => {
     let to = parallax.current.get(img);
@@ -119,8 +106,6 @@ const HorizontalImageSlider = ({
     to(x);
   }, []);
 
-  // The height each slide is heading for while dragging, so only the ones
-  // that change get a new tween
   const previewHeights = useRef<number[]>([]);
 
   const setSlideRef = useCallback(
@@ -136,15 +121,12 @@ const HorizontalImageSlider = ({
     [],
   );
 
-  // Drag state
   const isDragging = useRef(false);
   const dragStartPos = useRef(0);
   const dragStartSliderPos = useRef(0);
   const dragLastPos = useRef(0);
   const dragLastTime = useRef(0);
   const dragVelocity = useRef(0);
-
-  // ── Layout helpers ──────────────────────────────────────────────────────────
 
   const getSlideMainSize = useCallback(
     (index: number, forActiveIndex: number): number =>
@@ -195,8 +177,6 @@ const HorizontalImageSlider = ({
     ],
   );
 
-  // The offsets with the first and the last slide centred. Dragging past them
-  // only stretches
   const clampWithResistance = useCallback(
     (offset: number): number => {
       const max = calculateCenterOffset(0);
@@ -208,8 +188,6 @@ const HorizontalImageSlider = ({
     [calculateCenterOffset, items.length],
   );
 
-  // ── Cleanup all GSAP animations on unmount ────────────────────────────────────
-
   useEffect(() => {
     return () => {
       if (sliderRef.current) gsap.killTweensOf(sliderRef.current);
@@ -217,8 +195,6 @@ const HorizontalImageSlider = ({
       imgRefs.current.forEach((i) => i && gsap.killTweensOf(i));
     };
   }, []);
-
-  // ── GSAP: animate slide sizes + slider position ──────────────────────────────
 
   // Layout effect, so the slides are in place before the slider is first painted
   useLayoutEffect(() => {
@@ -229,12 +205,8 @@ const HorizontalImageSlider = ({
     prevIsVertical.current = isVertical;
 
     if (orientationFlipped) {
-      // A tween started by the last resize would carry on and move the stale
-      // axis back, so it goes first
       gsap.killTweensOf(sliderRef.current);
       gsap.set(sliderRef.current, { clearProps: "x,y" });
-      // The slides outlive the flip, so drop the sizes of the old layout and
-      // let the classes size the cross axis again
       slideRefs.current.forEach((slide) => {
         if (!slide) return;
         gsap.killTweensOf(slide);
@@ -281,8 +253,6 @@ const HorizontalImageSlider = ({
     getSlideMainSize,
   ]);
 
-  // ── GSAP: live height preview during drag ───────────────────────────────────
-
   useEffect(() => {
     if (isVertical) return;
     slideRefs.current.forEach((slide, index) => {
@@ -300,8 +270,6 @@ const HorizontalImageSlider = ({
       gsap.to(slide, { height, duration: 0.6, ease: "power2.out" });
     });
   }, [pendingIndex]);
-
-  // ── Drag ────────────────────────────────────────────────────────────────────
 
   const getEventPos = (
     e: MouseEvent | TouchEvent | React.MouseEvent | React.TouchEvent,
@@ -390,7 +358,6 @@ const HorizontalImageSlider = ({
     const dragDelta = currentPos - dragStartSliderPos.current;
 
     if (Math.abs(dragDelta) < CLICK_THRESHOLD) {
-      // A tap past the end still springs back
       gsap.to(sliderRef.current, {
         [axis]: calculateCenterOffset(activeIndex),
         ...SETTLE,
@@ -435,16 +402,12 @@ const HorizontalImageSlider = ({
     shiftImage,
   ]);
 
-  // ── Wheel ───────────────────────────────────────────────────────────────────
-
   const wheelAccumulator = useRef(0);
   const wheelTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleWheel = useCallback(
     (e: WheelEvent) => {
       const delta = isVertical ? e.deltaY : e.deltaX || e.deltaY;
-      // Left to the footer: on from the last piece, and anything while the
-      // footer is open or being pulled
       const container = containerRef.current;
       const pastLast = delta > 0 && activeIndex === items.length - 1;
       if (container && (!isFooterClosed(container) || pastLast)) {
@@ -472,16 +435,12 @@ const HorizontalImageSlider = ({
     [isVertical, activeIndex, items.length, onActiveIndexChange],
   );
 
-  // React listens to wheel passively, so its handler couldn't keep the page
-  // from scrolling along
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
     container.addEventListener("wheel", handleWheel, { passive: false });
     return () => container.removeEventListener("wheel", handleWheel);
   }, [handleWheel]);
-
-  // ── Global listeners ────────────────────────────────────────────────────────
 
   useEffect(() => {
     window.addEventListener("mousemove", handleDragMove);
@@ -496,8 +455,6 @@ const HorizontalImageSlider = ({
     };
   }, [handleDragMove, handleDragEnd]);
 
-  // ── Slide click ─────────────────────────────────────────────────────────────
-
   const handleSlideClick = useCallback(
     (index: number) => {
       if (!sliderRef.current) return;
@@ -511,8 +468,6 @@ const HorizontalImageSlider = ({
     [isVertical, onActiveIndexChange],
   );
 
-  // ── Render ──────────────────────────────────────────────────────────────────
-
   return (
     <div
       className={cn(
@@ -524,8 +479,6 @@ const HorizontalImageSlider = ({
         !ready && "invisible",
       )}
       ref={containerRef}
-      // Takes every touch, so a pull past the last piece opens the footer
-      // instead, see handleDragEnd
       data-gestures
       onMouseDown={handleDragStart}
       onTouchStart={handleDragStart}
@@ -546,7 +499,6 @@ const HorizontalImageSlider = ({
             isActive={index === activeIndex}
             isHovered={hoveredIndex === index}
             isVertical={isVertical}
-            // Stable, so a card only renders again when it changes itself
             slideRef={setSlideRef}
             imgRef={setImgRef}
             onSelect={handleSlideClick}

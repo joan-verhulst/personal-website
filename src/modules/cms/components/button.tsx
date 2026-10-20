@@ -14,8 +14,6 @@ export const buttonVariants = cva(
   {
     variants: {
       variant: {
-        // The page's main action: a pill, with its icon after the label. Every
-        // other variant has its icon before the label
         primary: "rounded-full bg-primary-500 text-white hover:bg-primary-600",
         tertiary:
           "rounded-[10px] border border-neutral-950/10 bg-white text-neutral-950 hover:bg-neutral-100",
@@ -29,12 +27,10 @@ export const buttonVariants = cva(
         default: "h-[33px] px-3",
         sm: "h-7 px-2.5",
         icon: "size-[33px] shrink-0 rounded-[10px] p-0",
-        // Larger under a finger, which needs more room than a mouse pointer
         "icon-sm": "size-7 pointer-coarse:size-9 shrink-0 rounded-[10px] p-0",
       },
     },
     compoundVariants: [
-      // A primary icon button stays round, like the + next to the bottom nav
       {
         variant: "primary",
         size: ["icon", "icon-sm"],
@@ -42,7 +38,6 @@ export const buttonVariants = cva(
       },
     ],
     defaultVariants: {
-      // Neutral, so a button only turns primary when asked to
       variant: "tertiary",
       size: "default",
     },
@@ -56,17 +51,11 @@ interface BaseProps
     ButtonHTMLAttributes<HTMLButtonElement> {
   children?: ReactNode;
   ref?: Ref<HTMLButtonElement>;
-  /**
-   * Renders a link styled as a button. A page of the admin goes in as its
-   * canonical path, like "/admin/ui-ux".
-   */
   href?: string;
   withArrow?: boolean;
-  /** Shows a spinner and blocks clicks while an action runs. */
   isPending?: boolean;
 }
 
-// Icon buttons have no text, so they have to say what they do
 type ButtonProps = BaseProps &
   (
     | { size?: Exclude<Size, "icon" | "icon-sm"> | null }
@@ -90,7 +79,6 @@ const Button = ({
   const spinner = <LoaderCircle className="animate-spin" size={16} />;
   const classes = cn(buttonVariants({ variant, size }), className);
 
-  // An icon button swaps its icon for the spinner, a text button keeps its label
   const content = isPending ? (
     isIcon ? (
       spinner

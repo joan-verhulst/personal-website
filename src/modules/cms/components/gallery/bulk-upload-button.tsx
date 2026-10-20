@@ -17,18 +17,12 @@ import {
 const count = (total: number, config: { noun: string; plural: string }) =>
   `${total} ${total === 1 ? config.noun : config.plural}`;
 
-/**
- * Adds pieces one by one, each titled after its file, and sums them up in
- * one toast at the end: twenty photos would be twenty toasts otherwise. For
- * a batch of uploads, or a batch picked from Media.
- */
 export const useAddPieces = (kind: GalleryKind) => {
   const config = GALLERIES[kind];
   const { run } = useAction();
   const added = useRef(0);
   const failed = useRef(0);
 
-  /** Call before the first file. */
   const start = () => {
     added.current = 0;
     failed.current = 0;
@@ -48,7 +42,6 @@ export const useAddPieces = (kind: GalleryKind) => {
         }),
       false,
     );
-    // The file stays in Media either way, so a failure only needs counting
     if (result && !result.error) added.current += 1;
     else failed.current += 1;
   };
@@ -58,7 +51,6 @@ export const useAddPieces = (kind: GalleryKind) => {
     failed.current += 1;
   };
 
-  /** Call after the last file. Returns how many were added. */
   const finish = () => {
     if (added.current) {
       toast.success(
@@ -77,17 +69,10 @@ interface Props {
   kind: GalleryKind;
   disabled?: boolean;
   "aria-describedby"?: string;
-  /** True from the first file to the last, so the dialog around it can wait. */
   onUploadingChange?: (isUploading: boolean) => void;
-  /** Runs after the last file, with how many pieces were added. */
   onDone?: (added: number) => void;
 }
 
-/**
- * Uploads and adds many pieces at once, each titled after its file, for when
- * filling in the form would mean one round trip per image. It sits in the
- * "New" dialog, next to the button that uploads a single image.
- */
 const BulkUploadButton = ({
   kind,
   disabled,

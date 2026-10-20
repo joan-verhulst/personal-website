@@ -13,11 +13,6 @@ type Favorite = "on-rotation" | "gear";
 const isFavorite = (id: string): id is Favorite =>
   id === "on-rotation" || id === "gear";
 
-/**
- * On Rotation and Gear in their modals, for every page. Opened by their
- * tiles on home and in the island's tray, and from the room on the about
- * page, see openWidget. The about page has both on it as well.
- */
 const FavoritesHost = () => {
   const [open, setOpen] = useState<Favorite | null>(null);
 
@@ -25,7 +20,6 @@ const FavoritesHost = () => {
     const handleWidget = (event: Event) => {
       const { id, from } = (event as CustomEvent<OpenWidgetDetail>).detail;
       if (!isFavorite(id)) return;
-      // Tells the island it was taken care of, so it stays on this page
       event.preventDefault();
       track("Widget Opened", { widget: id, from });
       setOpen(id);

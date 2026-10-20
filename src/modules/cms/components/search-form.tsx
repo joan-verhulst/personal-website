@@ -16,18 +16,14 @@ import type { SiteRow } from "~/modules/content/utils/rows";
 
 const FORM_ID = "search-form";
 
-// Where search results start cutting a description off
 const VISIBLE_LENGTH = 155;
 
 interface Props {
   site: SiteRow;
-  /** What each page says while its field is empty, see fallbackDescription. */
   fallbacks: Record<PageKey, string>;
-  /** Each page's title as a search result shows it. */
   titles: Record<PageKey, string>;
 }
 
-/** How long a description is, and whether search results show all of it. */
 const Length = ({
   control,
   name,
@@ -48,7 +44,6 @@ const Length = ({
   );
 };
 
-/** The search descriptions' editor: the header, a section per page and Save in the bottom bar. */
 const SearchForm = ({ site, fallbacks, titles }: Props) => {
   const { run, isPending } = useAction();
   const {
@@ -69,7 +64,6 @@ const SearchForm = ({ site, fallbacks, titles }: Props) => {
     },
   });
 
-  // Leaving the page would drop unsaved changes, so it asks first
   useUnsavedWarning(isDirty);
 
   const onSubmit = handleSubmit(async (values) => {
@@ -79,7 +73,6 @@ const SearchForm = ({ site, fallbacks, titles }: Props) => {
       setErrors(result.fieldErrors);
       return;
     }
-    // What was saved is the new starting point, so Save turns off again
     reset(values);
   });
 

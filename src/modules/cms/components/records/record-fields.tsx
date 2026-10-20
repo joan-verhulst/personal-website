@@ -32,7 +32,6 @@ export const recordValuesFrom = (row: RecordRow): RecordValues => ({
   favoriteTitle: row.favorite_title,
 });
 
-/** The form both the new record dialog and the edit dialog fill in. */
 export const useRecordForm = (defaultValues: RecordValues) =>
   useForm({ schema: recordSchema, defaultValues });
 
@@ -45,13 +44,10 @@ const typeOptions = [
 
 interface FieldsProps {
   form: RecordForm;
-  // Keeps ids unique when two record forms share a page
   idPrefix: string;
-  /** Runs before the type changes, with the type it's changing to. */
   onTypeChange?: (type: RecordValues["type"]) => void;
 }
 
-/** Type, title and artist: what the record is. */
 export const RecordDetailsFields = ({
   form,
   idPrefix,
@@ -109,7 +105,6 @@ export const RecordDetailsFields = ({
   );
 };
 
-/** The song whose preview plays on the turntable. */
 export const FavoriteSongFields = ({ form, idPrefix }: FieldsProps) => {
   const { register, errors } = form;
 

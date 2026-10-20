@@ -51,7 +51,6 @@ const HEX = /^#[0-9a-f]{6}$/i;
 
 const usedBy = (usage: number) => `${usage} item${usage === 1 ? "" : "s"}`;
 
-/** A single color logo, tinted like the site does it. */
 const TagLogo = ({ logo, color }: { logo: string; color: string }) => (
   <span
     aria-hidden
@@ -66,19 +65,15 @@ const TagLogo = ({ logo, color }: { logo: string; color: string }) => (
   />
 );
 
-/** Deleting asks first, from a row's menu and from the edit dialog alike. */
 const useDeleteTag = (tag: WallTagRow | null, usage: number) => {
   const confirm = useConfirm();
   const router = useRouter();
   const { href } = useAdminPath();
   const { run, isPending } = useAction();
 
-  // Resolves to whether the tag is gone
   const deleteTag = async () => {
     if (!tag) return false;
 
-    // The database refuses a tag that items still have, so this doesn't
-    // offer a delete that can only fail
     if (usage) {
       const wantsItems = await confirm({
         title: "This tag is in use",
@@ -104,12 +99,8 @@ const useDeleteTag = (tag: WallTagRow | null, usage: number) => {
   return { deleteTag, isPending };
 };
 
-// ── The create and edit dialog ───────────────────────────────────────────────
-
 interface TagDialogProps {
-  // Null creates a new tag
   tag: WallTagRow | null;
-  // How many items use the tag
   usage: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -119,7 +110,6 @@ const TagDialog = ({ tag, usage, open, onOpenChange }: TagDialogProps) => {
   const formId = useId();
   const { run, isPending } = useAction();
   const remove = useDeleteTag(tag, usage);
-  // Save waits for a logo that's still going up
   const [isUploading, setIsUploading] = useState(false);
   const {
     control,
@@ -154,7 +144,6 @@ const TagDialog = ({ tag, usage, open, onOpenChange }: TagDialogProps) => {
   });
 
   const handleOpenChange = (isOpen: boolean) => {
-    // Closing mid-delete would hide how it went
     if (!isOpen && remove.isPending) return;
     onOpenChange(isOpen);
   };
@@ -184,7 +173,6 @@ const TagDialog = ({ tag, usage, open, onOpenChange }: TagDialogProps) => {
             disabled={isPending}
             onClick={handleDelete}
           >
-            {/* The spinner takes over from the icon while it deletes */}
             {!remove.isPending && <Trash2 size={16} aria-hidden />}
             Delete
           </Button>
@@ -217,7 +205,6 @@ const TagDialog = ({ tag, usage, open, onOpenChange }: TagDialogProps) => {
                 <input
                   type="color"
                   aria-label="Pick a color"
-                  // The picker only takes a full hex, so it holds still while one is typed
                   value={previewColor}
                   onChange={(event) => field.onChange(event.target.value)}
                   className="h-[35px] w-12 shrink-0 cursor-pointer rounded-xl border border-neutral-950/10 bg-white p-1 focus-visible:outline-2 focus-visible:outline-primary-500"
@@ -289,7 +276,6 @@ const TagDialog = ({ tag, usage, open, onOpenChange }: TagDialogProps) => {
           </span>
           <Input.Hint>
             A single color SVG, tinted to the color above.
-            {/* Replace only changes the form here, unlike in the other dialogs */}
             {tag && dirtyFields.logo && " Save to keep the change."}
           </Input.Hint>
           <Input.Error error={errors.logo} />
@@ -297,7 +283,6 @@ const TagDialog = ({ tag, usage, open, onOpenChange }: TagDialogProps) => {
 
         <Input.Root>
           <Input.Label as="span">Preview</Input.Label>
-          {/* The two ways the wall shows a tag: on a colored card and on a light one */}
           <div className="grid grid-cols-1 gap-2">
             <div
               className="flex h-16 min-w-0 items-center justify-center overflow-hidden rounded-xl px-3"
@@ -322,8 +307,6 @@ const TagDialog = ({ tag, usage, open, onOpenChange }: TagDialogProps) => {
     </FormDialog>
   );
 };
-
-// ── The table ─────────────────────────────────────────────────────────────────
 
 interface TagMenuProps {
   tag: WallTagRow;
@@ -373,14 +356,11 @@ const TagMenu = ({ tag, usage, onEdit }: TagMenuProps) => {
 
 interface Props {
   tags: WallTagRow[];
-  // How many items use each tag
   usage: Record<string, number>;
 }
 
-/** The tags page: its header, the table of tags and their dialog. */
 const TagsEditor = ({ tags, usage }: Props) => {
   const [isOpen, setIsOpen] = useState(false);
-  // A fresh key per opening, so the form starts from the tag's saved values
   const [editing, setEditing] = useState<{
     tag: WallTagRow | null;
     key: number;
@@ -409,8 +389,6 @@ const TagsEditor = ({ tags, usage }: Props) => {
       {tags.length === 0 ? (
         <EmptyState title="No tags yet" action={newTagButton} />
       ) : (
-        // The table is the page's one section, so it fills its container
-        // edge to edge instead of sitting in a second box
         <div className={cn(panelClass, "overflow-hidden")}>
           <Table>
             <TableHeader>
@@ -465,7 +443,6 @@ const TagsEditor = ({ tags, usage }: Props) => {
         </div>
       )}
 
-      {/* The bar's round + adds what the page is about: here that's a tag */}
       <PageActions isCompact>
         <Tooltip>
           <TooltipTrigger asChild>

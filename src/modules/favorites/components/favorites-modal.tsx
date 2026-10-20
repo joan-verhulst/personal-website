@@ -12,10 +12,6 @@ interface Props {
   children: ReactNode;
 }
 
-/**
- * The modal On Rotation and Gear each open in, the same size for both so they
- * line up on the same width.
- */
 const FavoritesModal = ({ isOpen, onClose, title, children }: Props) => {
   const contentRef = useRef<HTMLDivElement>(null);
   const { animationsEnabled } = useAnimationPreference();
@@ -41,9 +37,6 @@ const FavoritesModal = ({ isOpen, onClose, title, children }: Props) => {
       onClose={onClose}
       title={title}
       onOpenComplete={handleOpenComplete}
-      // Sized so the player has the same space on every side. Whatever is
-      // taller scrolls inside it. On small screens it takes the height there
-      // is, as everything stacks
       className="h-[90dvh] md:h-[min(32.5625rem,90vh)]"
     >
       {/*
@@ -63,7 +56,6 @@ const FavoritesModal = ({ isOpen, onClose, title, children }: Props) => {
           scroll box. Neither scrolls on large screens: both fit the width above
         */}
         <div className="-mx-4 -my-6 h-[calc(100%+3rem)] overflow-y-auto px-4 py-6 md:overflow-hidden">
-          {/* A column the height of the modal, so a section can centre itself in it */}
           <div className="mx-auto flex min-h-full w-full max-w-(--stage) flex-col">
             {children}
           </div>

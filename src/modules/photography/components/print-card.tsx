@@ -20,7 +20,6 @@ interface Props {
   print: Print;
   number: number;
   view: PhotoView;
-  // Rendered width of the photo, so Next sends a copy big enough
   sizes: string;
   haptic: ReturnType<typeof useHapticSound>;
   cardRef: (element: HTMLButtonElement | null) => void;
@@ -30,11 +29,6 @@ interface Props {
   onFocus?: (event: FocusEvent<HTMLButtonElement>) => void;
 }
 
-/**
- * A photo printed on white paper with its caption below. The card is
- * positioned and sized by the table, or by the grid as a tinted tile, and
- * the paper fits itself inside whatever box it gets.
- */
 const PrintCard = ({
   print,
   number,
@@ -56,7 +50,6 @@ const PrintCard = ({
       data-print
       aria-label={onOpen && `Open ${print.title}`}
       tabIndex={onOpen ? undefined : -1}
-      // The table decides whether it was a click or the end of a drag
       onClick={onOpen}
       onMouseEnter={haptic.onMouseEnter}
       onFocus={onFocus}
@@ -75,7 +68,6 @@ const PrintCard = ({
           : undefined
       }
     >
-      {/* Straightens out of the table's tilt when picked up */}
       <span
         className={cn(
           // An outline rather than a border, so it doesn't change the paper's size
@@ -104,7 +96,6 @@ const PrintCard = ({
             draggable={false}
           />
         </span>
-        {/* Zero width with full min width, so a long title truncates instead of widening the paper */}
         <span
           className="flex w-0 min-w-full items-center gap-1.5 text-[0.625rem] text-neutral-500"
           style={{ height: PAPER_LABEL }}

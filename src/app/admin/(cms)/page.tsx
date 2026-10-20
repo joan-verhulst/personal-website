@@ -29,7 +29,6 @@ const AdminHome = async () => {
   const { items, products, photos, artworks, records } =
     await readContentCounts();
 
-  // Only collections get a count; the pages under Site are a single page each
   const counts: Record<string, string> = {
     "/admin/ui-ux": plural(items, "item", "items"),
     "/admin/products": plural(products, "product", "products"),
@@ -43,7 +42,6 @@ const AdminHome = async () => {
 
   return (
     <>
-      {/* View site and Refresh site are in the sidebar, on every page */}
       <Header
         title="Dashboard"
         description="Everything on the site. Saving publishes straight away: the next visit sees the change."
@@ -72,7 +70,6 @@ const AdminHome = async () => {
 
       {groups.map((section) => (
         <Panel key={section.id} title={section.label}>
-          {/* As many columns as fit the container, whatever the sidebar takes */}
           <ul className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-3">
             {section.items.map(({ url, label, icon: Icon }) => (
               <li key={url} className="flex min-w-0">

@@ -7,17 +7,11 @@ import QuickActions from "~/modules/cms/components/sidebar/quick-actions";
 import cn from "~/utils/cn";
 
 interface SidebarContentProps {
-  /** The signed in admin, shown on the account card. */
   email: string;
-  /** Called when a link is followed, so the mobile sheet can close. */
   onNavigate?: () => void;
   className?: string;
 }
 
-/**
- * Everything in the sidebar: logo, quick actions, the pages and the account
- * card. Shared by the column on desktop and the sheet on small screens.
- */
 export const SidebarContent = ({
   email,
   onNavigate,
@@ -42,7 +36,6 @@ interface SidebarProps {
   email: string;
 }
 
-/** The CMS navigation, a 252px column on the left from md up. */
 const Sidebar = ({ email }: SidebarProps) => (
   <aside className="hidden h-dvh w-[252px] shrink-0 bg-neutral-100 md:flex md:flex-col">
     <SidebarContent email={email} className="flex-1" />

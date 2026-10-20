@@ -15,18 +15,14 @@ import { useAction } from "~/modules/cms/hooks/use-action";
 
 interface Props {
   id: string;
-  /** The item's edit page, as a canonical path. */
   href: string;
   title: string;
-  // Where it shows on the site, so deleting can warn
   usage: string[];
 }
 
-/** The ⋮ menu on an item's card. */
 const ItemCardMenu = ({ id, href, title, usage }: Props) => {
   const confirm = useConfirm();
   const { run, isPending } = useAction();
-  // Set by the menu item, acted on once the menu has closed
   const isDeleteRequested = useRef(false);
 
   const handleDelete = async () => {

@@ -6,7 +6,6 @@ import {
   WeatherDemo,
 } from "~/modules/blog/demos/sky-demos";
 
-/** The cloud shader, from a tile of noise to a lit, moving deck. */
 const CloudShader = () => (
   <>
     <p>

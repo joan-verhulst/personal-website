@@ -24,7 +24,6 @@ const ItemsAdmin = async () => {
     isHighlight: highlights.has(item.id),
   }));
 
-  // The view counts them itself, for the line under its header
   return (
     <ItemsView
       items={cards}

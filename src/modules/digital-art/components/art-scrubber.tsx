@@ -8,25 +8,17 @@ import {
 import { useHapticSound } from "~/modules/core/hooks/use-haptic-sound";
 import cn from "~/utils/cn";
 
-// Height of a stem, in pixels
 const STEM = { shown: 14, active: 10, near: 9, rest: 6 };
 
 interface Props {
   pieces: { id: string; title: string }[];
   activeIndex: number;
-  // The piece a drag on the slider is heading for
   pendingIndex: number | null;
-  // The piece under the pointer, or being scrubbed to
   pointedIndex: number | null;
   onPoint: (index: number | null) => void;
   onSelect: (index: number) => void;
 }
 
-/**
- * A stem for every piece, like the ticks on the island's dial. The blue one
- * is the piece that's showing. Hover or drag along them to point at another,
- * which the island names, and click or let go to go there.
- */
 const ArtScrubber = ({
   pieces,
   activeIndex,
@@ -38,7 +30,6 @@ const ArtScrubber = ({
   const haptic = useHapticSound();
   const trackRef = useRef<HTMLDivElement>(null);
   const isScrubbing = useRef(false);
-  // Pointer moves come faster than renders, this one is always current
   const pointed = useRef<number | null>(null);
 
   const shown = pointedIndex ?? pendingIndex ?? activeIndex;
@@ -55,7 +46,6 @@ const ArtScrubber = ({
   const point = (index: number | null) => {
     if (index === pointed.current) return;
     pointed.current = index;
-    // A tick for every stem it passes
     if (index !== null) haptic.onMouseEnter();
     onPoint(index);
   };

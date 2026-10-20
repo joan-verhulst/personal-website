@@ -34,7 +34,6 @@ import type { UploadedMedia } from "~/modules/cms/utils/upload-media";
 import { formatBytes } from "~/modules/media/utils/media-types";
 import cn from "~/utils/cn";
 
-/** What a place takes: images, videos, either, or only SVGs (tag logos). */
 export type MediaAccept = "image" | "video" | "any" | "svg";
 
 const isSvg = (file: MediaFile) => /\.svg$/i.test(file.path);
@@ -43,11 +42,8 @@ const accepts = (accept: MediaAccept, file: MediaFile) =>
   accept === "any" ||
   (accept === "svg" ? isSvg(file) : file.kind === accept);
 
-// A form needs the size to lay a file out. Every upload measures it, so only
-// a file from before the media table can be without
 const isUsable = (file: MediaFile) => file.width > 0 && file.height > 0;
 
-/** A file from Media as a form takes it: the same as a fresh upload. */
 const toUploadedMedia = (file: MediaFile): UploadedMedia => ({
   path: file.path,
   url: file.url,
@@ -71,7 +67,6 @@ interface FileButtonProps {
   file: MediaFile;
   isPicked: boolean;
   onToggle: () => void;
-  /** Picks this one file straight away, for a double click. */
   onPick: () => void;
 }
 
@@ -147,19 +142,11 @@ interface MediaPickerProps {
   title: string;
   description?: ReactNode;
   accept: MediaAccept;
-  /** Lets several files be picked, for adding a batch at once. */
   multiple?: boolean;
-  /** The main button's label, by how many files are picked. */
   pickLabel: (count: number) => string;
   onPick: (files: UploadedMedia[]) => void;
 }
 
-/**
- * Picks files that are already in Media, newest first, to use the way an
- * upload would be. The library is read fresh each time it opens, so files
- * uploaded on another page are there too. A double click picks one file
- * right away.
- */
 export const MediaPicker = ({
   open,
   onOpenChange,
@@ -197,7 +184,6 @@ export const MediaPicker = ({
     };
   }, []);
 
-  // Each opening starts over: fresh files, nothing picked
   useEffect(() => {
     if (!open) return;
     setPicked([]);
@@ -333,20 +319,6 @@ interface ChooseFromMediaProps extends Omit<MediaPickerProps, "open" | "onOpenCh
   "aria-describedby"?: string;
 }
 
-/**
- * The button next to an upload button that picks from Media instead. It
- * hands over the same thing an upload does.
- *
- * @example
- * <ChooseFromMedia
- *   title="Choose a photo"
- *   accept="image"
- *   pickLabel={() => "Use photo"}
- *   onPick={([media]) => setImage(media)}
- * >
- *   Choose from Media
- * </ChooseFromMedia>
- */
 export const ChooseFromMedia = ({
   children,
   variant = "tertiary",

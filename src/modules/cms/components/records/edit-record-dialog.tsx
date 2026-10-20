@@ -29,16 +29,11 @@ import { mediaUrl } from "~/modules/media/utils/media-url";
 
 interface Props {
   row: RecordRow;
-  /** True for the first record, the one on the home page widget. */
   isFirst: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-/**
- * A record's edit dialog: its cover, its details and its favorite song. Mount
- * it with a new key for every opening, so the form starts from what's saved.
- */
 const EditRecordDialog = ({ row, isFirst, open, onOpenChange }: Props) => {
   const id = useId();
   const formId = `${id}-form`;
@@ -54,20 +49,16 @@ const EditRecordDialog = ({ row, isFirst, open, onOpenChange }: Props) => {
     formState: { isDirty },
   } = form;
 
-  // Closing or reloading the tab would drop unsaved changes, so it asks first.
-  // Closing the dialog asks too, through isDirty below
   useUnsavedWarning(open && isDirty);
 
   const isBusy = remove.isPending || isUploading || cover.isPending;
 
-  // Uploaded or picked from Media, it saves right away
   const replaceCover = (media: UploadedMedia) =>
     cover
       .run(() => replaceRecordCover(row.id, media.path), "Cover replaced")
       .then(() => undefined);
 
   const handleOpenChange = (isOpen: boolean) => {
-    // A delete or a new cover mid-way would lose its result with the dialog
     if (!isOpen && isBusy) return;
     onOpenChange(isOpen);
   };
@@ -107,7 +98,6 @@ const EditRecordDialog = ({ row, isFirst, open, onOpenChange }: Props) => {
           disabled={isPending || isUploading || cover.isPending}
           onClick={handleDelete}
         >
-          {/* The spinner takes over from the icon while it deletes */}
           {!remove.isPending && <Trash2 size={16} aria-hidden />}
           Delete
         </Button>
@@ -124,7 +114,6 @@ const EditRecordDialog = ({ row, isFirst, open, onOpenChange }: Props) => {
         <Input.Root>
           <Input.Label as="span">Cover</Input.Label>
           <div className="relative size-28 overflow-hidden rounded-xl border border-neutral-950/10 bg-neutral-100">
-            {/* Without one, its cover was deleted from Media */}
             {row.cover && (
               <Image
                 src={mediaUrl(row.cover)}

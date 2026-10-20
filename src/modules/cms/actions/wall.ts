@@ -24,11 +24,7 @@ import {
 import { WALL_SLOTS, type WallLayout } from "~/modules/content/types";
 import type { WallItemRow, WallListId } from "~/modules/content/utils/rows";
 
-// Null is "make a new one". Actions can be called with anything, so an id
-// that is given is checked before it goes into a filter
 const optionalIdSchema = v.nullish(idSchema);
-
-// ── Items ─────────────────────────────────────────────────────────────────────
 
 const itemColumns = (item: v.InferOutput<typeof wallItemSchema>) => ({
   title: item.title,
@@ -46,10 +42,6 @@ const itemColumns = (item: v.InferOutput<typeof wallItemSchema>) => ({
   link_href: orNull(item.linkHref),
 });
 
-/**
- * Why an item can't become a video where it sits, or null when it can.
- * Small slots and the home highlights only take images.
- */
 const refuseVideo = async (supabase: SupabaseClient, id: string) => {
   const { data: blocks, error } = await supabase
     .from("wall_blocks")
@@ -78,10 +70,6 @@ const refuseVideo = async (supabase: SupabaseClient, id: string) => {
   return null;
 };
 
-/**
- * Puts a new item at the end of the experiments. Ids in the list whose item
- * is gone are dropped on the way, so one stale entry can't block the save.
- */
 const addToExperiments = async (
   supabase: SupabaseClient,
   id: string,
@@ -110,12 +98,6 @@ const addToExperiments = async (
   ]);
 };
 
-/**
- * Creates an item when there's no id yet, otherwise saves it. A new item made
- * with list "experiments" also goes at the end of that list. When only that
- * step fails, the item still exists: listError says so instead of error, so
- * the form moves on to the item rather than offering to create it twice.
- */
 export async function saveWallItem(
   id: string | null,
   input: unknown,
@@ -133,7 +115,6 @@ export async function saveWallItem(
   if (!parsed.success) return parsed.failure;
   const item = parsed.output;
 
-  // Uploaded here or picked from Media, the file has to be in the bucket
   const missing = await missingMedia(item.media);
   if (missing) return failed(missing);
 
@@ -147,7 +128,6 @@ export async function saveWallItem(
     );
     if (result.error !== undefined) return failed(result.error);
 
-    // Compared strictly, an action can be called with anything
     if (list === "experiments") {
       const added = await addToExperiments(supabase, result.id);
       if (added.error) {
@@ -175,17 +155,10 @@ export async function saveWallItem(
     itemColumns(item),
     "Couldn't save the item.",
   );
-  // A file that was replaced stays in Media
   if (failure) return failure;
   return { ...published(), id: itemId };
 }
 
-/**
- * Deletes an item the slow way, for a database without the delete_wall_item
- * function: every place it's used first, the item last. A failure halfway
- * then leaves an item that still exists and can be deleted again, never an id
- * that points at nothing.
- */
 const deleteItemInSteps = async (supabase: SupabaseClient, id: string) => {
   const { data: blocks, error: blocksError } = await supabase
     .from("wall_blocks")
@@ -237,12 +210,6 @@ const deleteItemInSteps = async (supabase: SupabaseClient, id: string) => {
   return { failure: null };
 };
 
-/**
- * Deletes an item and takes it off the wall and the lists. Its slots are left
- * empty, which hides those rows on the site until they're filled again.
- * returnToList is for its edit page: the browser goes back to the items, so
- * the page of an item that's gone never renders.
- */
 export async function deleteWallItem(
   id: string,
   returnToList = false,
@@ -254,8 +221,6 @@ export async function deleteWallItem(
   const parsedId = parseArgument(idSchema, id);
   if (!parsedId.success) return parsedId.failure;
 
-  // One function call, so the wall, the lists and the item change together.
-  // It comes with supabase/migrations/0003_cms_hardening.sql
   const { error } = await supabase.rpc("delete_wall_item", {
     item_id: parsedId.output,
   });
@@ -266,7 +231,6 @@ export async function deleteWallItem(
     return dbFailed(error, "Couldn't delete the item.");
   }
 
-  // Its file stays in Media
   const result = published();
   if (returnToList === true) {
     const { href } = await getAdminPaths();
@@ -275,9 +239,6 @@ export async function deleteWallItem(
   return result;
 }
 
-// ── Tags ──────────────────────────────────────────────────────────────────────
-
-// Postgres' foreign key violation, here when an item still has the tag
 const STILL_REFERENCED = "23503";
 
 export async function saveWallTag(
@@ -319,7 +280,6 @@ export async function saveWallTag(
     tag,
     "Couldn't save the tag.",
   );
-  // A logo that was replaced or removed stays in Media
   return failure ?? published();
 }
 
@@ -348,20 +308,15 @@ export async function deleteWallTag(id: string): Promise<ActionResult> {
     .delete()
     .eq("id", parsedId.output);
   if (error) {
-    // An item got the tag between the count and the delete
     if (error.code === STILL_REFERENCED) {
       return failed("An item uses this tag. Give it another tag first.");
     }
     return dbFailed(error, "Couldn't delete the tag.");
   }
 
-  // Its logo stays in Media
   return published();
 }
 
-// ── Blocks ────────────────────────────────────────────────────────────────────
-
-// Postgres' check violation, here when the table doesn't know a layout yet
 const CHECK_VIOLATION = "23514";
 
 const unique = (ids: string[]) => new Set(ids).size === ids.length;
@@ -371,11 +326,9 @@ const wallSchema = v.pipe(
     v.object({
       id: v.pipe(v.string(), v.uuid("A row has an invalid id.")),
       layout: v.picklist(WALL_LAYOUTS, "A row has an unknown layout."),
-      // An empty string is an empty slot
       items: v.array(v.string()),
     }),
   ),
-  // The ids of the rows that stay go into one filter, which has to fit a URL
   v.maxLength(200, "That's more rows than the wall can hold."),
   v.check(
     (rows) => rows.every((row) => row.items.length === WALL_SLOTS[row.layout]),
@@ -389,10 +342,6 @@ const wallSchema = v.pipe(
 
 type ItemKind = Pick<WallItemRow, "id" | "title" | "media_type">;
 
-/**
- * The items behind these ids, or null when one of them is gone. With
- * allowMissing, the ones that are gone are just left out.
- */
 const readItems = async (
   supabase: SupabaseClient,
   ids: string[],
@@ -410,17 +359,11 @@ const readItems = async (
   return { items: allowMissing || items.size === ids.length ? items : null };
 };
 
-/**
- * Saves the whole wall: these rows in this order, with their layouts and
- * items. Rows left out are deleted. Rows with an empty slot are saved too,
- * the site skips them until they're filled.
- */
 export async function saveWall(input: unknown): Promise<ActionResult> {
   const admin = await requireAdmin();
   if (admin.error) return failed(admin.error);
   const { supabase } = admin;
 
-  // Issues point into the list of rows, which no form shows
   const parsed = parseArgument(wallSchema, input);
   if (!parsed.success) return parsed.failure;
   const rows = parsed.output;
@@ -449,10 +392,6 @@ export async function saveWall(input: unknown): Promise<ActionResult> {
     }
   }
 
-  // Two requests: the rows that were removed go first, then the rest is
-  // written in one statement. In that order every state in between is a wall
-  // that works. The other way round, a failed delete would leave removed rows
-  // sharing their place in the order with the new ones.
   const kept = rows.map((row) => row.id);
   const removal = supabase.from("wall_blocks").delete();
   const { data: removed, error: removeError } = await (
@@ -464,8 +403,6 @@ export async function saveWall(input: unknown): Promise<ActionResult> {
   ).select("id");
   if (removeError) return dbFailed(removeError, "Couldn't save the wall.");
 
-  // The editor makes the ids, which keeps a second save from adding the rows
-  // again.
   if (rows.length) {
     const { error } = await supabase.from("wall_blocks").upsert(
       rows.map((row, index) => ({
@@ -477,7 +414,6 @@ export async function saveWall(input: unknown): Promise<ActionResult> {
     );
     if (error) {
       console.error(error);
-      // The removed rows are gone already, so the site has to hear about it
       if (removed?.length) published();
       if (error.code === CHECK_VIOLATION) {
         return failed(
@@ -495,8 +431,6 @@ export async function saveWall(input: unknown): Promise<ActionResult> {
   return published();
 }
 
-// ── Lists ─────────────────────────────────────────────────────────────────────
-
 const LIST_IDS = [
   "experiments",
   "highlights",
@@ -506,17 +440,11 @@ const listSchema = v.object({
   id: v.picklist(LIST_IDS),
   items: v.pipe(
     v.array(v.string()),
-    // Empty picks are skipped, as before
     v.transform((items) => items.filter(Boolean)),
     v.check(unique, "An item can only be in the list once."),
   ),
 });
 
-/**
- * Checks a list and writes it, without publishing: saveWallItem adds to the
- * experiments as part of its own save. The lists have no foreign keys, so
- * this is the only place that keeps ids of deleted items out.
- */
 const writeWallList = async (
   supabase: SupabaseClient,
   id: unknown,
@@ -535,7 +463,6 @@ const writeWallList = async (
     );
   }
 
-  // The home widget rotates two highlights as still images
   if (list.id === "highlights") {
     const known = read.items;
     if (list.items.length > 2) return failed("There are only two highlights.");

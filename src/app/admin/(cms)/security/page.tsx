@@ -17,8 +17,6 @@ const dateFormat = new Intl.DateTimeFormat("en-GB", {
 const SecurityAdmin = async () => {
   const [user, supabase] = await Promise.all([adminUser(), adminClient()]);
 
-  // Only the ones that were confirmed with a code. A setup that was left
-  // halfway isn't an authenticator
   const authenticators = verifiedFactors(user).map((factor) => ({
     id: factor.id,
     name: factor.friendly_name || "Authenticator",
@@ -29,7 +27,6 @@ const SecurityAdmin = async () => {
   // the database's own check. It's run by hand, so without a reminder a
   // forgotten run would leave the database open to a password alone
   const { data: isEnforced, error } = await supabase.rpc("two_factor_enforced");
-  // Any other error says nothing about the migration, so the page stays quiet
   if (error && error.code !== MISSING_FUNCTION) console.error(error);
   const needsMigration = error
     ? error.code === MISSING_FUNCTION

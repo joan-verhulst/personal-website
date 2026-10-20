@@ -6,7 +6,6 @@ import type {
   WallTagRow,
 } from "~/modules/content/utils/rows";
 
-/** Everything the UI/UX screens work with, in one go. */
 export const readWall = async () => {
   const [items, tags, blocks, lists] = await Promise.all([
     readRows<WallItemRow>("wall_items", "title"),

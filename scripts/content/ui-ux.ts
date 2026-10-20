@@ -1,4 +1,3 @@
-// The UI/UX wall as it was hard-coded, imported once by scripts/import-content.mts
 import type { WallBlock, WallItem, WallTag } from "../../src/modules/content/types.ts";
 
 const tags = {
@@ -28,8 +27,6 @@ const tags = {
 
 const WORK = "/assets/images/work";
 const EXPERIMENTS = "/assets/images/experiments";
-
-// ── Eyes ──────────────────────────────────────────────────────────────────────
 
 const eyesShowcase: WallItem = {
   id: "eyes-landingspage-showcase",
@@ -104,7 +101,6 @@ const navIsland: WallItem = {
     height: 1080,
   },
   background: "mint",
-  // The recording includes browser tabs and the taskbar
   zoom: 1.4,
 };
 
@@ -121,7 +117,6 @@ const navAnticipation: WallItem = {
   background: "forest",
 };
 
-// ── Pixel Perfect ─────────────────────────────────────────────────────────────
 
 const ppaLanding: WallItem = {
   id: "ppa-landing",
@@ -185,8 +180,6 @@ const ppaShowcase: WallItem = {
   link: { label: "Visit site", href: "https://pixelperfect.agency/" },
 };
 
-// ── MCP Hosted ────────────────────────────────────────────────────────────────
-
 const mcpDemo: WallItem = {
   id: "mcp-demo",
   title: "Website walkthrough",
@@ -235,8 +228,6 @@ const mcpConnections: WallItem = {
   link: { label: "Visit site", href: "https://mcphosted.com/" },
 };
 
-// ── Spark ─────────────────────────────────────────────────────────────────────
-
 const sparkReel: WallItem = {
   id: "spark-showcase-reel",
   title: "Design system reel",
@@ -267,8 +258,6 @@ const sparkCampaigns: WallItem = {
   description:
     "A typical Spark screen: sidebar, key numbers, a filterable table and a floating bar for switching views.",
 };
-
-// ── Loose work ────────────────────────────────────────────────────────────────
 
 const showreel: WallItem = {
   id: "showcase-reel",
@@ -355,8 +344,6 @@ const distressedInk: WallItem = {
   },
 };
 
-// ── Wall ──────────────────────────────────────────────────────────────────────
-
 // Ordered by importance: the most important work takes the big slots near
 // the top, the least important sits in the last row
 export const uiUxWall: WallBlock[] = [
@@ -382,9 +369,6 @@ export const uiUxWall: WallBlock[] = [
   },
 ];
 
-// Side projects and motion studies, shown in the experiments modal on the
-// home page instead of on the wall. The first two fill the home page widget:
-// an image, then a video.
 export const experiments: WallItem[] = [
   distressedInk,
   navIsland,

@@ -1,5 +1,3 @@
-// Paints the room's surfaces off the main thread, one after another, and
-// hands each back as it's done. Started from textures.ts
 
 import { paintSurface, type SurfaceName } from "~/modules/about/room/painting";
 

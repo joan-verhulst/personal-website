@@ -44,7 +44,6 @@ const WidgetCard = ({
         ease: "back.out(1.7)",
       });
 
-      // Start wiggle after 400ms of hovering
       wiggleTimeoutRef.current = setTimeout(() => {
         wiggleAnimationRef.current = gsap.to(card, {
           rotation: 2,
@@ -60,19 +59,16 @@ const WidgetCard = ({
     const handleMouseLeave = () => {
       if (!animationsEnabled) return;
 
-      // Clear the timeout if mouse leaves before 400ms
       if (wiggleTimeoutRef.current) {
         clearTimeout(wiggleTimeoutRef.current);
         wiggleTimeoutRef.current = null;
       }
 
-      // Kill the wiggle animation if it's running
       if (wiggleAnimationRef.current) {
         wiggleAnimationRef.current.kill();
         wiggleAnimationRef.current = null;
       }
 
-      // Reset scale and rotation
       gsap.to(card, {
         scale: 1,
         rotation: 0,
@@ -108,14 +104,12 @@ const WidgetCard = ({
   return (
     <div
       ref={cardRef}
-      // The part of a section link that the section opens out of
       data-tile
       onClick={() => {
         haptic.onClick();
         onClick?.();
       }}
       className={cn(
-        // inset-border sits over the image, so it reaches the rounded edge
         "relative inset-border aspect-square w-full cursor-pointer select-none rounded-4xl",
         !animationsEnabled &&
           "transition-transform duration-300 hover:scale-90",

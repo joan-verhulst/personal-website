@@ -45,7 +45,6 @@ const SliderIndicator = ({
 
   const sizeKey = isHorizontal ? "height" : "width";
 
-  // Priority: hover > pending (drag preview) > active
   const getStemStyles = (index: number) => {
     if (hoveredIndex !== null) {
       if (index === hoveredIndex)

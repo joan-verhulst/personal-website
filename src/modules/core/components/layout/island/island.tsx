@@ -38,42 +38,30 @@ import IslandDial from "~components/layout/island/island-dial";
 import IslandTicker from "~components/layout/island/island-ticker";
 import IslandTray from "~components/layout/island/island-tray";
 
-// Made from the headshot by scripts/make-icons.mts, like the favicon
 const HEADSHOT = "/icons/icon-192.png";
 
 type Unfold = "widgets" | "dial";
 
-// What the island unfolds into when it's clicked. Both are built, to try
-// them out in place: the home screen in miniature, or a tuning dial
 const UNFOLD = "widgets" as Unfold;
 
-// The island at rest, and unfolded, in pixels
 const SIZES = {
-  // Fits the headshot, the light and the name
   home: { width: 152, height: 36 },
   section: { width: 252, height: 36 },
   widgets: { width: 284, height: 244 },
   dial: { width: 480, height: 48 },
 };
 
-// The dial stays open for a moment, to show its cursor arrive
 const DIAL_LINGER = 1100;
 
 type Reveal = "always" | "hover";
 
-// When a page's controls show under the label. Both are built, to try them
-// out in place: always, or while the pointer is on the island. Without a
-// pointer that can hover, they always show
 const REVEAL = "always" as Reveal;
-// The controls stay a moment after the pointer leaves, so a slip doesn't
-// fold them away
 const REVEAL_LINGER = 400;
 
 interface LayerProps {
   isActive: boolean;
 }
 
-// One face of the island. Only the active one can be seen and used
 const Layer = ({ isActive, children }: PropsWithChildren<LayerProps>) => {
   return (
     <div
@@ -88,11 +76,6 @@ const Layer = ({ isActive, children }: PropsWithChildren<LayerProps>) => {
   );
 };
 
-/**
- * The header: a small island at the top that names where you are, and
- * unfolds into the navigation when clicked. It floats, so pages run up
- * underneath it.
- */
 const Island = () => {
   const router = useRouter();
   const pathname = usePathname();
@@ -112,7 +95,6 @@ const Island = () => {
   const content = useContent();
   const section = sectionOf(getSections(content), pathname);
   const isHome = !section;
-  // A section that's closing keeps its controls until it's gone, home has none
   const controls = isHome ? null : store.controls;
   const isRevealed =
     REVEAL === "always" || !canHover || isPointing || isFocused;
@@ -142,8 +124,6 @@ const Island = () => {
     } else fold();
   };
 
-  // One level up. A post goes back to the blog it's in, which takes its
-  // place like one section takes another's, and the blog to home
   const goBack = () => {
     if (!pathname.startsWith(`${ownPages.blog.path}/`)) {
       visit("/");
@@ -156,12 +136,10 @@ const Island = () => {
 
   const openFromTray = (id: string) => {
     haptic.onClick();
-    // Their modals are on every page. Should one not be, go home
     if (!openWidget(id, "island")) router.push("/");
     fold();
   };
 
-  // Folds back on a click anywhere else, and on Escape
   useEffect(() => {
     if (!isOpen) return;
 
@@ -188,7 +166,6 @@ const Island = () => {
     };
   }, []);
 
-  // Hands the slot to pages, and grows the island to fit what they put there
   useLayoutEffect(() => {
     const slot = slotRef.current;
     if (!slot) return;
@@ -237,7 +214,6 @@ const Island = () => {
       };
   const label = section?.label ?? siteData.owner.name;
   const count = controls?.count ?? section?.count;
-  // Room for the contact pill on both sides, so the island stays centered
   const width = `min(${size.width}px, calc(100vw - 1.5rem - 2 * ${CONTACT_ROOM}))`;
 
   return (
@@ -246,7 +222,6 @@ const Island = () => {
         ref={islandRef}
         aria-label="Site"
         className={cn(
-          // Over the open section (z-5), under modals (z-50)
           "fixed top-3 left-1/2 z-10 -translate-x-1/2 overflow-hidden rounded-[22px] bg-neutral-950 text-neutral-50",
           animationsEnabled &&
             "transition-[width,height] duration-550 ease-[cubic-bezier(0.34,1.4,0.64,1)] motion-reduce:transition-none",
@@ -257,7 +232,6 @@ const Island = () => {
         onFocus={() => setIsFocused(true)}
         onBlur={handleBlur}
       >
-        {/* At rest: who this is, or where you are */}
         <Layer isActive={!isOpen}>
           <div className="flex h-9 items-center gap-1.5 px-1.5">
             {!isHome && (
@@ -278,7 +252,6 @@ const Island = () => {
             >
               {isHome ? (
                 <>
-                  {/* The headshot, flush with the island's rounded end */}
                   <Image
                     src={HEADSHOT}
                     alt=""
@@ -302,7 +275,6 @@ const Island = () => {
             </button>
           </div>
 
-          {/* The open page's controls, see IslandControls */}
           <div
             ref={slotRef}
             inert={!showControls}

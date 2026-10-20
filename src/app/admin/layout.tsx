@@ -11,13 +11,6 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-/**
- * Wraps the sign in page and the CMS. Admin-only styles hang off data-cms,
- * so nothing here reaches the public site.
- *
- * It also tells the client components which host the admin is on, so their
- * links match the ones rendered here, see utils/admin-path.ts.
- */
 const AdminLayout = async ({ children }: { children: ReactNode }) => {
   const { onAdminHost, siteUrl } = await getAdminPaths();
 
@@ -25,9 +18,6 @@ const AdminLayout = async ({ children }: { children: ReactNode }) => {
     <AdminPathProvider onAdminHost={onAdminHost} siteUrl={siteUrl}>
       <div
         data-cms
-        // dvh, like the screens inside it: on a phone 100vh is taller than
-        // what's visible while the address bar shows, which would let the
-        // page scroll
         className={`${cmsFont.className} min-h-dvh bg-neutral-50 text-base text-neutral-950`}
       >
         <TooltipProvider delayDuration={300}>

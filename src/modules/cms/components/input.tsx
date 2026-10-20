@@ -19,8 +19,6 @@ import {
 import { SelectTrigger } from "~/modules/cms/components/primitives/select";
 import cn from "~/utils/cn";
 
-// Matches react-hook-form's FieldError closely enough to pass one straight
-// in, without tying these inputs to a form library
 interface FieldError {
   message?: string;
 }
@@ -28,27 +26,18 @@ interface FieldError {
 const fieldClass =
   "w-full rounded-xl border border-neutral-950/10 bg-white px-3 font-medium text-neutral-950 text-xs transition-[border-color,box-shadow] placeholder:font-normal placeholder:text-neutral-600 focus:border-primary-500 focus:outline-hidden focus:ring-2 focus:ring-primary-500/20 disabled:cursor-not-allowed disabled:bg-neutral-100 disabled:text-neutral-600 group-data-[has-error=true]/error:border-error-500 group-data-[has-error=true]/error:focus:ring-error-500/20";
 
-// ── What a field's parts know about each other ───────────────────────────────
-
 type Described = { hint?: string; error?: string };
 
 interface InputContextValue {
-  /** The ids a hint and an error use when they aren't given one. */
   hintId: string;
   errorId: string;
   hasError: boolean;
-  /** The hint and error that are on screen right now, by their real ids. */
   described: Described;
   describe: (part: keyof Described, id: string | undefined) => void;
 }
 
 const InputContext = createContext<InputContextValue | null>(null);
 
-/**
- * What ties a control to its hint and error, for one that isn't an
- * <Input.Field />: spread it on the control. It only knows something inside
- * an <Input.Root />, elsewhere it's empty.
- */
 export const useInputField = () => {
   const context = useContext(InputContext);
   if (!context) return {};
@@ -63,8 +52,6 @@ export const useInputField = () => {
   };
 };
 
-// Tells the field which hint or error is showing, so it only points at
-// elements that exist
 const useDescribe = (part: keyof Described, id: string | undefined) => {
   const describe = useContext(InputContext)?.describe;
 
@@ -80,18 +67,11 @@ interface InputRootProps extends HTMLAttributes<HTMLDivElement> {
   error?: FieldError;
 }
 
-/**
- * Holds one field: its label, control, hint and error. The error colours the
- * control's border through data-has-error, and the control is told about its
- * hint and error, so a screen reader reads them when the field gets focus.
- */
 const Root = ({ children, className, error, ...props }: InputRootProps) => {
   const id = useId();
   const [described, setDescribed] = useState<Described>({});
   const hasError = !!error?.message;
 
-  // Stays the same function, or the hint's effect would run on every change
-  // it makes itself
   const describe = useCallback<InputContextValue["describe"]>(
     (part, partId) =>
       setDescribed((current) =>
@@ -131,10 +111,6 @@ type InputLabelProps =
   | ({ as: "span" } & ComponentProps<"span">)
   | ({ as: "legend" } & ComponentProps<"legend">);
 
-/**
- * A field's name. as="span" is for a field without one control to point at,
- * like an image with its upload button, and as="legend" for a fieldset.
- */
 const Label = ({ as = "label", className, ...props }: InputLabelProps) => {
   const classes = cn(labelClass, className);
 
@@ -152,7 +128,6 @@ const Label = ({ as = "label", className, ...props }: InputLabelProps) => {
   );
 };
 
-/** Goes after a label's text, for a field that may stay empty. */
 const Optional = () => (
   <span className="font-normal text-neutral-600"> (optional)</span>
 );
@@ -216,7 +191,6 @@ interface InputTextareaProps
   ref?: Ref<HTMLTextAreaElement>;
 }
 
-/** Grows with its content, so long texts don't scroll inside a tiny box. */
 const Textarea = ({ className, ref, ...props }: InputTextareaProps) => (
   <textarea
     className={cn(
@@ -230,7 +204,6 @@ const Textarea = ({ className, ref, ...props }: InputTextareaProps) => (
   />
 );
 
-/** A <SelectTrigger /> that knows its field's hint and error. */
 const SelectField = (props: ComponentProps<typeof SelectTrigger>) => (
   <SelectTrigger {...useInputField()} {...props} />
 );
@@ -283,25 +256,6 @@ const ErrorLabel = ({ error, id, className }: InputErrorProps) => {
   );
 };
 
-/**
- * @example
- * <Input.Root error={errors.title}>
- *   <Input.Label htmlFor="title">Title</Input.Label>
- *   <Input.Field id="title" {...register("title")} />
- *   <Input.Hint>Shown under the image.</Input.Hint>
- *   <Input.Error error={errors.title} />
- * </Input.Root>
- *
- * @example
- * <Input.Root error={errors.link}>
- *   <Input.Label htmlFor="link">
- *     Link
- *     <Input.Optional />
- *   </Input.Label>
- *   <Input.Field id="link" type="url" {...register("link")} />
- *   <Input.Error error={errors.link} />
- * </Input.Root>
- */
 const Input = {
   Root,
   Label,

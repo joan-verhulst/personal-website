@@ -10,7 +10,6 @@ interface Props {
 export const generateStaticParams = () => posts.map(({ slug }) => ({ slug }));
 export const dynamicParams = false;
 
-// A post opened from the blog in the layer, taking the blog's place
 const PostApp = async ({ params }: Props) => {
   const post = postAt((await params).slug);
 

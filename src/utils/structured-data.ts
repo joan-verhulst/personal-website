@@ -1,10 +1,6 @@
 import { siteData } from "~/data/site";
 import type { Content } from "~/modules/content/types";
 
-/**
- * Who the site is by, for search engines: schema.org's Person and WebSite,
- * from what the about page and contact links already say.
- */
 export const structuredData = (content: Content, url: string) => {
   const { about, contact } = content;
   const person = {
@@ -37,9 +33,5 @@ export const structuredData = (content: Content, url: string) => {
   };
 };
 
-/**
- * JSON for a <script> in the page. A "<" in the CMS text could close the
- * script early, so it's escaped the way JSON allows.
- */
 export const toJsonLd = (data: unknown) =>
   JSON.stringify(data).replace(/</g, "\u003c");

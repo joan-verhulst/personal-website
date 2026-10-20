@@ -20,30 +20,21 @@ import { getWallBackground } from "~/modules/ui-ux/utils/wall-backgrounds";
 import cn from "~/utils/cn";
 import IslandButton from "~components/layout/island/island-button";
 
-// A post's cover can be its shader drawn live. The island is on every page,
-// so that code only loads once the tray opens
 const PostCover = dynamic(() => import("~/modules/blog/components/post-cover"));
 
 interface Tile {
   id: string;
   label: string;
-  // Row and column on the 6 by 4 grid, laid out like the home screen
   area: string;
-  // A section to go to, or a widget that opens over the page. Tiles with
-  // neither are there to complete the picture
   href?: string;
   widget?: string;
   className?: string;
   style?: CSSProperties;
   image?: string;
-  // What its widget on home shows, in place of an image: a post's cover or
-  // a product's reel. Only there while the tray is open
   live?: ReactNode;
-  // Sits inside the tile instead of filling it
   inset?: "screen" | "record" | "cutout";
 }
 
-// The newest post, on the blog's tile as on home
 const [latest] = posts;
 
 const getTiles = ({
@@ -58,7 +49,6 @@ const getTiles = ({
   const [record] = records;
 
   return [
-  // About opens its page, the record and the gear their modals, as on home
   {
     id: "about",
     label: widgets.about.label,
@@ -118,7 +108,6 @@ const getTiles = ({
     className: "bg-neutral-900",
     live: latest && <PostCover post={latest} isSmall isStill />,
   },
-  // Products took contact's spot on the home screen, once there's one
   product
     ? {
         id: "products",
@@ -126,7 +115,6 @@ const getTiles = ({
         href: "/products",
         area: "4 / 5 / 5 / 7",
         style: { background: getWallBackground(product) },
-        // A video plays, like on home, where a still would leave it empty
         live: (
           <WallMedia
             item={{
@@ -158,17 +146,14 @@ const getHint = (tile: Tile, sections: Section[]) => {
 };
 
 interface Props {
-  // The page that's open, "/" for the home screen
   pathname: string;
   isOpen: boolean;
   onVisit: (href: string) => void;
   onWidget: (id: string) => void;
-  // One level up: from a post to the blog, from a section to home
   onBack: () => void;
   onClose: () => void;
 }
 
-/** The home screen in miniature: pick a widget to go there. */
 const IslandTray = ({
   pathname,
   isOpen,
@@ -181,7 +166,6 @@ const IslandTray = ({
   const content = useContent();
   const tiles = useMemo(() => getTiles(content), [content]);
   const sections = useMemo(() => getSections(content), [content]);
-  // The header line names the tile under the pointer
   const [pointed, setPointed] = useState<Tile | null>(null);
 
   const current = sectionOf(sections, pathname);
@@ -215,7 +199,6 @@ const IslandTray = ({
             tile.href !== undefined && pathOf(tile.href) === current?.href;
           const className = cn(
             "relative overflow-hidden rounded-[10px] ring-1 ring-neutral-50/25 ring-inset transition duration-300 ease-[cubic-bezier(0.34,1.4,0.64,1)] motion-reduce:transition-none",
-            // Tiles pop in one after another as the island unfolds
             !isOpen && "scale-50 opacity-0",
             isCurrent && "outline-2 outline-primary outline-offset-2",
             tile.className,
@@ -257,7 +240,6 @@ const IslandTray = ({
             </span>
           );
 
-          // Nowhere to go: shown for the picture, not for use
           if (!tile.href && !tile.widget)
             return (
               <div

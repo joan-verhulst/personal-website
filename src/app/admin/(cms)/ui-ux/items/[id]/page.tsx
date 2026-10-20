@@ -10,8 +10,6 @@ interface Props {
   params: Promise<{ id: string }>;
 }
 
-// The form renders the whole page, header included: the header shows what the
-// form knows, and Save and Delete go to the bottom bar from inside it
 const EditItemAdmin = async ({ params }: Props) => {
   const { id } = await params;
   const { items, tags, blocks, lists } = await readWall();

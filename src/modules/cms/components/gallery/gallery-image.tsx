@@ -7,19 +7,11 @@ interface Props {
   image: string;
   alt: string;
   sizes: string;
-  /**
-   * "cover" crops the piece to fill the box, so every card is the same
-   * size. "contain" shows all of it, for previews.
-   */
   fit?: "cover" | "contain";
   priority?: boolean;
   className?: string;
 }
 
-/**
- * A gallery piece in a fixed 4:3 box, whatever its own shape. SVGs are
- * stored without a size, so a box that doesn't depend on it suits them too.
- */
 const GalleryImage = ({
   image,
   alt,
@@ -44,15 +36,9 @@ interface PreviewProps {
   image: string;
   alt: string;
   priority?: boolean;
-  /** Laid over the image, like the Cover badge. */
   children?: ReactNode;
 }
 
-/**
- * The whole piece, as the new and edit dialogs show it above their fields.
- * It has a fixed height instead of a shape, so a full-width preview doesn't
- * push the fields out of view.
- */
 export const GalleryPreview = ({
   image,
   alt,

@@ -29,7 +29,6 @@ import { slugify } from "~/modules/cms/utils/slugify";
 import { measureImage } from "~/modules/media/utils/measure-image";
 import { putMedia } from "~/modules/media/utils/storage";
 
-// Where covers live in the media bucket
 const FOLDER = "on-rotation";
 
 export interface ItunesSong {
@@ -37,7 +36,6 @@ export interface ItunesSong {
   song: string;
   album: string;
   artist: string;
-  // 600px artwork
   artwork: string;
 }
 
@@ -53,7 +51,6 @@ const termSchema = v.pipe(v.string(), v.trim(), v.nonEmpty(), v.maxLength(200));
 
 const APPLE_DOWN = "Couldn't reach Apple Music. Try again.";
 
-// Apple's answer is checked like any other input: only complete songs count
 const isSearchResult = (result: unknown): result is SearchResult => {
   if (typeof result !== "object" || result === null) return false;
   const song = result as Record<string, unknown>;
@@ -64,10 +61,6 @@ const isSearchResult = (result: unknown): result is SearchResult => {
   );
 };
 
-/**
- * Songs on Apple Music matching a search, to pick a favorite from. A search
- * that couldn't be done is an error, so it doesn't pass for "no songs found".
- */
 export async function searchItunes(
   term: string,
 ): Promise<ActionResult & { songs?: ItunesSong[] }> {
@@ -116,7 +109,6 @@ export async function searchItunes(
 
 export type RecordDetails = RecordValues;
 
-// Takes parsed details, which are trimmed already
 const detailColumns = (details: v.InferOutput<typeof recordSchema>) => ({
   type: details.type,
   title: details.title,
@@ -127,7 +119,6 @@ const detailColumns = (details: v.InferOutput<typeof recordSchema>) => ({
 
 const MAX_COVER_BYTES = 5 * 1024 * 1024;
 
-// What Apple's artwork may be, and the extension it's stored under
 const COVER_TYPES: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/png": "png",
@@ -136,7 +127,6 @@ const COVER_TYPES: Record<string, string> = {
 
 const NO_ARTWORK = "Couldn't download the artwork.";
 
-/** Adds a record at the end, with Apple's artwork as its cover. */
 export async function addRecord(
   details: RecordDetails,
   artworkUrl: string,
@@ -148,7 +138,6 @@ export async function addRecord(
   const parsed = parse(recordSchema, details);
   if (!parsed.success) return parsed.failure;
 
-  // Only ever fetch Apple's own artwork
   let artwork: URL;
   try {
     artwork = new URL(String(artworkUrl));
@@ -162,7 +151,6 @@ export async function addRecord(
     return failed("That artwork isn't from Apple Music.");
   }
 
-  // Read before anything is stored, so a failure here leaves nothing behind
   const sortOrder = await nextSortOrder(supabase, "records");
   if (sortOrder === null) return failed("Couldn't add the record.");
 
@@ -171,7 +159,6 @@ export async function addRecord(
   try {
     const response = await fetch(artwork, {
       cache: "no-store",
-      // A redirect could lead away from Apple, so it counts as a failure
       redirect: "error",
       signal: AbortSignal.timeout(10_000),
     });
@@ -186,13 +173,11 @@ export async function addRecord(
       return failed("That artwork is too large.");
     }
 
-    // The timeout can still fire while the body comes in
     body = await response.arrayBuffer();
   } catch (error) {
     console.error(error);
     return failed(NO_ARTWORK);
   }
-  // The header can be missing, so the size is checked again once it's read
   if (body.byteLength > MAX_COVER_BYTES) {
     return failed("That artwork is too large.");
   }
@@ -216,13 +201,10 @@ export async function addRecord(
     "Couldn't add the record.",
   );
   if (result.error) {
-    // Fetched for this record alone, so it goes with it
     await removeMedia(supabase, [cover]);
     return failed(result.error);
   }
 
-  // In Media like an upload, with its size and color, so it can be picked
-  // elsewhere too. A failure here leaves the record as it is
   try {
     await rememberMedia(supabase, {
       path: cover,
@@ -259,10 +241,6 @@ export async function updateRecord(
   return failure ?? published();
 }
 
-/**
- * Swaps the cover for one from Media: just uploaded or picked there. The old
- * cover stays in Media.
- */
 export async function replaceRecordCover(
   id: string,
   cover: string,
@@ -299,7 +277,6 @@ export async function reorderRecords(ids: string[]): Promise<ActionResult> {
   return error ? dbFailed(error, "Couldn't save the order.") : published();
 }
 
-/** Deletes a record. Its cover stays in Media. */
 export async function deleteRecord(id: string): Promise<ActionResult> {
   const admin = await requireAdmin();
   if (admin.error) return failed(admin.error);

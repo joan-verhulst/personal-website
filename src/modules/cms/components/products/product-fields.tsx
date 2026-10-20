@@ -52,7 +52,6 @@ export const productValuesFrom = (row: ProductRow): ProductValues => ({
   linkLabel: row.link_label ?? "",
   linkHref: row.link_href ?? "",
   mediaType: row.media_type,
-  // Empty when its file was deleted from Media, which asks for another
   media: row.media ?? "",
   width: row.width,
   height: row.height,
@@ -60,17 +59,11 @@ export const productValuesFrom = (row: ProductRow): ProductValues => ({
   bare: row.bare,
 });
 
-/** The form both the new product dialog and the edit dialog fill in. */
 export const useProductForm = (defaultValues: ProductValues) =>
   useForm({ schema: productSchema, defaultValues });
 
 type ProductForm = ReturnType<typeof useProductForm>;
 
-/**
- * For handleSubmit's second argument. The media has no input to focus, so
- * without a toast pressing the button would seem to do nothing. The other
- * fields get focus, which says enough.
- */
 export const reportInvalid = (errors: FieldErrors<ProductValues>) => {
   if (errors.media || errors.mediaType || errors.width || errors.height) {
     toast.error(errors.media?.message ?? "Upload the media again.");
@@ -84,19 +77,11 @@ const describeMedia = (
 
 interface FieldsProps {
   form: ProductForm;
-  // Keeps ids unique when two product forms share a page
   idPrefix: string;
-  /** True in the edit dialog, where a new file only counts once it's saved. */
   isSaved?: boolean;
-  /** True while a file goes up, so the dialog can wait for it. */
   onUploadingChange: (isUploading: boolean) => void;
 }
 
-/**
- * Everything about a product, stacked: what it is and how to try it, then
- * the media and how its card looks. Files are uploaded or picked from Media
- * into the form, and a file that was replaced stays in Media.
- */
 export const ProductFields = ({
   form,
   idPrefix,
@@ -121,8 +106,6 @@ export const ProductFields = ({
     "background",
   ]);
   const logoUrl = optionalMediaUrl(logo);
-  // The logo and the media can go up at the same time, so the dialog waits
-  // until both are done
   const uploads = useRef(0);
 
   const trackUpload = (isUploading: boolean) => {
@@ -130,7 +113,6 @@ export const ProductFields = ({
     onUploadingChange(uploads.current > 0);
   };
 
-  // Revalidates, so an "upload first" error clears once there's media
   const handleMedia = (file: UploadedMedia) => {
     const options = { shouldDirty: true, shouldValidate: true };
     setValue("mediaType", file.type, options);
@@ -185,7 +167,6 @@ export const ProductFields = ({
         </Input.Label>
         <span className="flex flex-wrap items-center gap-2">
           {logoUrl && (
-            // Tinted like the site does it, so a white logo shows too
             <span className="grid size-8.25 place-items-center rounded-[10px] border border-neutral-950/10 text-neutral-950">
               <TagLogo logo={logoUrl} className="size-4.5" />
             </span>
@@ -218,7 +199,6 @@ export const ProductFields = ({
         </span>
         <Input.Hint id={`${idPrefix}-logo-hint`}>
           A single color SVG, tinted like the name next to it.
-          {/* Replace only changes the form, like the media below */}
           {isSaved && dirtyFields.logo && " Save to keep the change."}
         </Input.Hint>
         <Input.Error error={errors.logo} />
@@ -245,7 +225,6 @@ export const ProductFields = ({
         </Input.Label>
         <Input.Field
           id={`${idPrefix}-link-label`}
-          // What the site says when it's left empty
           placeholder={`Try ${name.trim() || "it"}`}
           {...register("linkLabel")}
         />
@@ -287,7 +266,6 @@ export const ProductFields = ({
             </div>
             <Input.Hint id={`${idPrefix}-media-hint`}>
               A screenshot or a short screen recording.
-              {/* Replace only changes the form here, unlike a record's cover */}
               {isSaved && dirtyFields.media && " Save to keep the new media."}
             </Input.Hint>
           </>

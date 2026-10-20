@@ -1,9 +1,7 @@
 import * as v from "valibot";
 import { dimension, mediaPath } from "~/modules/cms/schema/shared";
 
-// Shared by the gallery forms and their actions, so this file can't be
-// "use server". Every output is also valid input: the form parses once, the
-// action again
+// Shared with the actions, so not "use server"
 
 export const galleryImageSchema = v.object({
   image: v.pipe(
@@ -13,7 +11,6 @@ export const galleryImageSchema = v.object({
   ),
   width: dimension("Upload the image again."),
   height: dimension("Upload the image again."),
-  // Only photos store these; the actions drop them for artworks
   hue: v.optional(v.number()),
   chroma: v.optional(v.number()),
 });
@@ -25,7 +22,6 @@ export const galleryDetailsSchema = v.object({
     v.nonEmpty("Give it a title."),
     v.maxLength(200, "Keep the title under 200 characters."),
   ),
-  // Optional, stored as null when it's left empty
   description: v.pipe(
     v.string(),
     v.trim(),

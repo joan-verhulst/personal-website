@@ -9,11 +9,6 @@ import { authLinkClass } from "~/modules/cms/components/auth-card";
 import { LOGIN_PATH } from "~/modules/cms/utils/two-factor";
 import { createBrowserSupabase } from "~/modules/supabase/utils/browser-client";
 
-/**
- * The way out of a sign in step: back to the login page, to start over or
- * sign in as someone else. Without it a session that can't produce a code
- * would have nowhere to go.
- */
 const SignOutLink = () => {
   const router = useRouter();
   const { href } = useAdminPath();
@@ -21,9 +16,7 @@ const SignOutLink = () => {
 
   const signOut = () =>
     startTransition(async () => {
-      // Only this session. Supabase's default ends every session of the
-      // account, and a sign in that was never finished shouldn't be able to
-      // sign out the device that did finish
+      // Only this session: the default would also sign out the finished device
       const { error } = await createBrowserSupabase().auth.signOut({
         scope: "local",
       });

@@ -7,8 +7,6 @@ import ShaderCanvas from "~/modules/blog/components/shader-canvas";
 import { INK_FRAGMENT } from "~/modules/blog/demos/ink-gl";
 import cn from "~/utils/cn";
 
-// A photo from the photography section, plain and clean, so the ink shows
-// on it
 const PHOTO = "/blog/two-horses.jpg";
 const PHOTO_ASPECT = 3 / 2;
 
@@ -29,8 +27,6 @@ export interface InkValues {
   hardness: number;
 }
 
-// The distressed ink look: a heavy blur away from a sharp spot on the left,
-// short fine strokes, and small soft clumps that tear them into blots
 export const DISTRESSED: InkValues = {
   blur: 13,
   unevenness: 0.34,
@@ -59,14 +55,8 @@ interface Framing {
 }
 
 const WHOLE: Framing = { zoom: 1, x: 0.5, y: 0.5 };
-// On the cover: closer, on the horses, with the film's black edge cut off
 const ON_THE_HORSES: Framing = { zoom: 1.5, x: 0.515, y: 0.555 };
 
-/**
- * The photo, drawn to fill the canvas at the canvas's own size in device
- * pixels, so the shader reads it one to one. Drawn again when the canvas
- * changes size.
- */
 const usePhoto = (framing: Framing) => {
   const boxRef = useRef<HTMLDivElement>(null);
   const [photo, setPhoto] = useState<HTMLCanvasElement | null>(null);
@@ -97,7 +87,6 @@ const usePhoto = (framing: Framing) => {
       canvas.height = height;
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
-      // Covers the canvas, like object-cover, as close as the framing says
       const scale =
         Math.max(width / image.naturalWidth, height / image.naturalHeight) * framing.zoom;
       const drawnWidth = image.naturalWidth * scale;
@@ -126,18 +115,14 @@ const usePhoto = (framing: Framing) => {
 
 interface InkCanvasProps {
   values: InkValues;
-  // Left of this share of the width, the photo as it is; 0 for the whole
-  // print
   split?: number;
   showFocus?: boolean;
-  // Fills the box it's in, rather than taking the photo's shape
   isFilling?: boolean;
   framing?: Framing;
   onPointer?: (x: number, y: number) => void;
   className?: string;
 }
 
-/** The photo, printed with these settings. */
 const InkCanvas = ({
   values,
   split = 0,
@@ -198,15 +183,10 @@ const InkCanvas = ({
 const px = (value: number) => `${value.toFixed(1)} px`;
 const share = (value: number) => value.toFixed(2);
 
-/** The print up close on the horses, filling its box: the post's picture in the list. */
 export const InkCover = () => (
   <InkCanvas values={DISTRESSED} isFilling framing={ON_THE_HORSES} />
 );
 
-/**
- * The photo and its print, with a line between them to drag: the post's
- * picture at the top, filling its box.
- */
 export const InkBeforeAfter = () => {
   const [split, setSplit] = useState(0.5);
 
@@ -217,8 +197,6 @@ export const InkBeforeAfter = () => {
         split={split}
         isFilling
         onPointer={(x) => setSplit(x)}
-        // The line only drags sideways, so a swipe up or down on a phone
-        // still scrolls the page
         className="cursor-ew-resize touch-pan-y"
       />
       <div
@@ -234,7 +212,6 @@ export const InkBeforeAfter = () => {
   );
 };
 
-/** The whole print, with the settings that matter most in your hands. */
 export const InkPlayground = () => {
   const [values, setValues] = useState<InkValues>(DISTRESSED);
   const set = (key: keyof InkValues) => (value: number) =>

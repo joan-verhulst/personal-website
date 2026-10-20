@@ -1,8 +1,5 @@
 import { WALL_SLOTS, type WallLayout } from "~/modules/content/types";
 
-// The wall's row shapes and the rules for moving items between their slots.
-// No React here: the save action checks the same rules on the server.
-
 export type SlotSize = "large" | "medium" | "small" | "half";
 
 export const WALL_LAYOUTS = [
@@ -35,9 +32,7 @@ export const SLOT_LABELS: Record<SlotSize, string> = {
   half: "Half",
 };
 
-/** A row as the editor holds it. An empty string is an empty slot. */
 export interface WallRowDraft {
-  // Stable across renders and saves; a uuid, which the save uses as the row's id
   id: string;
   layout: WallLayout;
   items: string[];
@@ -59,7 +54,6 @@ export const fits = (
   isVideo: IsVideo,
 ) => !(isVideo(id) && LAYOUTS[layout].slots[slot] === "small");
 
-/** Where each item on the wall sits, by item id. */
 export const placements = (rows: WallRowDraft[]) => {
   const map = new Map<string, { row: number; slot: number }>();
   rows.forEach((row, rowIndex) => {
@@ -70,18 +64,10 @@ export const placements = (rows: WallRowDraft[]) => {
   return map;
 };
 
-/**
- * Whether a row mirrors on the site. Rows with an empty slot aren't shown,
- * so only the complete rows above it count. Doubles never mirror.
- */
 export const isMirrored = (rows: WallRowDraft[], index: number) =>
   rows[index].layout !== "double" &&
   rows.slice(0, index).filter(isComplete).length % 2 === 1;
 
-/**
- * Puts an item in a slot. An item already on the wall moves, and whatever was
- * in the slot goes back to where it came from (a swap), or off the wall.
- */
 export const placeItem = (
   rows: WallRowDraft[],
   id: string,
@@ -110,18 +96,12 @@ export const placeItem = (
   return { rows: next };
 };
 
-/**
- * Switches a row to another layout and keeps as many of its items as fit,
- * the first ones first. Items that don't fit come back as `leftOver`, for the
- * library.
- */
 export const relayout = (
   row: WallRowDraft,
   layout: WallLayout,
   isVideo: IsVideo,
 ): { row: WallRowDraft; leftOver: string[] } => {
   const { slots } = LAYOUTS[layout];
-  // Every layout lists its slots big to small, so these come first
   const roomy = slots.filter((size) => size !== "small").length;
 
   const kept: string[] = [];
@@ -137,7 +117,6 @@ export const relayout = (
     }
   }
 
-  // Videos take roomy slots and images fill the rest, each in their old order
   const images = kept.filter((id) => !isVideo(id));
   const imagesUpFront = images.slice(0, Math.max(roomy - videos, 0));
   const front = kept.filter((id) => isVideo(id) || imagesUpFront.includes(id));

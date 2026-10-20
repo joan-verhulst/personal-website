@@ -2,8 +2,6 @@ import type { ReactNode } from "react";
 import { codeFont } from "~/modules/blog/components/prose";
 import cn from "~/utils/cn";
 
-// Enough of GLSL, WGSL and TypeScript to color the snippets in the posts.
-// Anything it doesn't know stays plain, which is most of it
 const KEYWORDS = new Set([
   "const", "let", "var", "fn", "return", "if", "else", "for", "while", "break",
   "continue", "uniform", "in", "out", "struct", "export", "import", "from",
@@ -56,16 +54,10 @@ const COLORS: Record<Kind, string> = {
 };
 
 interface Props {
-  // Over the code: what it does, or where it's from
   caption?: ReactNode;
   children: string;
 }
 
-/**
- * A snippet, with a line saying what it is. Only the lines that matter: the
- * rest of a function is left out with a comment, and the whole file is in
- * the site's repository.
- */
 const CodeBlock = ({ caption, children }: Props) => {
   const code = children.replace(/^\n+|\s+$/g, "");
 

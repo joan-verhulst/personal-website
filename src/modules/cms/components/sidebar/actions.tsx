@@ -23,16 +23,10 @@ import { createBrowserSupabase } from "~/modules/supabase/utils/browser-client";
 
 interface Props {
   email: string;
-  /** What the trigger button shows. */
   children: ReactNode;
-  /** Called when the menu opens a page, so the mobile sheet can close. */
   onNavigate?: () => void;
 }
 
-/**
- * The account menu: who's signed in, the way to the Security page and Sign
- * out. View site and Refresh site are rows at the top of the sidebar.
- */
 const Actions = ({ email, children, onNavigate }: Props) => {
   const router = useRouter();
   const { href } = useAdminPath();
@@ -42,14 +36,12 @@ const Actions = ({ email, children, onNavigate }: Props) => {
   const requested = useRef<"security" | "sign-out" | null>(null);
 
   const openSecurity = async () => {
-    // Asks first, like the sidebar's own links do
     if (hasUnsavedChanges() && !(await confirm(LEAVE_UNSAVED))) return;
     onNavigate?.();
     router.push(href("/admin/security"));
   };
 
   const signOut = async () => {
-    // Signing out leaves the page, like any link would
     if (hasUnsavedChanges() && !(await confirm(LEAVE_UNSAVED))) return;
     const { error } = await createBrowserSupabase().auth.signOut();
     if (error) {
@@ -71,7 +63,6 @@ const Actions = ({ email, children, onNavigate }: Props) => {
           {children}
         </button>
       </DropdownMenuTrigger>
-      {/* Portalled outside the admin wrapper, data-cms brings its type scale */}
       <DropdownMenuContent
         data-cms
         side="top"

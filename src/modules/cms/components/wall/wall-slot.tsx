@@ -16,36 +16,23 @@ export interface WallSlotProps {
   item?: WallItemRow;
   tag?: WallTagRow;
   size: SlotSize;
-  /** Where the slot is, like "Row 2", for screen readers. */
   rowLabel: string;
-  /** Whether the dragged item may go here. */
   accepts: (id: string) => boolean;
-  /** The id of the item being dragged, or null when nothing is. */
   dragging: () => string | null;
   onDragStart: () => void;
   onDragEnd: () => void;
   onDrop: () => void;
-  /** Click or Enter: shows the slot's item, or asks for one when empty. */
   onOpen: () => void;
   onRemove: () => void;
-  /** Placement in the row's grid. */
   className?: string;
 }
 
 interface MediaProps {
   item: WallItemRow;
-  /** The rendered width, so next/image picks a fitting file. */
   sizes: string;
 }
 
-/**
- * A wall item roughly framed the way the site's wall shows it, small enough
- * for a slot. A video shows its first frame. The item's dialog and page show
- * the real card, with <WallCardPreview />.
- */
 const WallMedia = ({ item, sizes }: MediaProps) => {
-  // Its file was deleted from Media: the slot shows the background alone,
-  // and the row stays off the site until the item has another
   if (!item.media) return null;
 
   const media =
@@ -67,8 +54,6 @@ const WallMedia = ({ item, sizes }: MediaProps) => {
       />
     );
 
-  // Reels fill the card, screenshots sit in a frame that runs off the edges
-  // like on the site
   return item.bare ? (
     <span className="absolute inset-0">{media}</span>
   ) : (
@@ -78,10 +63,6 @@ const WallMedia = ({ item, sizes }: MediaProps) => {
   );
 };
 
-/**
- * One slot of a wall row: a drop target and, when filled, something to drag
- * elsewhere. A click opens the slot's item, or the picker when it's empty.
- */
 const WallSlot = ({
   item,
   tag,
@@ -102,7 +83,6 @@ const WallSlot = ({
   const onDragOver = (event: DragEvent) => {
     const id = dragging();
     if (!id) return;
-    // Dropping a refused item is still allowed, so it can say why it failed
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
     setHover(accepts(id) ? "over" : "reject");
@@ -141,7 +121,6 @@ const WallSlot = ({
       onDragEnd={onDragEnd}
       onDragOver={onDragOver}
       onDragLeave={(event) => {
-        // Moving onto the slot's own children counts as leaving it too
         if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
           setHover(null);
         }

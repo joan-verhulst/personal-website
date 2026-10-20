@@ -57,7 +57,6 @@ const ALL_FOLDERS = "all";
 type Show = "all" | "used" | "unused";
 type Sort = "largest" | "newest";
 
-/** What deleting a file does, for the confirm dialog. */
 const deleteWarning = (file: MediaFile) => {
   if (!file.usedBy.length) {
     return `It takes ${formatBytes(file.size)} and nothing on the site uses it. This can't be undone.`;
@@ -68,13 +67,11 @@ const deleteWarning = (file: MediaFile) => {
 
 interface StorageProps {
   used: number;
-  /** Unused files old enough to remove. */
   removable: MediaFile[];
   onRemove: () => void;
   isPending: boolean;
 }
 
-/** How much of R2's free storage the bucket takes, and the way to free some. */
 const Storage = ({ used, removable, onRemove, isPending }: StorageProps) => {
   const share = Math.min(1, used / STORAGE_LIMIT_BYTES);
   const left = Math.max(0, STORAGE_LIMIT_BYTES - used);
@@ -108,7 +105,6 @@ const Storage = ({ used, removable, onRemove, isPending }: StorageProps) => {
                   ? "bg-warning-500"
                   : "bg-primary-500",
             )}
-            // A sliver shows as soon as anything is stored
             style={{ width: `${used > 0 ? Math.max(share * 100, 0.5) : 0}%` }}
           />
         </div>
@@ -236,7 +232,6 @@ const FileCard = ({ file }: { file: MediaFile }) => {
           fill
           sizes={CARD_SIZES}
           unoptimized={/\.svg$/i.test(file.path)}
-          // A logo shows whole, not cropped like the card's photos
           className={/\.svg$/i.test(file.path) ? "object-contain! p-6" : undefined}
         />
       )}
@@ -246,17 +241,10 @@ const FileCard = ({ file }: { file: MediaFile }) => {
 
 interface Props {
   files: MediaFile[];
-  /** Whether the media table exists, see 0006_media_library.sql. */
   hasDetails: boolean;
-  /** When the page was read, so the server and browser agree on what's new. */
   now: number;
 }
 
-/**
- * Every file in the media bucket: upload here, see what uses each file and
- * how much of R2's free storage they take together, and delete what's no
- * longer needed. The pages pick their files from here, or upload their own.
- */
 const MediaLibrary = ({ files, hasDetails, now }: Props) => {
   const router = useRouter();
   const [folder, setFolder] = useState(ALL_FOLDERS);
@@ -316,7 +304,6 @@ const MediaLibrary = ({ files, hasDetails, now }: Props) => {
             folder={LIBRARY_FOLDER}
             accept="image/*,video/mp4,video/webm"
             multiple
-            // Large enough for UI screenshots, the largest anything shows
             maxSize={3200}
             variant="primary"
             onUploaded={() => {

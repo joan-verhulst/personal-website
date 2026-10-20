@@ -1,21 +1,10 @@
-/**
- * The distressed ink shader, see favorites/utils/ink-shader.ts, ported from
- * WGSL to GLSL so the post's demos run in every browser, not only where
- * there's WebGPU. Line for line the same print, with two things added for
- * the demos: a split, left of which the photo shows as it is, and a ring
- * where the sharp spot is.
- *
- * Sizes are in CSS pixels, scaled by uPixelRatio, like the original.
- */
 export const INK_FRAGMENT = /* glsl */ `#version 300 es
 precision highp float;
 
 uniform vec2 uResolution;
 uniform float uPixelRatio;
 uniform sampler2D uImage;
-// Left of this share of the width, the photo as it is; 0 for the whole print
 uniform float uSplit;
-// A ring where the sharp spot is, for the demo that moves it
 uniform float uShowFocus;
 
 uniform float uBlur;
@@ -69,8 +58,6 @@ float fbm(vec2 p0) {
   return s / max(norm, 0.00001);
 }
 
-// The picture over white paper. For an opaque photo it's the same as the
-// original; a cut-out's edges come out right here too
 float lumAt(vec2 uv) {
   vec4 c = textureLod(uImage, clamp(uv, vec2(0.0), vec2(1.0)), 0.0);
   float a = clamp(c.a, 0.0, 1.0);
@@ -101,7 +88,6 @@ void main() {
   vec2 uv = vec2(gl_FragCoord.x, dims.y - gl_FragCoord.y) / dims;
   vec2 Ppx = uv * dims;
 
-  // Left of the split, the photo as it is
   if (uv.x < uSplit) {
     vec4 c = textureLod(uImage, uv, 0.0);
     outColor = vec4(c.rgb * c.a + uPaper * (1.0 - c.a), 1.0);
@@ -123,8 +109,6 @@ void main() {
   vec2 dir = vec2(cos(penAngle), sin(penAngle));
   vec2 perp = vec2(-dir.y, dir.x);
 
-  // Step one: how far the blur reaches here, away from the sharp spot and
-  // pushed around by noise
   float aspect = dims.x / dims.y;
   float diag = length(vec2(aspect, 1.0));
   float d = length((uv - uFocus) * vec2(aspect, 1.0)) / diag;
@@ -150,8 +134,6 @@ void main() {
     lumField = acc / max(wacc, 0.00001);
   }
 
-  // Steps two and three: the pen's dots around this pixel, counted into a
-  // density, and the density cut into torn edges
   float useField = smoothstep(0.2, 0.9, rLocal / tornRadius);
   float penBias = (penBalance - 0.5) * 1.8;
   float jit2 = hash21(Ppx * 3.9 + 11.0) * 6.2831853;

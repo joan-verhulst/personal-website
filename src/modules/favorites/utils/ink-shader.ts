@@ -1,31 +1,17 @@
 /// <reference types="@webgpu/types" />
 
-/**
- * The "Distressed ink" shader, ported from Figma to run on a canvas. It
- * takes a picture and prints it in ink on paper: a patchy field blur, then a
- * graphic-pen dither, then the dots clump into torn edges. The WGSL is the
- * Figma version untouched, only the plumbing around it is new.
- */
-
 export interface InkParams {
-  // Blur radius in CSS pixels, how patchy it is (0 to 1), patch size
   blur: number;
   unevenness: number;
   patchSize: number;
-  // Where the picture stays sharp (0 to 1 of the frame), how large that is
-  // and how long the ramp into the blur is, as shares of the frame diagonal
   focusX: number;
   focusY: number;
   focusSize: number;
   falloff: number;
-  // The pen: stroke length in detail units, angle in degrees, spray density
-  // (0 to 1) and the detail scale in CSS pixels
   strokeLength: number;
   strokeAngle: number;
   balance: number;
   detailScale: number;
-  // The clumping: clump radius in CSS pixels, ink weight (0 to 1) and how
-  // hard the edges are
   clump: number;
   inkWeight: number;
   hardness: number;
@@ -33,7 +19,6 @@ export interface InkParams {
   paper: [number, number, number, number];
 }
 
-/** What a whole print run shares. The ink weight is set sheet by sheet. */
 export type InkSettings = Omit<InkParams, "inkWeight">;
 
 const WGSL = /* wgsl */ `
@@ -226,7 +211,6 @@ const SEED = 7;
 export const isInkSupported = () =>
   typeof navigator !== "undefined" && "gpu" in navigator;
 
-// One device for the page, asked for once
 let devicePromise: Promise<GPUDevice | null> | null = null;
 const getDevice = () => {
   devicePromise ??= (async () => {
@@ -250,7 +234,6 @@ interface Shared {
   pipelines: Map<GPUTextureFormat, GPURenderPipeline>;
 }
 
-// The pieces every printer on a device can share
 const shared = new WeakMap<GPUDevice, Shared>();
 const getShared = (device: GPUDevice): Shared => {
   let entry = shared.get(device);
@@ -319,7 +302,6 @@ export interface InkPrinter {
   destroy: () => void;
 }
 
-/** Sets a canvas up to print with the shader. Null where WebGPU isn't there. */
 export const createInkPrinter = async (
   canvas: HTMLCanvasElement,
 ): Promise<InkPrinter | null> => {
@@ -424,7 +406,6 @@ export const createInkPrinter = async (
       device.queue.submit([encoder.finish()]);
     },
     destroy() {
-      // The canvas is left configured: another printer may be using it
       texture?.destroy();
       uniforms.destroy();
     },

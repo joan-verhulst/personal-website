@@ -7,7 +7,6 @@ import { useAction } from "~/modules/cms/hooks/use-action";
 import type { RecordRow } from "~/modules/content/utils/rows";
 import { mediaUrl } from "~/modules/media/utils/media-url";
 
-/** The "Reorder" button and its dialog, for the order the modal shows. */
 const ReorderRecordsButton = ({ rows }: { rows: RecordRow[] }) => {
   const { run, isPending } = useAction();
 
@@ -18,8 +17,6 @@ const ReorderRecordsButton = ({ rows }: { rows: RecordRow[] }) => {
       items={rows.map((row) => ({
         id: row.id,
         title: row.title,
-        // The dialog's box is 4:3, so the square cover sits in the middle
-        // of it instead of losing its top and bottom
         thumbnail: (
           <span className="block bg-white">
             <span className="relative mx-auto block aspect-square h-full overflow-hidden rounded-md">

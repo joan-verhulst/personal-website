@@ -18,21 +18,15 @@ import {
 import { createBrowserSupabase } from "~/modules/supabase/utils/browser-client";
 
 interface Props {
-  /**
-   * Where to go once the code is in: a canonical path, already checked to be
-   * a CMS page.
-   */
   redirectTo: string;
 }
 
-/** The second step of signing in: a code from an authenticator app. */
 const VerifyForm = ({ redirectTo }: Props) => {
   const router = useRouter();
   const { href, onAdminHost } = useAdminPath();
   // Stays pending while the CMS loads, so a second code can't be sent
   const [isLeaving, startLeaving] = useTransition();
 
-  // Takes the address as this host spells it
   const leave = (path: string) =>
     startLeaving(() => {
       router.replace(path);
@@ -49,18 +43,13 @@ const VerifyForm = ({ redirectTo }: Props) => {
     }
 
     if (!data.totp.length) {
-      // A phone number or a passkey, added outside the CMS. Setup would be
-      // refused while it's there, so this says what to do instead
       if (data.all.some((factor) => factor.status === "verified")) {
         return UNUSABLE_FACTOR_ERROR;
       }
-      // The last authenticator was removed since this page opened
       leave(withRedirectTo(SETUP_PATH, redirectTo, onAdminHost));
       return null;
     }
 
-    // The code doesn't say which app made it, so with a backup set up it's
-    // tried on each. A wrong code moves on to the next, anything else stops
     let message = "";
     for (const factor of data.totp) {
       const { error } = await supabase.auth.mfa.challengeAndVerify({

@@ -17,7 +17,6 @@ export interface RowControlsLabels {
 }
 
 interface RowControlsProps {
-  /** Each control only shows when its handler is given. */
   onMoveUp?: () => void;
   onMoveDown?: () => void;
   onDelete?: () => void;
@@ -42,19 +41,6 @@ const WithTooltip = ({
   </Tooltip>
 );
 
-/**
- * The move up, move down and delete buttons at the end of a list row.
- *
- * @example
- * <RowControls
- *   isFirst={index === 0}
- *   isLast={index === rows.length - 1}
- *   isPending={isPending}
- *   onMoveUp={() => onMove(-1)}
- *   onMoveDown={() => onMove(1)}
- *   onDelete={() => setConfirming(true)}
- * />
- */
 const RowControls = ({
   onMoveUp,
   onMoveDown,

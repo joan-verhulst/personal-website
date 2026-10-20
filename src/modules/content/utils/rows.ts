@@ -1,15 +1,10 @@
 import type { WallBackground, WallLayout } from "~/modules/content/types";
 
-// Rows as they're stored, see supabase/migrations. Media columns hold paths in
-// the media bucket. One is null when its file was deleted from Media: the row
-// stays off the site until another file is picked.
-
 export interface SiteRow {
   id: 1;
   about_headline: string;
   about_intro: string;
   about_image: string | null;
-  // Undefined until 0008_about_modal_image.sql has run
   about_modal_image?: string | null;
   currently_name: string | null;
   currently_since: string | null;
@@ -18,12 +13,10 @@ export interface SiteRow {
   instagram_url: string | null;
   linkedin_url: string | null;
   email: string | null;
-  // Undefined until 0007_search_descriptions.sql has run
   search_home?: string | null;
   search_ui_ux?: string | null;
   search_digital_art?: string | null;
   search_photography?: string | null;
-  // Undefined until 0009_contact_cards.sql has run
   card_ui_ux_title?: string | null;
   card_ui_ux_text?: string | null;
   card_ui_ux_button?: string | null;
@@ -71,7 +64,6 @@ export interface RecordRow {
   sort_order: number;
 }
 
-// From 0011_products_table.sql on
 export interface ProductRow {
   id: string;
   name: string;
@@ -115,8 +107,6 @@ export interface WallItemRow {
 export interface WallBlockRow {
   id: string;
   layout: WallLayout;
-  // One item id per slot, big to small. An empty string is an empty slot: the
-  // row is saved but stays off the site until it's filled.
   items: string[];
   sort_order: number;
 }

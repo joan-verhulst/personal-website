@@ -3,11 +3,9 @@ import Actions from "~/modules/cms/components/sidebar/actions";
 
 interface Props {
   email: string;
-  /** Called when the menu opens a page, so the mobile sheet can close. */
   onNavigate?: () => void;
 }
 
-/** The account card at the bottom of the sidebar, which opens the account menu. */
 const Profile = ({ email, onNavigate }: Props) => (
   <Actions email={email} onNavigate={onNavigate}>
     <span

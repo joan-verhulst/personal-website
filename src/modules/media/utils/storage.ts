@@ -1,20 +1,13 @@
 import { AwsClient } from "aws4fetch";
 
-// The media bucket on Cloudflare R2, through its S3 API. The keys can write
-// and delete anything in the bucket, so only server actions import this, and
-// each one checks requireAdmin first. The browser never sees a key: it gets a
-// signed URL for one upload, see signUpload
 
-// A file never changes under its name, a new upload gets a new one, so
-// browsers and the CDN may keep it for a year
+// Immutable: a file never changes under its name
 const CACHE_CONTROL = "public, max-age=31536000, immutable";
 
-// How long a signed upload can start. One that started in time finishes
 const UPLOAD_SECONDS = 600;
 
 let bucket: { client: AwsClient; endpoint: string } | undefined;
 
-/** The client and the bucket's address, set up on first use. */
 const getBucket = () => {
   if (bucket) return bucket;
 
@@ -44,18 +37,12 @@ const objectUrl = (endpoint: string, path: string) =>
 const refused = async (response: Response) =>
   new Error(`R2 answered ${response.status}: ${await response.text()}`);
 
-/**
- * A URL the browser can upload one file to, straight into the bucket, and the
- * headers to send along. The signature covers the path, the type and the
- * size, so the URL takes that one file and nothing else.
- */
 export const signUpload = async (path: string, type: string, size: number) => {
   try {
     const { client, endpoint } = getBucket();
     const url = new URL(objectUrl(endpoint, path));
     url.searchParams.set("X-Amz-Expires", String(UPLOAD_SECONDS));
 
-    // The browser sends the length on its own, from the file
     const headers = { "content-type": type, "cache-control": CACHE_CONTROL };
     const signed = await client.sign(url, {
       method: "PUT",
@@ -68,12 +55,6 @@ export const signUpload = async (path: string, type: string, size: number) => {
   }
 };
 
-/**
- * Stores a file the server has in hand, like a record's cover. Signed here,
- * then sent with the body as it is: client.fetch hands fetch a Request, which
- * Next rebuilds inside a server action with its body as a stream, sent
- * without a length, and R2 refuses an upload without one.
- */
 export const putMedia = async (path: string, body: ArrayBuffer, type: string) => {
   try {
     const { client, endpoint } = getBucket();
@@ -94,10 +75,7 @@ export const putMedia = async (path: string, body: ArrayBuffer, type: string) =>
   }
 };
 
-/**
- * Whether a file is in the bucket, or null when R2 couldn't be asked. A row
- * only gets a path that's checked, so the site never points at nothing.
- */
+/** True or false when checked, null when R2 could not be asked. */
 export const mediaExists = async (path: string) => {
   try {
     const { client, endpoint } = getBucket();
@@ -114,11 +92,6 @@ export const mediaExists = async (path: string) => {
   }
 };
 
-/**
- * Deletes files and returns the ones that went. R2 answers a file that was
- * already gone like one it deleted, which is what a caller wants here. A
- * failure only leaves clutter, so it's logged rather than passed on.
- */
 export const deleteMedia = async (paths: string[]) => {
   let client: AwsClient;
   let endpoint: string;
@@ -164,16 +137,10 @@ const tag = (xml: string, name: string) => {
 
 export interface StoredFile {
   path: string;
-  /** In bytes. */
   size: number;
   createdAt: number;
 }
 
-/**
- * Every file in the bucket with its size and when it was stored, or null when
- * the listing failed. R2 keeps the time of the last write, so a file copied
- * in from elsewhere counts as new from the day it was copied.
- */
 export const listMedia = async () => {
   try {
     const { client, endpoint } = getBucket();

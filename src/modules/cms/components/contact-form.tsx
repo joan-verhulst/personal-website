@@ -15,8 +15,6 @@ import type { SiteRow } from "~/modules/content/utils/rows";
 
 const FORM_ID = "contact-form";
 
-// The cards in the contact modal, in its order. Each also shows as a banner
-// in its section's footer
 const CARDS = [
   {
     key: "uiUx",
@@ -38,7 +36,6 @@ const CARDS = [
   },
 ] as const;
 
-/** The contact links' editor: the header, the sections and Save in the bottom bar. */
 const ContactForm = ({ site }: { site: SiteRow }) => {
   const { run, isPending } = useAction();
   const {
@@ -67,7 +64,6 @@ const ContactForm = ({ site }: { site: SiteRow }) => {
     },
   });
 
-  // Leaving the page would drop unsaved changes, so it asks first
   useUnsavedWarning(isDirty);
 
   const onSubmit = handleSubmit(async (values) => {
@@ -77,7 +73,6 @@ const ContactForm = ({ site }: { site: SiteRow }) => {
       setErrors(result.fieldErrors);
       return;
     }
-    // What was saved is the new starting point, so Save turns off again
     reset(values);
   });
 

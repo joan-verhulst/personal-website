@@ -11,9 +11,7 @@ export const metadata: Metadata = { title: "Search" };
 
 const KEYS = Object.keys(pages) as PageKey[];
 
-// The form renders the whole page: its header, and Save in the bottom bar
 const SearchAdmin = async () => {
-  // The fallbacks come from what the site shows, like the about headline
   const [site, content] = await Promise.all([readSite(), getContent()]);
   const fallbacks = Object.fromEntries(
     KEYS.map((key) => [key, fallbackDescription(key, content)]),

@@ -9,7 +9,6 @@ import MediaThumb from "~/modules/cms/components/media-thumb";
 import type { WallItemRow, WallTagRow } from "~/modules/content/utils/rows";
 
 export interface ItemCardData extends WallItemRow {
-  // Where it shows on the site, empty when it doesn't
   usage: string[];
   isOnWall: boolean;
   isInExperiments: boolean;
@@ -17,22 +16,15 @@ export interface ItemCardData extends WallItemRow {
 }
 
 interface Props {
-  /** The items to show: the open tab's, after the toolbar's filters. */
   items: ItemCardData[];
-  /** How many the tab holds without filters, for the empty state's copy. */
   total: number;
   tags: WallTagRow[];
-  /** Which tab it's in, for the empty state's copy. */
   kind: "ui-ux" | "experiments";
-  /** The "New item" button, for a tab that has nothing in it yet. */
   newItem: ReactNode;
 }
 
-/** Wall items as cards. The toolbar above it does the filtering. */
 const ItemsGrid = ({ items, total, tags, kind, newItem }: Props) => {
   const tagById = new Map(tags.map((tag) => [tag.id, tag]));
-  // An item opened from Experiments remembers that, so its breadcrumb leads
-  // back to this tab
   const hrefOf = (id: string) =>
     `/admin/ui-ux/items/${id}${kind === "experiments" ? "?from=experiments" : ""}`;
 
@@ -46,7 +38,6 @@ const ItemsGrid = ({ items, total, tags, kind, newItem }: Props) => {
               href={hrefOf(item.id)}
               title={item.title}
               meta={<TagLabel tag={tagById.get(item.tag_id ?? "")} />}
-              // The tab already says whether it's in Experiments
               badge={
                 (item.isOnWall || item.isHighlight) && (
                   <>
@@ -91,7 +82,6 @@ const ItemsGrid = ({ items, total, tags, kind, newItem }: Props) => {
         />
       )}
 
-      {/* Says how many are left after filtering, without moving focus */}
       <p aria-live="polite" className="sr-only">
         {items.length} of {total} items
       </p>

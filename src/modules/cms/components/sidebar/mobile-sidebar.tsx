@@ -23,10 +23,6 @@ interface Props {
 const ICON_BUTTON =
   "grid size-9 cursor-pointer place-items-center rounded-[10px] text-neutral-700 transition-colors duration-200 hover:bg-neutral-950/5 hover:text-neutral-950 focus-visible:outline-2 focus-visible:outline-primary-500";
 
-/**
- * The sidebar on small screens: a bar with the wordmark and a menu button
- * that slides the whole sidebar in as a sheet, account menu included.
- */
 const MobileSidebar = ({ email }: Props) => {
   const [isOpen, setIsOpen] = useState(false);
 

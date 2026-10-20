@@ -16,7 +16,6 @@ interface Props {
 const DigitalArtGallery = ({ artworks }: Props) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [pendingIndex, setPendingIndex] = useState<number | null>(null);
-  // The piece pointed at on the island's scrubber
   const [pointedIndex, setPointedIndex] = useState<number | null>(null);
 
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
@@ -37,9 +36,7 @@ const DigitalArtGallery = ({ artworks }: Props) => {
 
   return (
     <PageWithFooter className="h-screen overflow-hidden">
-      {/* The island names the section on screen, this names it for search */}
       <h1 className="sr-only">Digital Art</h1>
-      {/* The island names the piece pointed at, and counts which one it is */}
       <IslandControls
         labels={titles}
         pointed={pointedIndex}
@@ -55,7 +52,6 @@ const DigitalArtGallery = ({ artworks }: Props) => {
         />
       </IslandControls>
 
-      {/* Horizontal Image Slider */}
       <div className="flex h-full items-center justify-center">
         <HorizontalImageSlider
           items={artworks}

@@ -46,8 +46,6 @@ import type {
   WallTagRow,
 } from "~/modules/content/utils/rows";
 
-// randomUUID only exists on https and localhost, so there's a fallback for a
-// dev server opened over the network
 const newId = () =>
   typeof crypto.randomUUID === "function"
     ? crypto.randomUUID()
@@ -59,10 +57,6 @@ const newId = () =>
         ).toString(16),
       );
 
-/**
- * The saved rows as drafts. Slots pointing at a deleted item, or at an item
- * that's already higher up, become empty.
- */
 const toDrafts = (
   blocks: WallBlockRow[],
   known: Map<string, WallItemRow>,
@@ -85,14 +79,9 @@ const signature = (rows: WallRowDraft[]) =>
 
 const listSignature = (list: string[]) => JSON.stringify(list);
 
-/**
- * What's being edited, next to what the database holds. Fresh data from the
- * server replaces the draft, unless there are edits that would be lost.
- */
 const useDraft = <T,>(incoming: T, keyOf: (value: T) => string) => {
   const incomingKey = keyOf(incoming);
   const [value, setValue] = useState(incoming);
-  // What the database holds, as far as this screen knows
   const [saved, setSaved] = useState(incomingKey);
   const [loaded, setLoaded] = useState(incomingKey);
   const key = keyOf(value);
@@ -109,13 +98,11 @@ const useDraft = <T,>(incoming: T, keyOf: (value: T) => string) => {
     setValue,
     key,
     isDirty,
-    /** After a save: what was sent is what the database holds now. */
     markSaved: setSaved,
     reset: () => setValue(incoming),
   };
 };
 
-// The parts of the page that save on their own, as a failed save names them
 const PART_LABELS = {
   rows: "Rows",
   highlights: "Highlights",
@@ -124,13 +111,11 @@ const PART_LABELS = {
 
 type Part = keyof typeof PART_LABELS;
 
-/** A slot a dialog is open for. Rows go by id, since they can move. */
 interface SlotRef {
   rowId: string;
   slot: number;
 }
 
-/** A filled slot's dialog also holds the item that sat in it then. */
 interface OpenSlot extends SlotRef {
   itemId: string;
 }
@@ -142,12 +127,6 @@ interface Props {
   lists: WallListRow[];
 }
 
-/**
- * The UI/UX wall screen, top to bottom: the item library, the rows with their
- * fixed slots, then the home highlights and experiments, each in its own
- * container. The one Save in the bottom bar saves whichever of the three
- * changed.
- */
 const WallEditor = ({ items, tags, blocks, lists }: Props) => {
   const { run, isPending } = useAction();
   const confirm = useConfirm();
@@ -168,13 +147,11 @@ const WallEditor = ({ items, tags, blocks, lists }: Props) => {
   const rowsDraft = useDraft(incoming, signature);
   const { value: rows, setValue: setRows } = rowsDraft;
 
-  // The home lists are drafts too, saved by the same button
   const savedLists = useMemo(() => {
     const listItems = (id: string) =>
       lists.find((list) => list.id === id)?.items ?? [];
     const highlights = listItems("highlights");
     return {
-      // Always two places, an empty one is ""
       highlights: [highlights[0] ?? "", highlights[1] ?? ""],
       experiments: listItems("experiments"),
     };
@@ -182,19 +159,14 @@ const WallEditor = ({ items, tags, blocks, lists }: Props) => {
   const highlightsDraft = useDraft(savedLists.highlights, listSignature);
   const experimentsDraft = useDraft(savedLists.experiments, listSignature);
 
-  // The site needs both highlights, so one on its own waits
   const isHighlightsComplete = highlightsDraft.value.every(Boolean);
   const canSaveHighlights = highlightsDraft.isDirty && isHighlightsComplete;
   const isDirty =
     rowsDraft.isDirty || highlightsDraft.isDirty || experimentsDraft.isDirty;
 
-  // Asks before the tab closes or a link leaves the page, like Edit item
   useUnsavedWarning(isDirty);
 
-  // What's being dragged. A ref, since dragover fires too often for state.
   const dragRef = useRef<string | null>(null);
-  // The slots the two dialogs are open for. Kept after closing, so a dialog
-  // keeps its content during the exit animation.
   const [viewing, setViewing] = useState<OpenSlot | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [pickingFor, setPickingFor] = useState<SlotRef | null>(null);
@@ -243,7 +215,6 @@ const WallEditor = ({ items, tags, blocks, lists }: Props) => {
       return {
         item,
         tag: item ? tagsById.get(item.tag_id ?? "") : undefined,
-        // Fits here, and whatever it swaps with fits where it came from
         accepts: (candidate) => {
           if (!fits(candidate, row.layout, slot, isVideo)) return false;
           const from = placed.get(candidate);
@@ -277,7 +248,6 @@ const WallEditor = ({ items, tags, blocks, lists }: Props) => {
       };
     };
 
-  // Puts a row back as it was, minus items that went elsewhere since
   const restoreRow = (previous: WallRowDraft) =>
     setRows((current) => {
       const taken = placements(
@@ -297,10 +267,8 @@ const WallEditor = ({ items, tags, blocks, lists }: Props) => {
     if (previous.layout === layout) return;
     const { row, leftOver } = relayout(previous, layout, isVideo);
     setRows(rows.map((other, index) => (index === rowIndex ? row : other)));
-    // A smaller layout can drop items: Undo brings them back
     if (leftOver.length) {
       toast(`${leftOver.map(titleOf).join(", ")} went back to the library`, {
-        // Long enough to decide on
         duration: 10000,
         action: { label: "Undo", onClick: () => restoreRow(previous) },
       });
@@ -321,13 +289,11 @@ const WallEditor = ({ items, tags, blocks, lists }: Props) => {
 
     setRows((current) => current.filter((row) => row.id !== removed.id));
     toast(`Row ${rowIndex + 1} deleted`, {
-      // Long enough to decide on
       duration: 10000,
       action: {
         label: "Undo",
         onClick: () =>
           setRows((current) => {
-            // Items placed elsewhere since then stay where they are now
             const taken = placements(current);
             const restored = {
               ...removed,
@@ -346,8 +312,6 @@ const WallEditor = ({ items, tags, blocks, lists }: Props) => {
   const addRow = (layout: WallLayout) =>
     setRows([...rows, { id: newId(), layout, items: emptySlots(layout) }]);
 
-  // Saves the parts that changed, one after the other. A part that fails
-  // stays unsaved and is named in the toast, the others still go through
   const onSave = async () => {
     const drafts = {
       rows: rowsDraft,
@@ -362,7 +326,6 @@ const WallEditor = ({ items, tags, blocks, lists }: Props) => {
     const parts = (Object.keys(drafts) as Part[]).filter((part) =>
       part === "highlights" ? canSaveHighlights : drafts[part].isDirty,
     );
-    // The drafts as they're sent, since they can change while the save runs
     const sent = Object.fromEntries(
       parts.map((part) => [part, drafts[part].key]),
     );
@@ -373,8 +336,6 @@ const WallEditor = ({ items, tags, blocks, lists }: Props) => {
       for (const part of parts) {
         const { error } = await actions[part]();
         if (!error) done.push(part);
-        // Signed out, or without a code, fails every part the same way, so
-        // it's said once
         else if (isSessionError(error)) return { error };
         else failures.push(`${PART_LABELS[part]}: ${error}`);
       }
@@ -384,7 +345,6 @@ const WallEditor = ({ items, tags, blocks, lists }: Props) => {
     for (const part of done) drafts[part].markSaved(sent[part]);
 
     if (!result) {
-      // The parts that did save changed the site, so the screen reloads
       if (done.length) router.refresh();
       return;
     }
@@ -412,7 +372,6 @@ const WallEditor = ({ items, tags, blocks, lists }: Props) => {
 
   const hiddenRows = rows.filter((row) => !isComplete(row)).length;
 
-  // The dialogs find their row by id, since rows can move while one is open
   const viewedIndex = viewing
     ? rows.findIndex((row) => row.id === viewing.rowId)
     : -1;
@@ -541,7 +500,6 @@ const WallEditor = ({ items, tags, blocks, lists }: Props) => {
       <SaveActions
         isDirty={isDirty}
         isPending={isPending}
-        // Half-picked highlights alone leave nothing to save yet
         isDisabled={
           !rowsDraft.isDirty && !experimentsDraft.isDirty && !canSaveHighlights
         }
@@ -562,15 +520,12 @@ const WallEditor = ({ items, tags, blocks, lists }: Props) => {
         tag={viewedItem ? tagsById.get(viewedItem.tag_id ?? "") : undefined}
         place={viewing && viewedRow ? slotName(viewedIndex, viewing.slot) : ""}
         isRowHidden={viewedRow ? !isComplete(viewedRow) : false}
-        // The lists only: the wall is the slot itself
         elsewhere={viewing ? describeUsage(viewing.itemId, [], lists) : []}
         onRemove={() => {
-          // Only when the item is still there, not one swapped in since
           if (viewing && viewedRow?.items[viewing.slot] === viewing.itemId) {
             clearSlot(viewedIndex, viewing.slot);
           }
         }}
-        // The keyboard and touch way to put another item in a filled slot
         onReplace={() => {
           if (!viewing) return;
           setPickingFor({ rowId: viewing.rowId, slot: viewing.slot });

@@ -1,12 +1,5 @@
 import { type GearItem, type GearType, gear } from "~/data/favorites";
 
-/**
- * Typesets the gear as a mail-order catalogue, the kind a general store kept
- * on its counter: a running head, a boxed department banner, every item in
- * its own ruled cell with a plate, a line of copy and its figures on dotted
- * leaders. Each page is drawn onto its own canvas, so its type and plates can
- * be printed through the ink shader as one sheet.
- */
 
 export interface Rect {
   x: number;
@@ -18,8 +11,6 @@ export interface Rect {
 export interface Department {
   title: string;
   items: GearItem[];
-  // How heavily its pages are inked, 0 to 1. Set by eye for each department:
-  // the cameras and lenses fill in sooner than the rest
   inkWeight: number;
 }
 
@@ -46,15 +37,12 @@ export interface PageColors {
   paper: string;
 }
 
-// The covers print in white on the site's blue
 export const COVER_COLORS: PageColors = { ink: "#faf9f9", paper: "#3a9bd8" };
 
 interface Sheet {
   ctx: CanvasRenderingContext2D;
   family: string;
-  // One fiftieth of a page's width: what all type is sized in
   t: number;
-  // The thinnest line that still prints
   hairline: number;
 }
 
@@ -68,7 +56,6 @@ const setFont = (
   ctx.letterSpacing = tracking;
 };
 
-// Breaks text where it would run past `maxWidth`
 const wrap = (ctx: CanvasRenderingContext2D, text: string, maxWidth: number) => {
   const lines: string[] = [];
   let line = "";
@@ -96,7 +83,6 @@ const splitName = (name: string) => {
     : { maker: "", model: maker };
 };
 
-// The plate: a cut-out stands free, a cropped photo goes in a frame
 const drawPlate = (
   sheet: Sheet,
   image: HTMLImageElement,
@@ -108,7 +94,6 @@ const drawPlate = (
 
   let area = box;
   if (isFramed) {
-    // Sized to the photo's own proportions, with a double rule around it
     const ratio = image.naturalWidth / image.naturalHeight;
     const height = Math.min(box.height, box.width / ratio);
     const width = height * ratio;
@@ -150,7 +135,6 @@ const drawPlate = (
   );
 };
 
-// A figure on a dotted leader, where a store would print the price
 const drawFigures = (
   sheet: Sheet,
   item: GearItem,
@@ -190,8 +174,6 @@ const drawFigures = (
   return top;
 };
 
-// One item in its cell: wide cells set the plate beside the copy, tall ones
-// set it between the heading and the copy
 const drawCell = (
   sheet: Sheet,
   item: GearItem,
@@ -287,9 +269,7 @@ interface PageContent {
   items: GearItem[];
   images: Map<string, HTMLImageElement>;
   folio: number;
-  // Shown boxed across the top of the department's first page
   hasBanner: boolean;
-  // Printed in the bottom corner, where the page is turned
   turn: { label: string; side: "left" | "right" } | null;
 }
 
@@ -300,7 +280,6 @@ const typesetPage = (sheet: Sheet, page: Rect, content: PageContent) => {
   const width = page.width - margin * 2;
   const small = Math.max(1.15 * t, 8);
 
-  // Running head
   let y = page.y + 2.4 * t + small;
   ctx.textAlign = "center";
   setFont(sheet, small, 500, "0.22em");
@@ -313,7 +292,6 @@ const typesetPage = (sheet: Sheet, page: Rect, content: PageContent) => {
   rule(sheet, x, y, width);
   y += 1.8 * t;
 
-  // Department banner: a heavy box with a hairline inside it
   if (content.hasBanner) {
     const height = 5.4 * t;
     ctx.lineWidth = hairline * 2.5;
@@ -342,7 +320,6 @@ const typesetPage = (sheet: Sheet, page: Rect, content: PageContent) => {
     y += height + 2 * t;
   }
 
-  // The cells, one above the other with a rule between
   const bottom = page.y + page.height - 4.6 * t;
   const gap = 3.2 * t;
   const count = content.items.length;
@@ -355,7 +332,6 @@ const typesetPage = (sheet: Sheet, page: Rect, content: PageContent) => {
       drawCell(sheet, item, image, { x, y: top, width, height: cellHeight });
   });
 
-  // Folio, and where to turn the page
   const foot = page.y + page.height - 1.9 * t;
   setFont(sheet, small, 500, "0.12em");
   ctx.textAlign = "center";
@@ -374,40 +350,28 @@ const typesetPage = (sheet: Sheet, page: Rect, content: PageContent) => {
   }
 };
 
-/** A page of a department, with its items. */
 interface ItemsPage {
   kind: "items";
   department: Department;
   items: GearItem[];
   folio: number;
-  // Shown boxed across the top of the first page of a department
   hasBanner: boolean;
-  // Printed in the bottom corner, where the page is turned
   turn: { label: string; side: "left" | "right" } | null;
   inkWeight: number;
 }
 
-/** One page of the catalogue: a cover, or a page of a department. */
 export type CataloguePage =
   | ItemsPage
   | { kind: "front"; inkWeight: number; colors: PageColors }
   | { kind: "back"; inkWeight: number; colors: PageColors };
 
-// The covers are inked like the first department, where their plate comes from
 const COVER_INK = departments[0]?.inkWeight ?? 0.5;
 
-/**
- * Every page in reading order, the covers included. They're bound in pairs:
- * an even index is the front of a leaf, which lies on the right while the
- * leaf is unturned, and the odd one after it is its back. So the front cover
- * comes first, its back is the first left page, and the back cover is last.
- */
 export const pages: CataloguePage[] = [
   { kind: "front", inkWeight: COVER_INK, colors: COVER_COLORS },
   ...departments.flatMap<ItemsPage>((department, index) => {
     const previous = departments[index - 1];
     const next = departments[index + 1];
-    // The first page takes the smaller half, so a lone item gets a page to itself
     const split = Math.floor(department.items.length / 2);
 
     return [
@@ -434,28 +398,15 @@ export const pages: CataloguePage[] = [
   { kind: "back", inkWeight: COVER_INK, colors: COVER_COLORS },
 ];
 
-/**
- * The cover's title face: Google Sans Flex at its heaviest, a little wide,
- * with rounded ends. A canvas can't reach the rounded axis, so this is an
- * instance with it set, cut down to the letters of "gear". Remade with
- * fonts.googleapis.com/css2?family=Google+Sans+Flex:slnt,wdth,wght,ROND@-10,112,900,100&text=gear
- * (the semi-expanded face). The slant isn't in it, it's drawn.
- */
 export const COVER_FONT = {
   family: "Gear Display",
   url: "/fonts/gear-display.ttf",
 };
 
-// How far the cover's type leans, like an italic
 const SLANT = Math.tan((10 * Math.PI) / 180);
 
-// Racing stripes, in shares of t: the inside one heaviest, thinning outwards
 const STRIPES = [1.4, 1.2, 1, 0.7, 0.4];
 
-/**
- * Stripes along the foot of the page that round the corner and run up past
- * its top. Mirrored, they start at the right edge instead.
- */
 const drawStripes = (sheet: Sheet, page: Rect, isMirrored: boolean) => {
   const { ctx, t } = sheet;
   ctx.save();
@@ -463,8 +414,6 @@ const drawStripes = (sheet: Sheet, page: Rect, isMirrored: boolean) => {
     ctx.translate(page.x * 2 + page.width, 0);
     ctx.scale(-1, 1);
   }
-  // The corner they round, set from the foot so a taller page only gains
-  // room above them
   const bend = { x: page.x + 33 * t, y: page.y + page.height - 20 * t };
   STRIPES.forEach((weight, index) => {
     const radius = (4 + index * 2) * t;
@@ -479,7 +428,6 @@ const drawStripes = (sheet: Sheet, page: Rect, isMirrored: boolean) => {
   ctx.restore();
 };
 
-// Text that leans, from its baseline
 const fillSlanted = (
   ctx: CanvasRenderingContext2D,
   text: string,
@@ -493,18 +441,12 @@ const fillSlanted = (
   ctx.restore();
 };
 
-// The plate on the front cover: the camera on the home page's Gear widget
 const COVER_PLATE = "mamiya-rz67";
 
-// The departments by their first word: Cameras, Film, Guitars
 const SHORT_DEPARTMENTS = departments
   .map(({ title }) => title.split(" ")[0].toUpperCase())
   .join(" · ");
 
-/**
- * A 1970s store catalogue: racing stripes, a fat rounded title that leans,
- * and the camera parked on the stripes.
- */
 const typesetFront = (
   sheet: Sheet,
   page: Rect,
@@ -531,7 +473,6 @@ const typesetFront = (
     page.y + 17.2 * t,
   );
 
-  // Parked on the innermost stripe
   const image = images.get(COVER_PLATE);
   if (image) {
     const bottom = page.y + page.height - 16 * t - 0.7 * t;
@@ -550,7 +491,6 @@ const typesetFront = (
   ctx.fillText(SHORT_DEPARTMENTS, right, foot);
 };
 
-// The back cover: only the stripes again, coming in from the spine
 const typesetBack = (sheet: Sheet, page: Rect) => {
   drawStripes(sheet, page, true);
 };
@@ -560,10 +500,6 @@ export interface PrintRun {
   images: Map<string, HTMLImageElement>;
 }
 
-/**
- * Typesets one page, filling the canvas with it. The canvas is `scale` device
- * pixels per CSS pixel.
- */
 export const drawPage = (
   ctx: CanvasRenderingContext2D,
   width: number,

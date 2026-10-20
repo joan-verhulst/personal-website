@@ -15,8 +15,6 @@ interface Props {
   searchParams: Promise<{ redirectTo?: string | string[] }>;
 }
 
-// The proxy only lets a session in here that has a password and still owes
-// a code. Nothing on the page is worth guarding by itself
 const VerifyPage = async ({ searchParams }: Props) => {
   const { redirectTo } = await searchParams;
   const { onAdminHost } = await getAdminPaths();

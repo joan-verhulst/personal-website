@@ -4,8 +4,6 @@ import * as SwitchPrimitives from "@radix-ui/react-switch";
 import type { ComponentProps } from "react";
 import cn from "~/utils/cn";
 
-// Spark's on and off tracks were two greys that were hard to tell apart, so
-// the on track is the primary colour here
 const Switch = ({
   className,
   ...props

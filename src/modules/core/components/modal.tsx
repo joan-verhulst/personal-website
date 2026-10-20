@@ -20,14 +20,10 @@ interface Props {
   title?: ReactNode;
   children: ReactNode;
   className?: string;
-  // When the modal is far enough in for its content to animate in
   onOpenComplete?: () => void;
 }
 
-// Opening: the backdrop dims while the modal rises into place and grows to
-// size, slowing down all the way, with no overshoot. It fades in over the
-// first part of the rise, slow enough not to flash. Its content follows
-// once it's mostly there. Closing is the same, sinking, a little quicker
+// Fades in slowly over the first part of the rise, slow enough not to flash
 const OPEN = { dim: 0.45, fade: 0.35, rise: 0.65, contentAt: 0.25 };
 const CLOSE = { dim: 0.35, fade: 0.25, sink: 0.3 };
 const FROM = { y: 48, scale: 0.96 };
@@ -89,7 +85,6 @@ const Modal = ({
         scale: 1,
         duration: OPEN.rise,
         ease: "power3.out",
-        // A transform left on would keep fixed elements inside off the page
         clearProps: "transform",
       },
       0,
@@ -183,15 +178,12 @@ const Modal = ({
     >
       <div
         ref={modalRef}
-        // Merged, so a modal can be made narrower than max-w-4xl
         className={cn(
           "relative flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border border-neutral-950/10 bg-neutral-50",
           className,
         )}
-        // Hidden until the open animation takes it, see animateOpen
         style={{ opacity: 0 }}
       >
-        {/* Header */}
         <div className="z-10 flex shrink-0 items-center justify-between rounded-t-3xl border-neutral-950/10 border-b bg-neutral-50 py-4 pr-4 pl-6">
           {title ? (
             <span className="font-regular text-md text-neutral-950">
@@ -211,7 +203,6 @@ const Modal = ({
           </button>
         </div>
 
-        {/* Content */}
         <div className="flex-1 overflow-auto p-6">{children}</div>
       </div>
     </div>,

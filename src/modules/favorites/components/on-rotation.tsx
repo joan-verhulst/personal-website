@@ -19,29 +19,20 @@ import { track as trackEvent } from "~/utils/eyes";
 
 // How long a record plays before the next one goes on
 const PLAY_SECONDS = 15;
-// How long the needle takes to come over and drop
 const CUE_SECONDS = 0.8;
 
-// Slider position to start at. Loudness is the square of the position, which
-// feels even to the ear, so this plays at 4%: there, but barely.
 const START_LEVEL = 0.2;
-// Where unmuting goes back to when there's nothing to restore
 const UNMUTE_LEVEL = 0.5;
 
-// The record that peeks out of a sleeve on the shelf
 const MINI_GROOVES =
   "repeating-radial-gradient(circle at center, #101010 0 1px, #222 1px 2px)";
 
-// One record plays at a time: the about page has a player of its own, and
-// the modal's can open over it. The one that starts says so, the others stop
 const PLAYING_EVENT = "on-rotation-playing";
 
 const prefersReducedMotion = () =>
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 interface Props {
-  // Whether the record plays as soon as it's shown. On a page, rather than
-  // in a modal someone opened, it waits for a press
   autoPlay?: boolean;
 }
 
@@ -101,9 +92,6 @@ const OnRotation = ({ autoPlay = true }: Props) => {
     });
   };
 
-  // Browsers block sound until the visitor has interacted with the page. If
-  // that's still the case, the record keeps spinning silently and the next
-  // click or slider drag starts the sound.
   const startSound = () => {
     const audio = audioRef.current;
     if (!audio?.src || !audio.paused) return;
@@ -114,10 +102,8 @@ const OnRotation = ({ autoPlay = true }: Props) => {
       .catch(() => {});
   };
 
-  // Lifts the record off, swaps it while it's up and sets the next one down
   const play = (index: number, { silent = false } = {}) => {
     if (index === activeIndex) return;
-    // Silent is the next record coming up by itself, which isn't a pick
     if (!silent) {
       haptic.onClick();
       const { title, artist } = onRotation[index];
@@ -158,14 +144,12 @@ const OnRotation = ({ autoPlay = true }: Props) => {
     tl.to(detailsRef.current, { opacity: 1, duration: 0.3 }, 0.3);
   };
 
-  // Wraps around both ways
   const step = (direction: 1 | -1, options?: { silent?: boolean }) =>
     play(
       (activeIndex + direction + onRotation.length) % onRotation.length,
       options,
     );
 
-  // The timer's callback outlives the render it was made in
   const stepRef = useRef(step);
   stepRef.current = step;
 
@@ -188,7 +172,6 @@ const OnRotation = ({ autoPlay = true }: Props) => {
     return () => controller.abort();
   }, []);
 
-  // One audio element for the player's lifetime, silenced when it closes
   useEffect(() => {
     const audio = new Audio();
     audio.preload = "auto";
@@ -202,11 +185,7 @@ const OnRotation = ({ autoPlay = true }: Props) => {
     };
   }, []);
 
-  // Follows the site's sound setting: off means muted, until the visitor
-  // turns the volume up here themselves
   useEffect(() => {
-    // Phones start silent too: a song playing out loud on open is unwelcome
-    // there, and the fader is a small target to find in a hurry
     const isPhone = window.matchMedia("(pointer: coarse)").matches;
     if (!isSoundEnabled() || isPhone) setLevel(0);
 
@@ -257,7 +236,6 @@ const OnRotation = ({ autoPlay = true }: Props) => {
     const tl = gsap.timeline({
       onComplete: () => stepRef.current(1, { silent: true }),
     });
-    // Waits for the record to be down
     tl.to(
       arm,
       { rotation: ARM.outer, duration: CUE_SECONDS, ease: "power2.inOut" },
@@ -267,7 +245,6 @@ const OnRotation = ({ autoPlay = true }: Props) => {
     if (progressRef.current)
       tl.fromTo(
         progressRef.current,
-        // Width, not a scale, so the rounded ends keep their shape
         { width: "0%" },
         { width: "100%", duration: PLAY_SECONDS, ease: "none" },
         "<",
@@ -283,7 +260,6 @@ const OnRotation = ({ autoPlay = true }: Props) => {
     sideRef.current?.paused(!isPlaying);
   }, [isPlaying]);
 
-  // Stops for another player, and stops the others when it starts
   useEffect(() => {
     const handlePlaying = (event: Event) => {
       if ((event as CustomEvent<string>).detail !== id) setIsPlaying(false);
@@ -341,7 +317,6 @@ const OnRotation = ({ autoPlay = true }: Props) => {
           queue scrolls within it instead of stretching it */}
       <div className="relative inset-border min-w-0 rounded-3xl bg-white">
         <div className="flex flex-col gap-5 p-5 md:absolute md:inset-0">
-          {/* Now playing */}
           <div>
             <div ref={detailsRef} aria-live="polite">
               <span className="block truncate text-2xl text-neutral-950 leading-tight">
@@ -352,7 +327,6 @@ const OnRotation = ({ autoPlay = true }: Props) => {
               </span>
             </div>
 
-            {/* How far the needle is across the record */}
             <div className="mt-4 flex items-center gap-3">
               <div className="relative h-0.75 flex-1 rounded-full bg-neutral-950/10">
                 {animationsEnabled && (
@@ -399,7 +373,6 @@ const OnRotation = ({ autoPlay = true }: Props) => {
                         : "hover:bg-neutral-950/5",
                     )}
                   >
-                    {/* Sleeve, with its record pulled halfway out when it's on */}
                     <span className="relative block h-12 w-18 shrink-0">
                       <span
                         aria-hidden
@@ -434,7 +407,6 @@ const OnRotation = ({ autoPlay = true }: Props) => {
                     </span>
 
                     {isActive ? (
-                      // Level meter, moving while the record plays
                       <span
                         aria-hidden
                         className="flex h-3 shrink-0 items-end gap-0.5"

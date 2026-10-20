@@ -18,7 +18,6 @@ interface Props {
   onShuffle: () => void;
 }
 
-// Lives in the island, see IslandControls, so it's styled light on dark
 const ViewSwitcher = ({ view, haptic, onChange, onShuffle }: Props) => {
   return (
     <div className="flex items-center gap-1.5">

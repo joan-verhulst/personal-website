@@ -17,33 +17,18 @@ import {
 } from "~/modules/cms/utils/two-factor";
 
 export const metadata: Metadata = {
-  // Every page names itself, so tabs and history tell Items from About
   title: { template: "%s · Content", default: "Content" },
   robots: { index: false, follow: false },
 };
 
-/**
- * The grey screen with the sidebar and the white panel that holds a page. The
- * screen itself never scrolls: only the page inside the panel does, between
- * the breadcrumbs and the bottom bar. So the bar stays in reach on a phone
- * too, and a page scrolls exactly as far as its content goes.
- *
- * A page is 960px wide at most, which suits a collection. A form page wraps
- * itself in <Page width="form"> to go down to 720px. What a page renders
- * stacks 16px apart.
- */
 const CmsLayout = async ({ children }: { children: ReactNode }) => {
   const admin = await requireAdmin();
   const { href } = await getAdminPaths();
 
   if (admin.reason === "signed-out") redirect(href(LOGIN_PATH));
-  // Signed in with only a password: the code comes first, or setting up an
-  // authenticator for an account that has none
   if (admin.reason === "needs-code") redirect(href(VERIFY_PATH));
   if (admin.reason === "needs-setup") redirect(href(SETUP_PATH));
 
-  // Supabase didn't answer, which says nothing about this account. Neither
-  // the login page nor the "not an admin" steps below would help
   if (admin.reason === "unreachable") {
     return (
       <main className="flex h-dvh flex-col items-center justify-center gap-2 bg-neutral-100 px-6 text-center">
@@ -71,13 +56,11 @@ const CmsLayout = async ({ children }: { children: ReactNode }) => {
         <Sidebar email={admin.user.email ?? ""} />
         <MobileSidebar email={admin.user.email ?? ""} />
         <div className="flex min-h-0 min-w-0 flex-1 flex-col rounded-t-xl border border-neutral-950/10 bg-white md:mt-2 md:rounded-tr-none">
-          {/* Both bars read the address's query, which needs a boundary */}
           <Suspense fallback={<div className="h-[54px] shrink-0" />}>
             <TopBar />
           </Suspense>
           <main
             id="cms-main"
-            // Focusable from the skip link only
             tabIndex={-1}
             className="min-h-0 flex-1 overflow-y-auto overscroll-contain outline-hidden"
           >

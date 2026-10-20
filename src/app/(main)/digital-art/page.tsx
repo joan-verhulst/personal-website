@@ -7,7 +7,6 @@ export const generateMetadata = async (): Promise<Metadata> =>
   pageMetadata("digitalArt", await getContent());
 
 const DigitalArtPage = async () => {
-  // Sizes are measured when a piece is uploaded
   const { artworks } = await getContent();
 
   return <DigitalArtGallery artworks={artworks} />;

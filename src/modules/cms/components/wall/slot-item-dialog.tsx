@@ -19,14 +19,10 @@ interface SlotItemDialogProps {
   onOpenChange: (open: boolean) => void;
   item?: WallItemRow;
   tag?: WallTagRow;
-  /** Where it sits, like "Row 2, large slot". */
   place: string;
-  /** Whether that row is hidden on the site, since a slot is empty. */
   isRowHidden: boolean;
-  /** Other places it shows up, like "Experiments". */
   elsewhere: string[];
   onRemove: () => void;
-  /** Runs once the dialog has closed, to choose another item for the slot. */
   onReplace: () => void;
 }
 
@@ -43,7 +39,6 @@ const Detail = ({
   </div>
 );
 
-/** A filled slot's item: a preview, its details and what to do with it. */
 const SlotItemDialog = ({
   open,
   onOpenChange,
@@ -56,8 +51,6 @@ const SlotItemDialog = ({
   onReplace,
 }: SlotItemDialogProps) => {
   const href = item ? `/admin/ui-ux/items/${item.id}` : "/admin/ui-ux/items";
-  // Set by Replace, acted on once this dialog has closed and focus is back on
-  // the slot. The picker then returns focus there too
   const isReplaceRequested = useRef(false);
 
   return (
@@ -72,7 +65,6 @@ const SlotItemDialog = ({
           onReplace();
         }}
         footerStart={
-          // Takes it off the draft only, so it isn't a delete
           <Button
             variant="ghost"
             onClick={() => {
@@ -106,7 +98,6 @@ const SlotItemDialog = ({
           </>
         }
       >
-        {/* The card as the site shows it, the same as on the item's own page */}
         {item && (
           <WallCardPreview
             item={toPreviewItem(item, tag ? [tag] : [])}

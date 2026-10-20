@@ -22,18 +22,12 @@ type Filter = "all" | "free";
 interface ItemLibraryProps {
   items: WallItemRow[];
   tags: WallTagRow[];
-  /** The row each item on the wall sits in, from 0. */
   rowOf: Map<string, number>;
   onDragStart: (id: string) => void;
   onDragEnd: () => void;
   className?: string;
 }
 
-/**
- * Every wall item as a card in a strip, to drag onto a slot. Placing without
- * a mouse goes through a slot's picker instead, so the cards themselves do
- * nothing on a click.
- */
 const ItemLibrary = ({
   items,
   tags,
@@ -50,7 +44,6 @@ const ItemLibrary = ({
   const free = items.filter((item) => !rowOf.has(item.id));
   const tagOf = (item: WallItemRow) =>
     tags.find((tag) => tag.id === item.tag_id);
-  // Matches the tag too, like the search on the items page
   const needle = query.trim().toLowerCase();
   const shown = (filter === "free" ? free : items).filter(
     (item) =>
@@ -134,8 +127,6 @@ const ItemLibrary = ({
             // biome-ignore lint/a11y/noNoninteractiveTabindex: see above
             tabIndex={0}
             aria-label="Library items"
-            // Runs out to the container's edges, so cards scroll away under
-            // its border instead of stopping short of it
             className="-mx-5 flex scroll-px-5 gap-2 overflow-x-auto px-5 pb-2 focus-visible:outline-2 focus-visible:outline-primary-500 focus-visible:-outline-offset-2"
           >
             {shown.map((item) => {

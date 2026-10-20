@@ -35,7 +35,6 @@ interface CardProps {
 const RecordCard = ({ row, isFirst, onEdit }: CardProps) => {
   const confirm = useConfirm();
   const { run, isPending } = useAction();
-  // Set by a menu item, acted on once the menu has closed
   const requested = useRef<"edit" | "delete" | null>(null);
 
   const handleDelete = async () => {
@@ -58,7 +57,6 @@ const RecordCard = ({ row, isFirst, onEdit }: CardProps) => {
         (isFirst || !row.cover) && (
           <>
             {isFirst && <Badge tone="primary">Home widget</Badge>}
-            {/* Deleted from Media: off the site until another is picked */}
             {!row.cover && <Badge tone="warning">No cover</Badge>}
           </>
         )
@@ -98,7 +96,6 @@ const RecordCard = ({ row, isFirst, onEdit }: CardProps) => {
         </CardMenu>
       }
     >
-      {/* Left out, the card shows its grey box: the cover was deleted from Media */}
       {row.cover && (
         <Image src={mediaUrl(row.cover)} alt="" fill sizes={CARD_SIZES} />
       )}
@@ -106,15 +103,10 @@ const RecordCard = ({ row, isFirst, onEdit }: CardProps) => {
   );
 };
 
-/**
- * The records as cards, in the order the On rotation modal shows them. A card
- * opens its record in the edit dialog.
- */
 const RecordsGrid = ({ rows }: { rows: RecordRow[] }) => {
   const [editing, setEditing] = useState<RecordRow | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isNewOpen, setIsNewOpen] = useState(false);
-  // A new key for every opening, so the form starts from what's saved
   const [editKey, setEditKey] = useState(0);
 
   const handleEdit = (row: RecordRow) => {
@@ -123,8 +115,6 @@ const RecordsGrid = ({ rows }: { rows: RecordRow[] }) => {
     setIsEditOpen(true);
   };
 
-  // The saved row, so a new cover shows straight away. A deleted one stays
-  // as it was while the dialog closes
   const editingRow = editing
     ? (rows.find((row) => row.id === editing.id) ?? editing)
     : null;

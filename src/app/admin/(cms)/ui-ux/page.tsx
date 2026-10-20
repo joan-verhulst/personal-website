@@ -4,8 +4,6 @@ import { readWall } from "~/modules/cms/utils/read-wall";
 
 export const metadata: Metadata = { title: "Wall" };
 
-// The editor renders its own header, since the counts in it follow the rows
-// as they're edited
 const WallAdmin = async () => {
   const { items, tags, blocks, lists } = await readWall();
 

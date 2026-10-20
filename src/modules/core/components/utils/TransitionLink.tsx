@@ -7,11 +7,6 @@ import { openApp } from "~/utils/app-layer";
 
 type TransitionLinkProps = ComponentProps<typeof Link>;
 
-/**
- * A link to a section on the home screen, which opens out of this link like
- * an app out of its icon. The part that grows is the element marked
- * `data-tile` inside, or the link itself.
- */
 const TransitionLink = ({
   href,
   children,
@@ -21,7 +16,6 @@ const TransitionLink = ({
   const router = useRouter();
 
   const handleClick = (e: MouseEvent<HTMLAnchorElement>) => {
-    // Call original onClick if provided
     onClick?.(e);
 
     // New tabs and windows are left to the browser

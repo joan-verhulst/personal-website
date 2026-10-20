@@ -24,16 +24,12 @@ import {
   updateOne,
 } from "~/modules/cms/utils/shared";
 
-// What save_order raises for a table it doesn't take: the one from
-// 0003_cms_hardening.sql doesn't know products
 const UNKNOWN_TABLE = "P0001";
 
-// Takes parsed values, which are trimmed already
 const productColumns = (product: ProductOutput) => ({
   name: product.name,
   logo: product.logo,
   description: orNull(product.description),
-  // A label without a link has no button to go on
   link_label: product.linkHref ? orNull(product.linkLabel) : null,
   link_href: orNull(product.linkHref),
   media_type: product.mediaType,
@@ -44,11 +40,6 @@ const productColumns = (product: ProductOutput) => ({
   bare: product.bare,
 });
 
-/**
- * Why the product can't point at its files, or null when it can: uploaded
- * here or picked from Media, they have to be in the bucket. The failure
- * names the field, so the form shows it next to the file that's gone.
- */
 const missingFiles = async (
   product: ProductOutput,
 ): Promise<ActionResult | null> => {
@@ -61,7 +52,6 @@ const missingFiles = async (
   return null;
 };
 
-/** Adds a product at the end. */
 export async function addProduct(
   details: ProductValues,
 ): Promise<ActionResult> {
@@ -75,8 +65,6 @@ export async function addProduct(
   const missing = await missingFiles(parsed.output);
   if (missing) return missing;
 
-  // The first read of the table, so this is where one that isn't there yet
-  // fails
   const sortOrder = await nextSortOrder(supabase, "products");
   if (sortOrder === null) {
     return failed(`Couldn't add the product. ${RUN_MIGRATION}`);
@@ -114,7 +102,6 @@ export async function updateProduct(
     productColumns(parsed.output),
     "Couldn't save the product.",
   );
-  // A file that was replaced or removed stays in Media
   return failure ?? published();
 }
 
@@ -135,7 +122,6 @@ export async function reorderProducts(ids: string[]): Promise<ActionResult> {
   );
 }
 
-/** Deletes a product. Its media and logo stay in Media. */
 export async function deleteProduct(id: string): Promise<ActionResult> {
   const admin = await requireAdmin();
   if (admin.error) return failed(admin.error);

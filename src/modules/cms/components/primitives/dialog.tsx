@@ -32,8 +32,6 @@ const DialogOverlay = ({
   />
 );
 
-// Tailwind v4 translates with the translate property and tw-animate-css
-// animates transform, so the centring and the zoom don't fight each other
 const DialogContent = ({
   className,
   children,
@@ -41,9 +39,6 @@ const DialogContent = ({
   onCloseAutoFocus,
   ...props
 }: ComponentProps<typeof DialogPrimitive.Content>) => {
-  // What had focus when the dialog opened. Radix only hands focus back to a
-  // <DialogTrigger />, and most dialogs here open from state: a card, a menu
-  // button, a slot. Without this their focus would end up on the page itself
   const openerRef = useRef<HTMLElement | null>(null);
 
   return (
@@ -59,7 +54,6 @@ const DialogContent = ({
           className,
         )}
         onOpenAutoFocus={(event) => {
-          // Still the opener here: focus only moves into the dialog after this
           const active = document.activeElement;
           openerRef.current = active instanceof HTMLElement ? active : null;
           onOpenAutoFocus?.(event);
@@ -68,7 +62,6 @@ const DialogContent = ({
           onCloseAutoFocus?.(event);
           const opener = openerRef.current;
           openerRef.current = null;
-          // An opener that's gone, like a deleted card, has nothing to focus
           if (
             event.defaultPrevented ||
             !opener?.isConnected ||
@@ -97,7 +90,6 @@ const DialogHeader = ({
 }: HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      // Room on the right for the close button
       "flex flex-col gap-1.5 pr-8 text-left",
       className,
     )}
@@ -105,10 +97,6 @@ const DialogHeader = ({
   />
 );
 
-/**
- * The part of a dialog that scrolls when it has to, between a header and a
- * pinned footer. <DialogShell /> puts the three together.
- */
 const DialogBody = ({
   className,
   ...props
@@ -124,15 +112,9 @@ const DialogBody = ({
 );
 
 interface DialogFooterProps extends HTMLAttributes<HTMLDivElement> {
-  /**
-   * Keeps the buttons in reach under a <DialogBody />. The body fades out
-   * above them instead of ending on a line.
-   */
   isPinned?: boolean;
 }
 
-// A gap rather than Spark's space-x, so the buttons don't touch when they
-// stack on small screens
 const DialogFooter = ({ className, isPinned, ...props }: DialogFooterProps) => (
   <div
     className={cn(
@@ -172,42 +154,14 @@ interface DialogShellProps
   extends Omit<ComponentProps<typeof DialogContent>, "title"> {
   title: ReactNode;
   description?: ReactNode;
-  /**
-   * "default" is 720px, roomy enough that a form rarely scrolls. "compact" is
-   * 480px, for a list of rows or a field or two.
-   */
   size?: "default" | "compact";
-  /** Stays put between the header and the body, like a search field. */
   toolbar?: ReactNode;
-  /** The body: the one part that scrolls. */
   children: ReactNode;
   bodyClassName?: string;
-  /** The right end of the footer: Cancel, then the main button. */
   footer: ReactNode;
-  /** The left end of the footer, for a button like Delete or Remove. */
   footerStart?: ReactNode;
 }
 
-/**
- * The content of every roomy dialog: a header, a body that scrolls when the
- * screen is too short for it, and a footer that stays in reach. It goes
- * inside a <Dialog />, in place of <DialogContent />.
- *
- * @example
- * <Dialog open={open} onOpenChange={setOpen}>
- *   <DialogShell
- *     title="Choose an item"
- *     toolbar={<Input.SearchField aria-label="Search items" />}
- *     footer={
- *       <DialogClose asChild>
- *         <Button className="w-full sm:w-fit">Cancel</Button>
- *       </DialogClose>
- *     }
- *   >
- *     ...
- *   </DialogShell>
- * </Dialog>
- */
 const DialogShell = ({
   title,
   description,
@@ -221,8 +175,6 @@ const DialogShell = ({
   ...props
 }: DialogShellProps) => (
   <DialogContent
-    // The content itself doesn't scroll: only the body does, so the footer's
-    // buttons stay in reach
     className={cn(
       "flex flex-col gap-0 overflow-hidden p-0",
       size === "compact" ? "max-w-[480px]" : "max-w-[720px]",

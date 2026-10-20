@@ -10,7 +10,6 @@ interface Props {
   children: ReactNode;
 }
 
-/** Hands the content read on the server to the client components below. */
 const ContentProvider = ({ content, children }: Props) => (
   <ContentContext.Provider value={content}>{children}</ContentContext.Provider>
 );

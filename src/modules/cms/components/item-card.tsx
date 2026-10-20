@@ -6,7 +6,6 @@ import cn from "~/utils/cn";
 
 type Tag = Pick<WallTagRow, "label" | "color">;
 
-/** A tag's color as a dot. Grey when there's no tag. */
 export const TagDot = ({ color }: { color?: string }) => (
   <span
     aria-hidden
@@ -15,7 +14,6 @@ export const TagDot = ({ color }: { color?: string }) => (
   />
 );
 
-/** A tag as the admin shows it everywhere: its dot, then its label. */
 export const TagLabel = ({
   tag,
   className,
@@ -29,10 +27,6 @@ export const TagLabel = ({
   </span>
 );
 
-/**
- * Marks a video in the corner of its thumbnail. Images get nothing: they're
- * the usual case. The box around the thumbnail has to be positioned.
- */
 export const MediaTypeBadge = ({
   type,
   className,
@@ -52,39 +46,22 @@ export const MediaTypeBadge = ({
     </span>
   ) : null;
 
-/** The box around an <ItemCard />, for the li, button or div that holds it. */
 export const itemCardClass =
   "flex min-w-0 flex-col rounded-xl border border-neutral-950/10 bg-white p-1";
 
 interface ItemCardProps {
-  /** Left out, the card is an empty place: a placeholder and emptyTitle. */
   item?: Pick<WallItemRow, "title" | "media" | "media_type" | "background">;
   tag?: Tag;
-  /** The rendered width, so next/image picks a fitting file. */
   sizes: string;
   emptyTitle?: string;
-  /** Laid over the thumbnail, like a <Badge /> with the card's place. */
   overlay?: ReactNode;
-  /** A few words after the tag, like "Row 2". */
   note?: ReactNode;
-  /** A small button right of the title, like Remove. */
   corner?: ReactNode;
   /** Greys the card out, for one that can't be picked. */
   isDimmed?: boolean;
-  /** Under the text: a reason, a badge, a button. */
   children?: ReactNode;
 }
 
-/**
- * A wall item as a small card: its thumbnail, title and tag. It renders the
- * card's content only, in spans, so it fits inside a button too. Put it in an
- * element with itemCardClass.
- *
- * @example
- * <li className={itemCardClass}>
- *   <ItemCard item={item} tag={tag} sizes="144px" note="Row 2" />
- * </li>
- */
 const ItemCard = ({
   item,
   tag,

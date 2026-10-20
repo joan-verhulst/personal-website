@@ -8,10 +8,8 @@ const TOAST_SHOWN_KEY = "haptic-toast-shown";
 export const PREFERENCE_EVENT = "haptic-sound-preference-change";
 export const FIRST_PLAY_EVENT = "haptic-first-play";
 
-// Module-level flag — fires the toast event only once per session
 let firstPlayDispatched = false;
 
-// Haptic pattern for click on touch devices
 const CLICK_PATTERN = [
   { duration: 80, intensity: 0.8 },
   { delay: 80, duration: 50, intensity: 0.3 },
@@ -22,7 +20,6 @@ function isTouchDevice(): boolean {
   return window.matchMedia("(pointer: coarse)").matches;
 }
 
-/** Returns true if sounds/haptics are enabled. Unset = enabled by default. */
 export function isSoundEnabled(): boolean {
   if (typeof window === "undefined") return true;
   const val = localStorage.getItem(STORAGE_KEY);
@@ -34,7 +31,6 @@ export function setSoundEnabled(enabled: boolean): void {
   window.dispatchEvent(new CustomEvent(PREFERENCE_EVENT, { detail: enabled }));
 }
 
-/** Returns true if the user has explicitly set a preference. */
 export function hasSoundPreference(): boolean {
   if (typeof window === "undefined") return false;
   return localStorage.getItem(STORAGE_KEY) !== null;
@@ -81,7 +77,6 @@ function buildAudioGraph(): AudioNodes {
 function playClick(nodes: AudioNodes, intensity: number): void {
   const { ctx, filter, gain, buffer } = nodes;
 
-  // Refresh buffer noise each click (mirrors web-haptics exactly)
   const data = buffer.getChannelData(0);
   for (let i = 0; i < data.length; i++) {
     data[i] = (Math.random() * 2 - 1) * Math.exp(-i / 25);
@@ -106,20 +101,14 @@ interface HapticSoundHandlers {
   onClick: () => void;
 }
 
-// One audio graph for the whole page. Every card, tile and button uses this
-// hook, and each used to open its own AudioContext: dozens of them, all
-// rendering silence on real-time threads once the first click resumed them
 let sharedNodes: AudioNodes | null = null;
 
-// Get or create the graph synchronously, so it stays within the user gesture
 function getAudio(): AudioNodes {
   sharedNodes ??= buildAudioGraph();
   if (sharedNodes.ctx.state === "suspended") sharedNodes.ctx.resume();
   return sharedNodes;
 }
 
-// Resumes the context on the first pointer interaction anywhere on the page.
-// Browsers require a click/pointerdown (not mouseenter) to allow audio
 let isPrewarming = false;
 function prewarm(): void {
   if (isPrewarming) return;
@@ -153,7 +142,6 @@ export function useHapticSound(): HapticSoundHandlers {
   }, [ensureAudio]);
 
   const onMouseLeave = useCallback(() => {
-    // no-op — kept for symmetry if callers need it
   }, []);
 
   const onClick = useCallback(() => {
@@ -165,7 +153,6 @@ export function useHapticSound(): HapticSoundHandlers {
     }
     const nodes = ensureAudio();
     if (nodes) {
-      // context may have just been resumed by this click — play regardless
       playClick(nodes, 0.8);
       dispatchFirstPlay();
     }

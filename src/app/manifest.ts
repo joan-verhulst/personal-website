@@ -1,7 +1,6 @@
 import type { MetadataRoute } from "next";
 import { siteData } from "~/data/site";
 
-// The icons are made from the headshot by scripts/make-icons.mts
 const manifest = (): MetadataRoute.Manifest => ({
   name: siteData.metadata.title,
   short_name: siteData.owner.name,

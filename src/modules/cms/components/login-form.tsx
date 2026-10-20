@@ -25,10 +25,6 @@ const schema = v.object({
 });
 
 interface Props {
-  /**
-   * Where to go once signed in: a canonical path, already checked to be a
-   * CMS page. The two-factor step comes first and passes it on.
-   */
   redirectTo: string;
 }
 
@@ -54,8 +50,6 @@ const LoginForm = ({ redirectTo }: Props) => {
       await createBrowserSupabase().auth.signInWithPassword(credentials);
 
     if (error) {
-      // Stays in the form, next to the field to try again in. Supabase
-      // doesn't say which of the two was wrong, and neither does this
       setError("password", {
         type: "server",
         message:
@@ -67,9 +61,6 @@ const LoginForm = ({ redirectTo }: Props) => {
       return;
     }
 
-    // The password is only half of it: next comes the code, or setting up
-    // an authenticator for an account without one. The proxy would send the
-    // session there too, this just skips the detour
     const nextStep = hasVerifiedFactor(data.user) ? VERIFY_PATH : SETUP_PATH;
 
     startNavigation(() => {

@@ -1,17 +1,3 @@
-// Every piece of the room is built from dozens of small shapes, and every
-// shape is a separate thing for the graphics card to draw: in the picture,
-// in each lamp's six shadow views and in each light probe's six. The parts
-// of a piece that never move on their own are merged here into one shape
-// per material, their outlines with them, so a piece is drawn in a few
-// calls instead of dozens. It still moves, hides and colours as a whole.
-//
-// Plain parts that differ only in colour, like a row of books, merge too:
-// their colours go into the shape, one material for all of them. Materials
-// the layout tints, or that get a picture later, stay their own.
-//
-// Clickable things merge within themselves, so each still outlines and
-// grows on its own. Small parts merge apart from large ones, so the light
-// probes can still leave them out, see room-scene.ts
 
 import {
   type BufferGeometry,
@@ -27,28 +13,21 @@ import {
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { hullGeometry, wantsOutline } from "~/modules/about/room/toon";
 
-// Smaller than this across, a part barely changes how light bounces
 export const SMALL_PART = 0.3;
 
 interface Batch {
   unit: Object3D;
-  // The parts' own material, or for plain ones, null: they get a shared one
   material: Material | null;
   plain: string | null;
   isSmall: boolean;
   meshes: Mesh[];
 }
 
-// A shape rarely has an index where another has one: where they're mixed,
-// none keep it
 const alike = (geometries: BufferGeometry[]) =>
   geometries.every(({ index }) => index !== null) || geometries.every(({ index }) => index === null)
     ? geometries
     : geometries.map((geometry) => (geometry.index ? geometry.toNonIndexed() : geometry));
 
-// What a plain material is, besides its colour: parts alike in this can
-// share one material, each with its colour in its shape. Null for anything
-// more than a colour: a picture, a glow, see-through, or tinted by the layout
 const plainness = (material: Material, keep: Set<Material>) => {
   if (!(material instanceof MeshStandardMaterial) || keep.has(material)) return null;
   const isPlain =
@@ -63,12 +42,7 @@ const plainness = (material: Material, keep: Set<Material>) => {
   return isPlain ? `${material.roughness}|${material.metalness}|${material.side}|${material.flatShading}` : null;
 };
 
-/**
- * Makes the merger for one room. `keep` are the materials that stay their
- * own: the ones the layout tints, which merge only with their own kind.
- */
 export const createMerger = (keep: Set<Material>) => {
-  // One shared material for each kind of plain part, across the room
   const shared = new Map<string, MeshStandardMaterial>();
   const sharedFor = (plain: string, like: MeshStandardMaterial) => {
     const made = shared.get(plain);
@@ -89,7 +63,6 @@ export const createMerger = (keep: Set<Material>) => {
   const fromUnit = new Matrix4();
   const relative = new Matrix4();
 
-  /** Merges the still parts under `root`, a piece of the room or its shell. */
   return (root: Object3D) => {
     root.updateMatrixWorld(true);
     const batches = new Map<string, Batch>();
@@ -97,10 +70,7 @@ export const createMerger = (keep: Set<Material>) => {
       if (!(child instanceof Mesh) || child instanceof InstancedMesh) return;
       const { material, geometry } = child;
       if (Array.isArray(material) || !child.visible) return;
-      // Moves on its own, like the duvet breathing, or holds something, like
-      // a light: left as it is
       if (child.userData.keepApart || child.userData.isOutline || child.children.length > 0) return;
-      // Mirrored: merged, it would turn inside out
       if (child.matrixWorld.determinant() < 0) return;
       if (!geometry.boundingSphere) geometry.computeBoundingSphere();
       child.getWorldScale(scale);
@@ -125,7 +95,6 @@ export const createMerger = (keep: Set<Material>) => {
         relative.multiplyMatrices(fromUnit, mesh.matrixWorld);
         const shape = mesh.geometry.clone().applyMatrix4(relative);
         if (plain) {
-          // The part's colour, at every corner
           const { r, g, b } = (mesh.material as MeshStandardMaterial).color;
           const count = shape.attributes.position.count;
           const colors = new Float32Array(count * 3);

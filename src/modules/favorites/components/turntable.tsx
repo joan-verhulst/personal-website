@@ -20,14 +20,8 @@ import {
 } from "~/modules/favorites/utils/textures";
 import cn from "~/utils/cn";
 
-/**
- * How far the tonearm is turned from pointing straight down the deck, in
- * degrees: parked on its rest, at the first groove, and at the last one before
- * the label. Worked out from where the pivot and the platter sit below.
- */
 export const ARM = { rest: 12, outer: 27.5, inner: 47.5 };
 
-// Dots around the platter's rim, the kind a strobe light holds still at 33⅓
 const STROBE =
   "repeating-conic-gradient(rgb(0 0 0 / 0.5) 0deg 0.8deg, transparent 0.8deg 2.25deg)";
 const STROBE_MASK =
@@ -45,24 +39,17 @@ const SKIP_BUTTON = cn(
 const ICON = "size-[max(2.8cqw,0.8125rem)]";
 
 interface Props {
-  // Turned by the player, to follow the record
   armRef: RefObject<HTMLDivElement | null>;
   isPlaying: boolean;
-  // Volume as the fader's position, 0 to 1
   level: number;
   onToggle: () => void;
   onPrevious: () => void;
   onNext: () => void;
   onLevel: (level: number) => void;
   onMute: () => void;
-  // The record, set on the platter
   children: ReactNode;
 }
 
-/**
- * The deck: a lacquered plinth with an aluminium platter, a tonearm and its
- * controls. Everything on it is sized from the deck's own width.
- */
 const Turntable = ({
   armRef,
   isPlaying,
@@ -88,13 +75,11 @@ const Turntable = ({
           className="pointer-events-none absolute inset-0 rounded-[5.5cqw] opacity-30 mix-blend-overlay"
           style={{ backgroundImage: GRAIN }}
         />
-        {/* A brass line set into the lacquer */}
         <div
           aria-hidden
           className="pointer-events-none absolute inset-[1.6cqw] rounded-[4.2cqw] border border-[#d7b97a]/25"
         />
 
-        {/* Platter */}
         <div
           className="absolute top-[4cqw] left-[4cqw] size-[68cqw] rounded-full shadow-[0_1.4cqw_2.6cqw_rgb(0_0_0/0.55),inset_0_0_0_1px_rgb(255_255_255/0.3)]"
           style={{ background: ALUMINIUM }}
@@ -108,18 +93,15 @@ const Turntable = ({
               WebkitMaskImage: STROBE_MASK,
             }}
           />
-          {/* Mat */}
           <div className="absolute inset-[2.6cqw] rounded-full bg-[#0a0a0a] shadow-[inset_0_0_0_1px_rgb(255_255_255/0.06)]" />
           <div className="absolute inset-[3cqw]">{children}</div>
         </div>
 
-        {/* Arm rest */}
         <div
           aria-hidden
           className="absolute top-[41.6cqw] left-[76.6cqw] h-[3.6cqw] w-[5.6cqw] rounded-[1cqw] bg-linear-to-b from-[#3a3a3d] to-[#151517] shadow-[inset_0_1px_0_rgb(255_255_255/0.14),0_0.4cqw_0.8cqw_rgb(0_0_0/0.5)]"
         />
 
-        {/* Pivot */}
         <div
           aria-hidden
           className="absolute top-[11cqw] left-[79cqw] size-[12cqw] rounded-full bg-linear-to-b from-[#3d3d40] to-[#131315] shadow-[inset_0_1px_0_rgb(255_255_255/0.16),0_0.8cqw_1.6cqw_rgb(0_0_0/0.55)]"
@@ -130,20 +112,17 @@ const Turntable = ({
           />
         </div>
 
-        {/* Tonearm, drawn pointing down the deck and turned about its pivot */}
         <div
           ref={armRef}
           aria-hidden
           className={cn(
             "pointer-events-none absolute top-[17cqw] left-[85cqw] size-0 transition-[filter] duration-500",
-            // Lifted off the record, its shadow falls further away
             isPlaying
               ? "filter-[drop-shadow(0.4cqw_0.7cqw_0.5cqw_rgb(0_0_0/0.55))]"
               : "filter-[drop-shadow(1cqw_1.8cqw_1.1cqw_rgb(0_0_0/0.4))]",
           )}
           style={{ transform: `rotate(${ARM.rest}deg)` }}
         >
-          {/* Counterweight, behind the pivot */}
           <div
             className="absolute top-[-13.5cqw] left-[-2.8cqw] h-[7.5cqw] w-[5.6cqw] rounded-[1cqw]"
             style={{ background: COUNTERWEIGHT }}
@@ -152,31 +131,25 @@ const Turntable = ({
             className="absolute top-[-7cqw] left-[-0.7cqw] h-[7cqw] w-[1.4cqw]"
             style={{ background: CHROME }}
           />
-          {/* Tube */}
           <div
             className="absolute top-0 left-[-0.7cqw] h-[38.5cqw] w-[1.4cqw] rounded-b-full"
             style={{ background: CHROME }}
           />
-          {/* Headshell, angled so the cartridge sits square in the groove */}
           <div className="absolute top-[37.5cqw] left-0 size-0 rotate-22">
             <div className="absolute top-0 left-[-2.3cqw] h-[8.6cqw] w-[4.6cqw] rounded-[0.9cqw] bg-linear-to-b from-[#4a4a4d] to-[#161618] shadow-[inset_0_1px_0_rgb(255_255_255/0.2)]">
-              {/* Cartridge */}
               <div className="absolute inset-x-[0.7cqw] bottom-[0.7cqw] h-[4.2cqw] rounded-[0.5cqw] bg-linear-to-b from-primary-400 to-primary-600" />
             </div>
-            {/* Finger lift */}
             <div
               className="absolute top-[1.6cqw] left-[1.8cqw] h-[0.9cqw] w-[3cqw] rounded-full"
               style={{ background: CHROME }}
             />
           </div>
-          {/* Pivot cap */}
           <div
             className="absolute top-[-2.6cqw] left-[-2.6cqw] size-[5.2cqw] rounded-full shadow-[inset_0_0_0_1px_rgb(0_0_0/0.25)]"
             style={{ background: BRASS }}
           />
         </div>
 
-        {/* Controls, along the front edge */}
         {/* The buttons keep a minimum size on small decks, so the row grows with
             them and keeps its distance from the trim instead of running into it */}
         <div className="absolute inset-x-[max(5cqw,1.25rem)] bottom-[max(3.2cqw,1.25rem)] flex h-[max(10cqw,2.5rem)] items-center gap-[max(2.4cqw,0.5rem)]">
@@ -199,7 +172,6 @@ const Turntable = ({
               )}
             </span>
           </button>
-          {/* Lit while the platter is driven */}
           <span
             aria-hidden
             className={cn(

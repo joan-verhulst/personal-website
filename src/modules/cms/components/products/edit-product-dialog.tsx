@@ -16,7 +16,6 @@ import { useAction } from "~/modules/cms/hooks/use-action";
 import { useUnsavedWarning } from "~/modules/cms/hooks/use-unsaved-warning";
 import type { ProductRow } from "~/modules/content/utils/rows";
 
-/** What deleting a product does, for the confirm dialog. */
 export const DELETE_WARNING =
   "Its media and logo stay in Media. This can't be undone.";
 
@@ -26,16 +25,11 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
-/**
- * A product's edit dialog: the same fields as a new one. Mount it with a new
- * key for every opening, so the form starts from what's saved.
- */
 const EditProductDialog = ({ row, open, onOpenChange }: Props) => {
   const id = useId();
   const formId = `${id}-form`;
   const confirm = useConfirm();
   const { run, isPending } = useAction();
-  // Separate, so a delete doesn't spin the Save button
   const remove = useAction();
   const [isUploading, setIsUploading] = useState(false);
   const form = useProductForm(productValuesFrom(row));
@@ -45,15 +39,11 @@ const EditProductDialog = ({ row, open, onOpenChange }: Props) => {
     formState: { isDirty },
   } = form;
 
-  // Closing or reloading the tab would drop unsaved changes, so it asks first.
-  // Closing the dialog asks too, through isDirty below
   useUnsavedWarning(open && isDirty);
 
   const isBusy = remove.isPending || isUploading;
 
   const handleOpenChange = (isOpen: boolean) => {
-    // A delete or a file going up mid-way would lose its result with the
-    // dialog
     if (!isOpen && isBusy) return;
     onOpenChange(isOpen);
   };
@@ -99,7 +89,6 @@ const EditProductDialog = ({ row, open, onOpenChange }: Props) => {
           disabled={isPending || isUploading}
           onClick={handleDelete}
         >
-          {/* The spinner takes over from the icon while it deletes */}
           {!remove.isPending && <Trash2 size={16} aria-hidden />}
           Delete
         </Button>

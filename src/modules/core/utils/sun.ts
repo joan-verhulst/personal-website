@@ -1,30 +1,20 @@
-// Where the sun is, for the sky in the footer
-
 export interface Place {
   latitude: number;
   longitude: number;
 }
 
 export interface Sun {
-  // Degrees above the horizon, negative below it
   elevation: number;
-  // Compass degrees: 0 north, 90 east
   azimuth: number;
 }
 
 const RAD = Math.PI / 180;
 const DAY = 86_400_000;
 
-/**
- * Where the sun is at a moment, seen from a place. NOAA's approximation,
- * within a fraction of a degree, which puts sunrise within a few minutes.
- */
 export const sunAt = (date: Date, { latitude, longitude }: Place): Sun => {
-  // Days since the start of the year in UTC, with the time of day
   const days = (date.getTime() - Date.UTC(date.getUTCFullYear(), 0, 1)) / DAY;
   const year = ((2 * Math.PI) / 365) * (days - 0.5);
 
-  // Minutes the sundial runs ahead of the clock, and how far north the sun is
   const equationOfTime =
     229.18 *
     (0.000075 +
@@ -55,7 +45,6 @@ export const sunAt = (date: Date, { latitude, longitude }: Place): Sun => {
       ),
     ),
   );
-  // From the south, then turned to start in the north
   const azimuth =
     Math.atan2(
       Math.sin(hourAngle),

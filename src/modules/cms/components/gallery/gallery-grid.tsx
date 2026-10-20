@@ -35,16 +35,11 @@ export type GalleryRow = PhotoRow | ArtworkRow;
 // Two columns on a phone, and from there a card never gets wider than this
 const CARD_SIZES = "(min-width: 640px) 300px, 50vw";
 
-/**
- * A piece's size in pixels. Rows from before sizes were measured have none,
- * which says nothing about what kind of file it is.
- */
 export const describeSize = (row: Pick<GalleryRow, "width" | "height">) =>
   row.width > 0 && row.height > 0
     ? `${row.width} × ${row.height}`
     : "Size unknown";
 
-/** What deleting a piece does, for the confirm dialog. */
 export const deleteWarning = (row: Pick<GalleryRow, "is_cover">) =>
   `Its image stays in Media. This can't be undone.${
     row.is_cover
@@ -93,7 +88,6 @@ const GalleryCard = ({ kind, row, onEdit }: CardProps) => {
                 Cover
               </Badge>
             )}
-            {/* Off the site until another image is picked */}
             {!row.image && <Badge tone="warning">No image</Badge>}
           </>
         )
@@ -152,15 +146,10 @@ interface Props {
   rows: GalleryRow[];
 }
 
-/**
- * The collection as cards in sort order, each with its quick actions.
- * Clicking a card edits it in a dialog.
- */
 const GalleryGrid = ({ kind, rows }: Props) => {
   const config = GALLERIES[kind];
   const [editing, setEditing] = useState<{
     row: GalleryRow;
-    // Counts the openings, so each one mounts a fresh form
     session: number;
   } | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -171,9 +160,6 @@ const GalleryGrid = ({ kind, rows }: Props) => {
     setIsEditOpen(true);
   };
 
-  // The saved row, so a replaced image shows once the grid refreshes. A row
-  // that was just deleted is gone from the list, so the dialog keeps its
-  // last copy while it animates out
   const editingRow = editing
     ? (rows.find((row) => row.id === editing.row.id) ?? editing.row)
     : null;
@@ -208,7 +194,6 @@ const GalleryGrid = ({ kind, rows }: Props) => {
         open={isNewOpen}
         onOpenChange={setIsNewOpen}
       />
-      {/* Outside the grid, so deleting the last piece still lets it close */}
       {editingRow && (
         <GalleryItemDialog
           key={`${editingRow.id}-${editing?.session}`}

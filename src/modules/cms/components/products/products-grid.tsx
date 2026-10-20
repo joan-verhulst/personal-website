@@ -30,8 +30,6 @@ import { TagLogo } from "~/modules/ui-ux/components/wall-tag";
 // Two columns on a phone, and from there a card never gets wider than this
 const CARD_SIZES = "(min-width: 640px) 300px, 50vw";
 
-// Where the button sends people, by its host. A stored link is always a full
-// https one, but a hand-edited row needn't be
 const linkHost = (href: string | null) => {
   if (!href) return "No link";
   try {
@@ -49,7 +47,6 @@ interface CardProps {
 const ProductCard = ({ row, onEdit }: CardProps) => {
   const confirm = useConfirm();
   const { run, isPending } = useAction();
-  // Set by a menu item, acted on once the menu has closed
   const requested = useRef<"edit" | "delete" | null>(null);
   const logoUrl = optionalMediaUrl(row.logo);
 
@@ -67,7 +64,6 @@ const ProductCard = ({ row, onEdit }: CardProps) => {
     <MediaCard
       onClick={onEdit}
       title={
-        // The logo as the site tints it, next to the name
         <span className="flex min-w-0 items-center gap-1.5">
           {logoUrl && <TagLogo logo={logoUrl} className="size-3.5" />}
           <span className="truncate">{row.name}</span>
@@ -75,7 +71,6 @@ const ProductCard = ({ row, onEdit }: CardProps) => {
       }
       meta={linkHost(row.link_href)}
       badge={
-        // Deleted from Media: off the site until another is picked
         !row.media && <Badge tone="warning">No media</Badge>
       }
       actions={
@@ -125,15 +120,10 @@ const ProductCard = ({ row, onEdit }: CardProps) => {
   );
 };
 
-/**
- * The products as cards, in the order the products page shows them. A card
- * opens its product in the edit dialog.
- */
 const ProductsGrid = ({ rows }: { rows: ProductRow[] }) => {
   const [editing, setEditing] = useState<ProductRow | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isNewOpen, setIsNewOpen] = useState(false);
-  // A new key for every opening, so the form starts from what's saved
   const [editKey, setEditKey] = useState(0);
 
   const handleEdit = (row: ProductRow) => {
@@ -142,8 +132,6 @@ const ProductsGrid = ({ rows }: { rows: ProductRow[] }) => {
     setIsEditOpen(true);
   };
 
-  // The saved row, so a save shows straight away. A deleted one stays as it
-  // was while the dialog closes
   const editingRow = editing
     ? (rows.find((row) => row.id === editing.id) ?? editing)
     : null;

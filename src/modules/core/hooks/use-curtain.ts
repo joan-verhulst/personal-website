@@ -4,28 +4,19 @@ import { gsap } from "gsap";
 import { type RefObject, useEffect, useRef } from "react";
 import { OPEN_FOOTER_EVENT, scrollerOf } from "~/utils/footer";
 
-// Room the footer keeps above what the open page uncovers: the page's
-// rounded corners show it, and so does a spring that overshoots
 export const CURTAIN_ROOM = 96;
 
-// The page's bottom corners round as it lifts, up to this
 const RADIUS = 40;
 
-// How stiff the pull is, like iOS overscroll: the further it's pulled, the
-// less it gives. Lower is stiffer
+// Rubber-band stiffness, like iOS overscroll; lower is stiffer
 const BAND = 0.6;
 
-// How far the page has to be stretched, as a share of the way, before it
-// pops open or closed. Let go before that and it springs back
 const POP_AT = 0.2;
 
-// A wheel gesture ends after this much quiet. Momentum keeps one going
 const GESTURE_GAP = 150;
 
-// After this much quiet a pull that didn't pop springs back
 const RELEASE_DELAY = 180;
 
-// How far the footer's content rises into place as it's uncovered
 const RISE = 48;
 
 type State = "closed" | "pulling" | "open";
@@ -42,15 +33,10 @@ interface Options {
   contentRef: RefObject<HTMLElement | null>;
   animationsEnabled: boolean;
   onPop?: () => void;
-  // When the footer comes open, however it was opened
   onOpen?: () => void;
-  // After every frame that moves the page or the footer's content, for what
-  // has to follow the content, like the sky's glass. Says whether any of the
-  // footer shows
   onDraw?: (isShown: boolean) => void;
 }
 
-/** A scrollable element between the target and the page that can still scroll down. */
 const canScrollDown = (from: EventTarget | null, page: HTMLElement) => {
   for (
     let element = from instanceof Element ? from : null;
@@ -74,19 +60,10 @@ const isTyping = (target: EventTarget | null) =>
     ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName));
 
 /**
- * The page as a curtain over the footer. At the end of the page, scrolling
- * on stretches the page up off the footer like a rubber band, the further
- * the stiffer. Stretched past POP_AT it pops open with a spring, let go
- * before that and it springs back. Open, scrolling back works the same way
- * the other way round.
- *
- * One gesture does one thing: a scroll that started higher up the page, or
- * the momentum after a pop, never pulls.
- *
- * Elements that take touches for gestures of their own are marked with
- * data-gestures; they open the footer with openFooter instead. Their wheel
- * handlers leave the event alone while the footer isn't closed, see
- * isFooterClosed.
+ * The page as a curtain over the footer, with rubber-band resistance and a pop
+ * past POP_AT. A scroll that started higher up, or momentum after a pop, never pulls.
+ * data-gestures elements use openFooter; their wheel handlers defer while the
+ * footer is open, see isFooterClosed.
  */
 export const useCurtain = ({
   pageRef,
@@ -98,7 +75,6 @@ export const useCurtain = ({
   onDraw,
 }: Options) => {
   const controls = useRef<Controls | null>(null);
-  // Read in the listeners, which shouldn't be rebound when these change
   const animateRef = useRef(animationsEnabled);
   animateRef.current = animationsEnabled;
   const onPopRef = useRef(onPop);
@@ -117,8 +93,7 @@ export const useCurtain = ({
     const scroller = scrollerOf(page);
     const target: HTMLElement | Window = scroller ?? window;
 
-    // How far the page lifts to show all of the footer. Kept up to date by
-    // the resize observer, so drawing never has to measure
+    // Kept current by the resize observer so drawing never measures
     let openLift = Math.max(0, footer.offsetHeight - CURTAIN_ROOM);
     const openOffset = () => openLift;
 
@@ -132,9 +107,6 @@ export const useCurtain = ({
       eventTarget instanceof Node &&
       (page.contains(eventTarget) || footer.contains(eventTarget));
 
-    // ── Drawing ──────────────────────────────────────────────────────────────
-
-    // Where the page is now, animated through gsap
     const position = { lift: 0 };
     let radius = -1;
     let isShown: boolean | null = null;
@@ -146,19 +118,14 @@ export const useCurtain = ({
       page.style.transform = lift ? `translate3d(0, ${-lift}px, 0)` : "";
       content.style.transform = `translate3d(0, ${(1 - shown) * RISE}px, 0)`;
 
-      // Square while it covers the footer, round once there's a gap to show.
-      // Only set when it changes, since it repaints the page. The property
-      // isn't inherited (global.css), so it doesn't restyle what's in it
       const next = Math.round(Math.min(Math.max(lift, 0) / 2, RADIUS));
       if (next !== radius) {
         radius = next;
         page.style.setProperty("--curtain-radius", `${next}px`);
       }
 
-      // Not drawn at all while the page covers it. Chrome on macOS can drop
-      // a frame of the page while it repaints, and the dark sky flashed
-      // through. Transparent rather than hidden, so tabbing into it still
-      // lifts the page
+      // Not drawn while the page covers it: Chrome on macOS can drop a frame of
+      // the page while it repaints, and the dark sky flashed through
       const nextShown = lift > 0.5;
       if (nextShown !== isShown) {
         isShown = nextShown;
@@ -171,16 +138,11 @@ export const useCurtain = ({
       gsap.to(position, { lift, overwrite: true, onUpdate: draw, ...vars });
     };
 
-    // ── State ────────────────────────────────────────────────────────────────
-
     let state: State = "closed";
-    // How far the current pull has gone, before the band takes its share
     let pull = 0;
     let isSpringing = false;
     let releaseTimer: ReturnType<typeof setTimeout> | undefined;
 
-    // On the page for what's in it, and on the document for what floats
-    // over it, like the settings pill, which keeps out of an open footer
     const setState = (next: State) => {
       state = next;
       page.dataset.footer = next;
@@ -188,7 +150,6 @@ export const useCurtain = ({
     };
     setState("closed");
 
-    // The rubber band, and its inverse to pick up a pull mid spring
     const stretch = (distance: number, limit: number) =>
       limit * (1 - 1 / ((distance * BAND) / limit + 1));
     const unstretch = (stretched: number, limit: number) => {
@@ -201,7 +162,6 @@ export const useCurtain = ({
     const settle = (next: "closed" | "open", isPop = false) => {
       clearTimeout(releaseTimer);
       pull = 0;
-      // A pull back that didn't pop settles open again, without opening
       if (next === "open" && state !== "open") onOpenRef.current?.();
       setState(next);
       isSpringing = true;
@@ -219,7 +179,6 @@ export const useCurtain = ({
       });
     };
 
-    // The rest of a gesture that popped is spent
     let isSpent = false;
 
     const pop = () => {
@@ -228,15 +187,10 @@ export const useCurtain = ({
       settle(isOpen() ? "closed" : "open", true);
     };
 
-    /**
-     * Pulls by a distance toward the other state, or back with a negative
-     * one. Smooth for the wheel's steps, direct for a finger.
-     */
     const pullBy = (distance: number, smooth: boolean) => {
       const limit = openOffset();
       if (!limit) return;
 
-      // Caught mid spring: carry on from where the page is
       if (isSpringing) {
         isSpringing = false;
         const fromRest = isOpen() ? limit - position.lift : position.lift;
@@ -254,8 +208,6 @@ export const useCurtain = ({
       if (state === "pulling" && pull === 0) setState("closed");
 
       const lift = isOpen() ? limit - stretched : stretched;
-      // Glides over a mouse wheel's steps. A trackpad sends many small ones,
-      // which a glide would only trail behind
       if (smooth) moveTo(lift, { duration: 0.12, ease: "power2.out" });
       else {
         gsap.killTweensOf(position);
@@ -264,19 +216,15 @@ export const useCurtain = ({
       }
     };
 
-    // A pull that didn't pop springs back to where it started
     const release = () => {
       if (isSpringing || pull === 0) return;
       settle(isOpen() ? "open" : "closed");
     };
 
-    // ── Wheel ────────────────────────────────────────────────────────────────
-
     let lastWheelAt = 0;
     let startedAtEnd = false;
 
     const handleWheel = (event: WheelEvent) => {
-      // Panned by the photo table, zoomed, or in a modal over the page
       if (event.defaultPrevented || event.ctrlKey || !isOurs(event.target))
         return;
 
@@ -296,7 +244,6 @@ export const useCurtain = ({
       }
       lastWheelAt = now;
 
-      // Open, the page stays put: scrolling only pulls it back down
       if (isSpent || state === "open") event.preventDefault();
       if (isSpent) return;
 
@@ -314,8 +261,6 @@ export const useCurtain = ({
       clearTimeout(releaseTimer);
       releaseTimer = setTimeout(release, RELEASE_DELAY);
     };
-
-    // ── Touch ────────────────────────────────────────────────────────────────
 
     let touch: { y: number; startedAtEnd: boolean } | null = null;
 
@@ -337,7 +282,6 @@ export const useCurtain = ({
     const handleTouchMove = (event: TouchEvent) => {
       if (!touch) return;
       const y = event.touches[0].clientY;
-      // Up the screen is down the page
       const deltaY = touch.y - y;
       touch.y = y;
 
@@ -363,11 +307,8 @@ export const useCurtain = ({
       release();
     };
 
-    // ── Keys, and everything else ────────────────────────────────────────────
-
     const handleKeyDown = (event: KeyboardEvent) => {
       const { key, shiftKey, target: keyTarget } = event;
-      // Home stays under a section that's open over it, out of reach
       if (page.closest("[inert]")) return;
       const onPage = keyTarget === document.body || isOurs(keyTarget);
       if (!onPage || isTyping(keyTarget) || event.defaultPrevented) return;
@@ -389,8 +330,6 @@ export const useCurtain = ({
       }
     };
 
-    // Scrolled some other way, like by its scrollbar or the layer resetting
-    // to the top: the page can't stay lifted away from its end
     const handleScroll = () => {
       if (state === "open" && !isAtEnd()) settle("closed");
     };

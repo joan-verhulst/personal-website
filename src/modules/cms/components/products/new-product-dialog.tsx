@@ -16,14 +16,9 @@ import { useAction } from "~/modules/cms/hooks/use-action";
 interface DialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** The button that opens it, when something else doesn't. */
   trigger?: ReactNode;
 }
 
-/**
- * The dialog that adds a product: its details and its media in one go. It's
- * added at the end of the products page.
- */
 export const NewProductDialog = ({
   open,
   onOpenChange,
@@ -42,10 +37,8 @@ export const NewProductDialog = ({
   } = form;
 
   const handleOpenChange = (isOpen: boolean) => {
-    // A file still going up would land in a form that's gone
     if (!isOpen && isUploading) return;
     onOpenChange(isOpen);
-    // An upload that didn't become a product stays in Media, for another time
     if (!isOpen) reset(emptyProduct);
   };
 
@@ -65,7 +58,6 @@ export const NewProductDialog = ({
       formId={formId}
       submitLabel="Add product"
       isPending={isPending}
-      // Waits for a file that's still going up, which would be left out
       isSubmitDisabled={isUploading}
       isDirty={isDirty}
     >
@@ -85,7 +77,6 @@ export const NewProductDialog = ({
   );
 };
 
-/** The label of every "New product" pill, in the header or elsewhere. */
 export const NewProductLabel = () => (
   <>
     New product
@@ -93,7 +84,6 @@ export const NewProductLabel = () => (
   </>
 );
 
-/** The header's "New product" pill, with the dialog it opens. */
 const NewProductButton = () => {
   const [open, setOpen] = useState(false);
 

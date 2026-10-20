@@ -7,29 +7,13 @@ import { Skeleton } from "~/modules/cms/components/primitives/skeleton";
 const CARDS = Array.from({ length: 8 }, (_, index) => index);
 
 interface CollectionLoadingProps {
-  /** The page's real title and description, which don't have to load. */
   title: string;
   description: string;
-  /** The shape of the collection's cards. */
   aspect?: "4/3" | "square";
-  /** Whether the header has a Reorder button next to "New". */
   hasReorder?: boolean;
-  /** The page's toolbar, when it has one, with placeholders in it. */
   toolbar?: ReactNode;
 }
 
-/**
- * Stands in for a collection page while it loads: the real title and
- * description, with placeholders for the counts, the buttons and the cards.
- *
- * @example
- * <CollectionLoading
- *   title={RECORDS.title}
- *   description={RECORDS.description}
- *   aspect="square"
- *   hasReorder
- * />
- */
 const CollectionLoading = ({
   title,
   description,

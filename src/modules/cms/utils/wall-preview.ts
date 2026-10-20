@@ -2,7 +2,6 @@ import type { WallItem } from "~/modules/content/types";
 import type { WallItemRow, WallTagRow } from "~/modules/content/utils/rows";
 import { mediaUrl, optionalMediaUrl } from "~/modules/media/utils/media-url";
 
-/** A row as the wall renders it, for previews in the CMS. */
 export const toPreviewItem = (
   row: WallItemRow,
   tags: WallTagRow[],
@@ -35,7 +34,6 @@ export const toPreviewItem = (
 
 const HIDDEN = " (hidden)";
 
-/** Where an item shows up, for the item list and before deleting. */
 export const describeUsage = (
   id: string,
   blocks: { items: string[] }[],
@@ -44,7 +42,6 @@ export const describeUsage = (
   const places: string[] = [];
   blocks.forEach((block, index) => {
     if (!block.items.includes(id)) return;
-    // A row with an empty slot isn't on the site until it's filled
     places.push(`Row ${index + 1}${block.items.every(Boolean) ? "" : HIDDEN}`);
   });
   for (const list of lists) {
@@ -55,11 +52,9 @@ export const describeUsage = (
   return places;
 };
 
-/** The places from describeUsage that are live on the site. */
 export const liveUsage = (usage: string[]) =>
   usage.filter((place) => !place.endsWith(HIDDEN));
 
-/** The places from describeUsage that the site skips, without the suffix. */
 export const hiddenUsage = (usage: string[]) =>
   usage
     .filter((place) => place.endsWith(HIDDEN))

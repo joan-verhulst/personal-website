@@ -13,18 +13,9 @@ import { withRedirectTo } from "~/modules/cms/utils/redirect-to";
 import { VERIFY_PATH } from "~/modules/cms/utils/two-factor";
 
 interface Props {
-  /**
-   * Where to go once it's set up: a canonical path, already checked to be a
-   * CMS page.
-   */
   redirectTo: string;
 }
 
-/**
- * Sets up the account's first authenticator: a QR code to scan, and the
- * first code from the app to prove the scan worked. Leaving halfway is fine,
- * the next visit starts with a fresh QR code.
- */
 const SetupForm = ({ redirectTo }: Props) => {
   const router = useRouter();
   const { href, onAdminHost } = useAdminPath();
@@ -42,8 +33,6 @@ const SetupForm = ({ redirectTo }: Props) => {
     // isn't coming, not even when the redirect below ends up back here
     setStartError(failure.message);
 
-    // The account has an authenticator after all, set up in another tab:
-    // this session owes its code instead
     if (failure.code === "insufficient_aal") {
       router.replace(withRedirectTo(VERIFY_PATH, redirectTo, onAdminHost));
     }

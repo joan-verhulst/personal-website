@@ -1,17 +1,12 @@
-// Photography and digital art share every screen. What differs between them
-// lives here, so the components only need to know which one they're showing
 export type GalleryKind = "photos" | "artworks";
 
 export const GALLERY_KINDS = ["photos", "artworks"] as const;
 
 export interface GalleryConfig {
   table: string;
-  // Storage folder for uploads
   folder: string;
-  // The collection page
   href: string;
   title: string;
-  // "photo" in "New photo", "Photo added"
   noun: string;
   plural: string;
   description: string;

@@ -16,9 +16,7 @@ interface Props {
 }
 
 // Outside the CMS shell, like the login page: the proxy sends an account
-// without an authenticator here before it gets to the CMS. Supabase itself
-// refuses a new authenticator for an account that has one, unless the
-// session entered a code, so the page needs no guard of its own
+// without an authenticator here before it gets to the CMS.
 const TwoFactorSetupPage = async ({ searchParams }: Props) => {
   const { redirectTo } = await searchParams;
   const { onAdminHost } = await getAdminPaths();

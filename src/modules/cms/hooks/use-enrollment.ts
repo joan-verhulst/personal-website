@@ -10,15 +10,12 @@ import { createBrowserSupabase } from "~/modules/supabase/utils/browser-client";
 
 export interface Enrollment {
   factorId: string;
-  /** The QR code as an image source. */
   qrCode: string;
-  /** What the QR code holds, for typing into the app by hand. */
   secret: string;
 }
 
 export interface EnrollmentFailure {
   message: string;
-  /** Supabase's error code, for a caller that acts on one. */
   code?: string;
 }
 
@@ -49,31 +46,11 @@ const qrSource = (qrCode: string) =>
       )}`
     : qrCode;
 
-/**
- * Adds an authenticator app in two steps: start() makes a new secret to
- * scan, confirm() checks the first code from the app. Only a confirmed
- * authenticator counts, so stopping halfway never leaves the account asking
- * for codes nobody can make.
- *
- * Both resolve with what went wrong, or null when it worked.
- *
- * @example
- * const { enrollment, start, confirm } = useEnrollment();
- *
- * await start();
- * // enrollment.qrCode and enrollment.secret are there to show
- * const message = await confirm("123456");
- */
 export const useEnrollment = () => {
   const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
-  // The same enrollment for callbacks, which outlive a render
   const current = useRef<Enrollment | null>(null);
   const isConfirmed = useRef(false);
-  // A start that's still running, shared by whoever asks meanwhile. React
-  // runs a mount effect twice in development, and two starts would remove
-  // each other's secret
   const starting = useRef<Promise<EnrollmentFailure | null> | null>(null);
-  // The name the last start was given, for starting over with it
   const lastName = useRef<string | undefined>(undefined);
 
   const show = useCallback((next: Enrollment | null) => {
@@ -82,7 +59,6 @@ export const useEnrollment = () => {
     setEnrollment(next);
   }, []);
 
-  /** Makes a new secret. Without a name it gets one that's still free. */
   const start = useCallback(
     (name?: string) => {
       lastName.current = name;
@@ -115,7 +91,6 @@ export const useEnrollment = () => {
         const { data, error } = await supabase.auth.mfa.enroll({
           factorType: "totp",
           friendlyName: name ?? freeFactorName(taken),
-          // The name the app lists the account under
           issuer: window.location.host,
         });
         if (error) {
@@ -146,7 +121,6 @@ export const useEnrollment = () => {
     [show],
   );
 
-  /** Checks the first code. A right one turns the authenticator on. */
   const confirm = useCallback(
     async (code: string) => {
       const pending = current.current;
@@ -162,7 +136,6 @@ export const useEnrollment = () => {
         return null;
       }
 
-      // Another tab started over and took this secret with it
       if (error.code === "mfa_factor_not_found") {
         show(null);
         const failure = await start(lastName.current);
@@ -180,13 +153,11 @@ export const useEnrollment = () => {
   const discard = useCallback(async () => {
     const pending = current.current;
     if (!pending || isConfirmed.current) return;
-    // Nothing to tell anyone when this fails: the next start cleans it up
     await createBrowserSupabase().auth.mfa.unenroll({
       factorId: pending.factorId,
     });
   }, []);
 
-  /** Back to the beginning, ready for another start(). */
   const reset = useCallback(() => show(null), [show]);
 
   return { enrollment, start, confirm, discard, reset };

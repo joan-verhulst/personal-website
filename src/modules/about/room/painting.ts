@@ -1,11 +1,4 @@
-// The room's surfaces, painted pixel by pixel from noise: plaster, wood,
-// fabric, a woven rug. Pure arithmetic, no canvas or three.js, so it runs in
-// a worker (paint.worker.ts) while the room is built, or on the main thread
-// where there's none. textures.ts turns what's painted here into textures
 
-// ── Noise ───────────────────────────────────────────────────────────────────
-
-// A small, repeatable random, so the room is the same on every visit
 export const random = (seed: number) => {
   let state = seed;
   return () => {
@@ -14,8 +7,6 @@ export const random = (seed: number) => {
   };
 };
 
-// Value noise on a lattice that wraps every 256, so that anything sampled
-// over a power-of-two period tiles
 const PERM = (() => {
   const next = random(3);
   const table = Array.from({ length: 256 }, (_, i) => i);
@@ -42,8 +33,6 @@ const noise = (x: number, y: number) => {
   );
 };
 
-// Layers of noise, from 0 to 1. `x` and `y` run 0 to 1 over the picture;
-// `period` is how many lattice cells that spans, a power of two for tiling
 export const fbm = (x: number, y: number, period: number, octaves: number) => {
   let sum = 0;
   let amplitude = 1;
@@ -58,11 +47,8 @@ export const fbm = (x: number, y: number, period: number, octaves: number) => {
   return sum / total;
 };
 
-// Creases: noise folded over, so it peaks in lines
 export const ridged = (x: number, y: number, period: number, octaves: number) =>
   1 - Math.abs(2 * fbm(x, y, period, octaves) - 1);
-
-// ── Colours ─────────────────────────────────────────────────────────────────
 
 export type RGB = [number, number, number];
 
@@ -78,14 +64,10 @@ export const mix = (a: RGB, b: RGB, t: number): RGB => [
   lerp(a[2], b[2], t),
 ];
 
-// A grey for a surface whose colour comes from its material, near white so
-// the colour picked is the colour seen
 const grey = (tone: number): RGB => {
   const value = Math.round(Math.max(0, Math.min(1, tone)) * 255);
   return [value, value, value];
 };
-
-// ── The surfaces ────────────────────────────────────────────────────────────
 
 export type SurfaceName =
   | "plaster"
@@ -104,20 +86,14 @@ interface Pixel {
 }
 
 interface Recipe {
-  // The picture is square, this many pixels a side
   size: number;
-  // One flat colour that stands in until it's painted
   flat: string;
-  // The paint at a point, 0 to 1 both ways
   pixel: () => (u: number, v: number) => Pixel;
 }
 
 const plaster: Recipe = {
   size: 1024,
   flat: "#f0f0f0",
-  // Plaster with the brush still in it, in greys: the walls' colour is their
-  // material's, so it can be picked in the tuner. Two meters a tile. The
-  // strokes go on in textures.ts
   pixel: () => (u, v) => {
     const cloud = fbm(u, v, 4, 5);
     const streak = fbm(u, v * 12, 2, 3);
@@ -128,7 +104,6 @@ const plaster: Recipe = {
   },
 };
 
-// Walnut, with long grain and a little wobble. The grain runs along u
 const walnut: Recipe = {
   size: 1024,
   flat: "#6a4325",
@@ -149,7 +124,6 @@ const walnut: Recipe = {
   },
 };
 
-// The planks of the floor: walnut boards laid along v with staggered ends
 const planks: Recipe = {
   size: 1024,
   flat: "#5c3820",
@@ -157,7 +131,6 @@ const planks: Recipe = {
     const next = random(7);
     const plankWidth = 0.065;
     const plankLength = 0.55;
-    // Where each column's joints fall
     const shifts = Array.from({ length: Math.ceil(1 / plankWidth) + 1 }, () => next() * plankLength);
     const tones = Array.from({ length: 64 }, () => 0.75 + next() * 0.5);
     const dark = hex("#3a2214");
@@ -181,7 +154,6 @@ const planks: Recipe = {
   },
 };
 
-// Spruce for a guitar's top: straight, fine grain along v, warm
 const spruce: Recipe = {
   size: 512,
   flat: "#d6ac62",
@@ -200,7 +172,6 @@ const spruce: Recipe = {
   },
 };
 
-// A sunburst: amber in the middle, dark at the rim, the grain through it
 const sunburst: Recipe = {
   size: 512,
   flat: "#a85a24",
@@ -220,10 +191,6 @@ const sunburst: Recipe = {
   },
 };
 
-// Cotton for the duvet, in greys under the colour of its material: a soft,
-// even cloth with a little drift in tone and fibre. Its folds are in its
-// shape, see duvetGeometry in parts.ts, not painted on, so the light finds
-// them where they are
 const fabric: Recipe = {
   size: 1024,
   flat: "#f2f2f2",
@@ -237,7 +204,6 @@ const fabric: Recipe = {
   },
 };
 
-// A round woven rug: rings of two greens, a lattice through them, fibres
 const rug: Recipe = {
   size: 1024,
   flat: "#3d5a46",
@@ -264,7 +230,6 @@ const rug: Recipe = {
   },
 };
 
-// Pebbled leather, for the chair, in greys under its material's colour
 const leather: Recipe = {
   size: 512,
   flat: "#cccccc",
@@ -277,8 +242,6 @@ const leather: Recipe = {
   },
 };
 
-// Linen, for the sheets and pillows: lightly creased, in greys. The weave
-// it had was too fine for the screen and shimmered, and didn't tile
 const linen: Recipe = {
   size: 512,
   flat: "#fafafa",
@@ -306,14 +269,12 @@ export const RECIPES: Record<SurfaceName, Recipe> = {
 
 export const SURFACE_NAMES = Object.keys(RECIPES) as SurfaceName[];
 
-/** A surface's picture and its bumps, as rows of RGBA pixels. */
 export interface Painted {
   name: SurfaceName;
   color: Uint8ClampedArray<ArrayBuffer>;
   bump: Uint8ClampedArray<ArrayBuffer>;
 }
 
-/** Paints a surface, every pixel of it. Takes up to a few hundred ms. */
 export const paintSurface = (name: SurfaceName): Painted => {
   const { size, pixel } = RECIPES[name];
   const paint = pixel();

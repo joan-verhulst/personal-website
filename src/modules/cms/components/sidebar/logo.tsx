@@ -3,17 +3,11 @@ import { ADMIN_ROOT } from "~/modules/cms/utils/admin-path";
 import cn from "~/utils/cn";
 
 interface Props {
-  /**
-   * False leaves the link out, for the sign in page: the dashboard is behind
-   * it.
-   */
   asLink?: boolean;
-  /** Called when the link is followed, so the mobile sheet can close. */
   onNavigate?: () => void;
   className?: string;
 }
 
-/** The wordmark, linking to the dashboard. */
 const Logo = ({ asLink = true, onNavigate, className }: Props) => {
   const content = (
     <span className="font-medium text-base text-primary-500">Content</span>

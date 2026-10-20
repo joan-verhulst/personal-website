@@ -21,8 +21,6 @@ import type {
 import { mediaUrl, optionalMediaUrl } from "~/modules/media/utils/media-url";
 import { createPublicClient } from "~/modules/supabase/utils/public-client";
 
-// A failed read should fail the build or request loudly, not render a site
-// with holes in it
 const rowsOf = <Row>(
   table: string,
   result: {
@@ -35,7 +33,6 @@ const rowsOf = <Row>(
     throw new Error(`Couldn't read ${table}: ${result.error.message}`);
   }
   const rows = (result.data ?? []) as Row[];
-  // The API cuts a long read off at its row limit without saying so
   if (result.count !== null && result.count > rows.length) {
     throw new Error(
       `Couldn't read ${table}: got ${rows.length} of ${result.count} rows, the API row limit cut the read short`,
@@ -44,22 +41,13 @@ const rowsOf = <Row>(
   return rows;
 };
 
-// What the API answers for a table that doesn't exist, in its own words and
-// in Postgres'
 const MISSING_TABLE = ["PGRST205", "42P01"];
 
-/**
- * A width and height that are safe to divide by. A row saved without a size,
- * which older uploads of an SVG were, is shown at 4:3 instead of breaking
- * the layout around it.
- */
 const sizeOf = (row: { width: number; height: number }) =>
   row.width >= 1 && row.height >= 1
     ? { width: row.width, height: row.height }
     : { width: 4, height: 3 };
 
-// A row whose file was deleted from Media has nothing to show, so it stays
-// off the site until another file is picked
 const hasImage = <Row extends { image: string | null }>(
   row: Row,
 ): row is Row & { image: string } => row.image !== null;
@@ -89,13 +77,8 @@ const toWallItem = (
       : undefined,
 });
 
-/**
- * Everything the site shows, read from Supabase. Cached until the CMS saves,
- * and read once per request however many components ask for it.
- */
 export const getContent = cache(async (): Promise<Content> => {
   const supabase = createPublicClient();
-  // Counted, so rowsOf can tell a whole table from one that was cut short
   const list = (table: string) =>
     supabase.from(table).select("*", { count: "exact" });
 
@@ -111,8 +94,6 @@ export const getContent = cache(async (): Promise<Content> => {
     products,
   ] = await Promise.all([
     supabase.from("site").select("*").eq("id", 1).maybeSingle(),
-    // The id breaks ties, so rows with the same sort order stay put and
-    // match the order the CMS shows
     list("photos").order("sort_order").order("id"),
     list("artworks").order("sort_order").order("id"),
     list("records").order("sort_order").order("id"),
@@ -126,8 +107,6 @@ export const getContent = cache(async (): Promise<Content> => {
   if (site.error) throw new Error(`Couldn't read site: ${site.error.message}`);
   const siteRow = site.data as SiteRow | null;
 
-  // The table is missing until 0011_products_table.sql has run. Until then
-  // there are no products, rather than no site
   const productRows = MISSING_TABLE.includes(products.error?.code ?? "")
     ? []
     : rowsOf<ProductRow>("products", products);
@@ -145,8 +124,6 @@ export const getContent = cache(async (): Promise<Content> => {
       },
     ]),
   );
-  // An item without its file counts as missing: its row of the wall stays off
-  // the site, like one with an empty slot, and the lists skip it
   const itemsById = new Map(
     rowsOf<WallItemRow>("wall_items", items).flatMap((row) =>
       row.media === null
@@ -157,8 +134,6 @@ export const getContent = cache(async (): Promise<Content> => {
   const pick = (ids: string[]) =>
     ids.flatMap((id) => itemsById.get(id) ?? []);
 
-  // A block with an empty slot or a missing item would break the grid, so it
-  // stays off the site until it's complete
   const wall = rowsOf<WallBlockRow>("wall_blocks", blocks).flatMap(
     (block): WallBlock[] => {
       if (block.items.length !== WALL_SLOTS[block.layout]) return [];
@@ -185,7 +160,6 @@ export const getContent = cache(async (): Promise<Content> => {
       headline: siteRow?.about_headline ?? "",
       intro: siteRow?.about_intro ?? "",
       image: optionalMediaUrl(siteRow?.about_image),
-      // Before 0008_about_modal_image.sql the modal shows the widget's photo
       modalImage: optionalMediaUrl(
         siteRow?.about_modal_image === undefined
           ? siteRow?.about_image
@@ -204,7 +178,6 @@ export const getContent = cache(async (): Promise<Content> => {
       instagram: siteRow?.instagram_url ?? undefined,
       linkedin: siteRow?.linkedin_url ?? undefined,
       email: siteRow?.email ?? undefined,
-      // Field by field, so a card that's half written still reads whole
       cards: {
         uiUx: {
           title: siteRow?.card_ui_ux_title || fallbackCards.uiUx.title,
@@ -270,7 +243,6 @@ export const getContent = cache(async (): Promise<Content> => {
     ),
     wall,
     experiments: pick(listsById.get("experiments") ?? []),
-    // A product whose file was deleted from Media stays off the site
     products: productRows.flatMap((row) =>
       row.media === null
         ? []
@@ -280,7 +252,6 @@ export const getContent = cache(async (): Promise<Content> => {
               name: row.name,
               logo: optionalMediaUrl(row.logo),
               description: row.description ?? undefined,
-              // A link without a label still leads somewhere
               link: row.link_href
                 ? {
                     label: row.link_label || `Try ${row.name}`,

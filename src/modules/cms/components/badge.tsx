@@ -21,7 +21,6 @@ const badgeVariants = cva(
 
 type Props = ComponentProps<"span"> & VariantProps<typeof badgeVariants>;
 
-/** A status label, like "Cover" or "Not saved", in a table cell or on a card. */
 const Badge = ({ tone, className, ...props }: Props) => (
   <span className={cn(badgeVariants({ tone }), className)} {...props} />
 );

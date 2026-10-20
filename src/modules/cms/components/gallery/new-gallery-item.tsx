@@ -44,14 +44,9 @@ interface DialogProps {
   kind: GalleryKind;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** The button that opens it, when something else doesn't. */
   trigger?: ReactNode;
 }
 
-/**
- * The dialog that adds a piece: one image with its details, uploaded or
- * picked from Media, or several at once, which skips the form.
- */
 export const NewGalleryDialog = ({
   kind,
   open,
@@ -65,7 +60,6 @@ export const NewGalleryDialog = ({
   const [isBulkUploading, setIsBulkUploading] = useState(false);
   const [isAddingPicks, setIsAddingPicks] = useState(false);
   const pieces = useAddPieces(kind);
-  // Read by uploads that finish after the dialog closed
   const openRef = useRef(open);
   useEffect(() => {
     openRef.current = open;
@@ -84,14 +78,12 @@ export const NewGalleryDialog = ({
   } = useForm({ schema: newGalleryItemSchema, defaultValues: EMPTY });
   const [image, title, description] = watch(["image", "title", "description"]);
 
-  // An upload that didn't become a piece stays in Media, for another time
   const close = () => {
     onOpenChange(false);
     reset(EMPTY);
   };
 
   const handleUploaded = (media: UploadedMedia) => {
-    // The dialog closed while the file went up
     if (!openRef.current) return;
     setValue("image", media.path);
     setValue("width", media.width);
@@ -106,8 +98,6 @@ export const NewGalleryDialog = ({
     }
   };
 
-  // One file fills the form, like an upload. Several skip it: each becomes a
-  // piece of its own right away
   const handlePicked = async (files: UploadedMedia[]) => {
     if (files.length === 1) {
       handleUploaded(files[0]);
@@ -117,7 +107,6 @@ export const NewGalleryDialog = ({
     pieces.start();
     for (const file of files) await pieces.add(file);
     setIsAddingPicks(false);
-    // Stays open when none made it, next to the error toasts
     if (pieces.finish() > 0) close();
   };
 
@@ -155,14 +144,10 @@ export const NewGalleryDialog = ({
       description={`It's added at the end of the ${config.title.toLowerCase()} page.`}
       formId={formId}
       submitLabel={`Add ${config.noun}`}
-      // Several images going up count as a save too: closing mid-way would
-      // hide how far along they are
       isPending={isPending || isBulkUploading || isAddingPicks}
       isSubmitDisabled={isUploading}
-      // Closing would drop what's filled in. An uploaded image stays in Media
       isDirty={Boolean(image || title || description)}
     >
-      {/* Stacked: the image first, then its details */}
       <form
         id={formId}
         onSubmit={onSubmit}
@@ -203,7 +188,6 @@ export const NewGalleryDialog = ({
                 aria-describedby={`${formId}-image-hint`}
                 onUploadingChange={setIsBulkUploading}
                 onDone={(added) => {
-                  // Stays open when none made it, next to the error toasts
                   if (added > 0) close();
                 }}
               />
@@ -244,7 +228,6 @@ export const NewGalleryDialog = ({
   );
 };
 
-/** The label of every "New" pill for a gallery, in the header or elsewhere. */
 export const NewGalleryLabel = ({ kind }: { kind: GalleryKind }) => (
   <>
     New {GALLERIES[kind].noun}
@@ -252,7 +235,6 @@ export const NewGalleryLabel = ({ kind }: { kind: GalleryKind }) => (
   </>
 );
 
-/** The header's "New" pill, with the dialog it opens. */
 const NewGalleryItem = ({ kind }: { kind: GalleryKind }) => {
   const [open, setOpen] = useState(false);
 

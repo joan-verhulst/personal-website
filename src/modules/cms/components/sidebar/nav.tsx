@@ -14,7 +14,6 @@ import {
 import cn from "~/utils/cn";
 
 interface Props {
-  /** Called when a link is followed, so the mobile sheet can close. */
   onNavigate?: () => void;
 }
 
@@ -31,7 +30,6 @@ const NavLink = ({
   onNavigate?: () => void;
 }) => {
   const { url, label, icon: Icon, children } = item;
-  // A section with sub-pages opens while you're anywhere inside it
   const isOpen = Boolean(children) && isActiveUrl(pathname, url);
   const isActive = isActiveItem(pathname, item);
 
@@ -40,7 +38,6 @@ const NavLink = ({
       <AdminLink
         href={url}
         onClick={onNavigate}
-        // The open sub-page is the "page", so its section only says "true"
         aria-current={isOpen ? "true" : ariaCurrent(pathname, item)}
         className={cn(
           ROW,
@@ -100,9 +97,7 @@ const NavLink = ({
   );
 };
 
-/** The CMS's pages, grouped under the same headings as the dashboard. */
 const Nav = ({ onNavigate }: Props) => {
-  // Canonical, like the urls in sidebarSections it's compared with
   const pathname = useAdminPathname();
   // The sheet on small screens renders a second copy, so ids can't be fixed
   const id = useId();

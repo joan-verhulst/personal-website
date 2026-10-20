@@ -48,25 +48,16 @@ const fromRow = (row: GalleryRow): GalleryDetails => ({
   description: row.description ?? "",
 });
 
-/**
- * Edits one photo or artwork in a dialog over the grid. Mount it with a new
- * key for every opening, so the fields start from the saved values.
- */
 const GalleryItemDialog = ({ kind, row, open, onOpenChange }: Props) => {
   const config = GALLERIES[kind];
   const formId = `edit-${kind}`;
   const confirm = useConfirm();
-  // Separate, so replacing the image or deleting doesn't spin the save button
   const save = useAction();
   const image = useAction();
   const remove = useAction();
   const [isUploading, setIsUploading] = useState(false);
-  // A new image going up or being saved: closing now would hide whether it
-  // worked
   const isReplacing = isUploading || image.isPending;
 
-  // Uploaded or picked from Media, the new image replaces the old one, which
-  // stays in Media
   const replaceImage = async (media: UploadedMedia) => {
     await image.run(
       () =>
@@ -89,8 +80,6 @@ const GalleryItemDialog = ({ kind, row, open, onOpenChange }: Props) => {
     formState: { isDirty },
   } = useForm({ schema: galleryDetailsSchema, defaultValues: fromRow(row) });
 
-  // Closing or reloading the tab would drop unsaved changes, so it asks first.
-  // Closing the dialog asks too, through isDirty below
   useUnsavedWarning(open && isDirty);
 
   const handleOpenChange = (isOpen: boolean) => {
@@ -140,13 +129,11 @@ const GalleryItemDialog = ({ kind, row, open, onOpenChange }: Props) => {
           disabled={save.isPending || isReplacing}
           onClick={handleDelete}
         >
-          {/* The spinner takes over from the icon while it deletes */}
           {!remove.isPending && <Trash2 size={16} aria-hidden />}
           Delete
         </Button>
       }
     >
-      {/* Stacked: the image first, then its details */}
       <form
         id={formId}
         onSubmit={onSubmit}
@@ -155,7 +142,6 @@ const GalleryItemDialog = ({ kind, row, open, onOpenChange }: Props) => {
       >
         <Input.Root>
           <Input.Label as="span">Image</Input.Label>
-          {/* The whole piece shows, so nothing is hidden while editing it */}
           {row.image ? (
             <GalleryPreview image={row.image} alt={row.title} priority>
               {row.is_cover && (

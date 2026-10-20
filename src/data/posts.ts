@@ -1,7 +1,4 @@
-// The blog's posts, newest first. They're written by hand in code, each with
-// its own demos, see modules/blog/posts. Not in the CMS
 
-// At the top of the list
 export const blogHero = {
   title: "How it's made",
   description:
@@ -22,11 +19,8 @@ export type PostSection = keyof typeof postSections;
 export interface Post {
   slug: string;
   title: string;
-  // The section of the list it's in
   section: PostSection;
-  // Under the title, and in the list
   summary: string;
-  // ISO date, shown as "19 October 2026"
   date: string;
   minutes: number;
   // Fills its tile in the list and the home widget, unless PostCover draws

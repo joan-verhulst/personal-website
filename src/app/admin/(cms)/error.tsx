@@ -10,11 +10,7 @@ interface Props {
   reset: () => void;
 }
 
-// Sits inside the CMS layout, so a page that failed to load keeps the sidebar
-// and a way out
 const CmsError = ({ error, reset }: Props) => {
-  // The digest finds the full error in the server's log. It means nothing on
-  // screen
   useEffect(() => {
     console.error(error.digest ?? error);
   }, [error]);

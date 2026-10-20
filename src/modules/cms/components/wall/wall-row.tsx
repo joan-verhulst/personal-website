@@ -22,16 +22,12 @@ import WallSlot, {
 import type { WallLayout } from "~/modules/content/types";
 import cn from "~/utils/cn";
 
-// The rows at their real proportions: 13 columns of 4:3 units, as on the site.
-// Phones stack the slots at 4:3 instead, like the site does.
 const BLOCK_CLASSES: Record<WallLayout, string> = {
   spiral: "sm:aspect-[13/6] sm:grid-cols-13 sm:grid-rows-8",
   triple: "sm:aspect-[13/3.75] sm:grid-cols-13 sm:grid-rows-1",
   double: "sm:grid-cols-2",
 };
 
-// Where each slot sits, plain and mirrored. Spirals and triples stretch their
-// slots to the grid, so they drop the 4:3 from a phone.
 const SLOT_CLASSES: Record<WallLayout, { plain: string[]; mirrored: string[] }> =
   {
     spiral: {
@@ -78,10 +74,6 @@ interface WallRowProps extends SlotHandlers {
   onDelete: () => void;
 }
 
-/**
- * One row of the wall in its own container: its name and controls on top,
- * then its slots.
- */
 const WallRow = ({
   row,
   index,
@@ -115,7 +107,6 @@ const WallRow = ({
             aria-label={`Layout of row ${index + 1}`}
             className="w-fit min-w-28"
           >
-            {/* The label alone: the hint only helps while choosing */}
             <SelectValue>{LAYOUTS[row.layout].label}</SelectValue>
           </SelectTrigger>
           <SelectContent>

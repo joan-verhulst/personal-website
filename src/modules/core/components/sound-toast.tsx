@@ -32,13 +32,11 @@ const SoundToast = () => {
     });
   };
 
-  // Dismiss on navigation
   useEffect(() => {
     if (visible) animateOut();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
-  // Listen for first play
   useEffect(() => {
     const handleFirstPlay = () => {
       setVisible(true);
@@ -53,7 +51,6 @@ const SoundToast = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Animate in when visible
   useEffect(() => {
     if (!visible || !toastRef.current) return;
     gsap.fromTo(

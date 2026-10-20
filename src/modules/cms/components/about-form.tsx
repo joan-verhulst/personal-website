@@ -28,7 +28,6 @@ const FORM_ID = "about-form";
 interface PhotoSectionProps {
   title: string;
   description: string;
-  /** The shape the site crops it to, as an aspect class. */
   aspect: string;
   path: string | null;
   isDirty?: boolean;
@@ -37,7 +36,6 @@ interface PhotoSectionProps {
   onUploadingChange: (isUploading: boolean) => void;
 }
 
-/** One of the about photos, set by an upload, a pick from Media or Remove. */
 const PhotoSection = ({
   title,
   description,
@@ -50,7 +48,6 @@ const PhotoSection = ({
 }: PhotoSectionProps) => {
   const url = optionalMediaUrl(path);
 
-  // Uploaded or picked from Media. A photo that's replaced stays in Media
   const uploadButton = (
     <>
       <UploadButton
@@ -105,7 +102,6 @@ const PhotoSection = ({
           {uploadButton}
         </UploadArea>
       )}
-      {/* The preview already shows it, which could pass for saved */}
       {isDirty && (
         <Input.Hint>
           {path
@@ -118,10 +114,8 @@ const PhotoSection = ({
   );
 };
 
-/** The about page's editor: the header, the sections and Save in the bottom bar. */
 const AboutForm = ({ site }: { site: SiteRow }) => {
   const { run, isPending } = useAction();
-  // Save waits for the photos that are still going up
   const [uploads, setUploads] = useState(0);
   const {
     register,
@@ -138,7 +132,6 @@ const AboutForm = ({ site }: { site: SiteRow }) => {
       headline: site.about_headline,
       intro: site.about_intro,
       image: site.about_image,
-      // Before 0008_about_modal_image.sql the modal shows the widget's photo
       modalImage:
         site.about_modal_image === undefined
           ? site.about_image
@@ -150,7 +143,6 @@ const AboutForm = ({ site }: { site: SiteRow }) => {
     },
   });
 
-  // The photos have no input of their own: uploads and Remove set them
   const [image, modalImage] = useWatch({
     control,
     name: ["image", "modalImage"],
@@ -161,7 +153,6 @@ const AboutForm = ({ site }: { site: SiteRow }) => {
   const onUploadingChange = (isUploading: boolean) =>
     setUploads((count) => count + (isUploading ? 1 : -1));
 
-  // Leaving the page would drop unsaved changes, so it asks first
   useUnsavedWarning(isDirty);
 
   const onSubmit = handleSubmit(async (values) => {
@@ -171,7 +162,6 @@ const AboutForm = ({ site }: { site: SiteRow }) => {
       setErrors(result.fieldErrors);
       return;
     }
-    // What was saved is the new starting point, so Save turns off again
     reset(values);
   });
 

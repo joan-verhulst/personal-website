@@ -3,8 +3,6 @@ import { ownPages, pages } from "~/data/pages";
 import { posts } from "~/data/posts";
 import { env } from "~/env";
 
-// The pages search engines should know about, see data/pages.ts, then the
-// blog's posts
 const sitemap = (): MetadataRoute.Sitemap =>
   [
     ...Object.values(pages).map(({ path }) => ({ path })),

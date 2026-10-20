@@ -5,17 +5,11 @@ import { Wide } from "~/modules/blog/components/prose";
 import cn from "~/utils/cn";
 
 interface DemoProps {
-  // Under the frame: what to try
   caption?: ReactNode;
-  // The sliders and switches, under the picture
   controls?: ReactNode;
   className?: string;
 }
 
-/**
- * A live demo in a post: the picture, its controls under it, and a line on
- * what to try. Wider than the text, so there's room to see the detail.
- */
 export const Demo = ({
   caption,
   controls,
@@ -48,11 +42,9 @@ interface SliderProps {
   max: number;
   step?: number;
   onChange: (value: number) => void;
-  // How the value reads, like "2.4 km"
   format?: (value: number) => string;
 }
 
-/** A labelled slider, with its value on the right. */
 export const Slider = ({
   label,
   value,
@@ -101,7 +93,6 @@ interface ChoiceProps<Value extends string | number> {
   onChange: (value: Value) => void;
 }
 
-/** A row of options, one of them picked. */
 export const Choice = <Value extends string | number>({
   label,
   value,

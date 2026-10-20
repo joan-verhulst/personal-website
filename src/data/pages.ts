@@ -9,9 +9,6 @@ export const pages: Record<PageKey, { path: string; title: string }> = {
   photography: { path: "/photography", title: "Photography" },
 };
 
-// Sections whose words live in the code rather than in the CMS: the about
-// page is written like a post around its CMS headline, the products page is
-// described by its widget, the blog's posts are written by hand
 export const ownPages = {
   about: {
     path: "/about",
@@ -32,7 +29,6 @@ export const ownPages = {
   },
 };
 
-/** The pages that open over the home screen. */
 export type SectionKey = Exclude<PageKey, "home"> | keyof typeof ownPages;
 
 const SECTION_PATHS: Record<SectionKey, string> = {
@@ -44,7 +40,6 @@ const SECTION_PATHS: Record<SectionKey, string> = {
   about: ownPages.about.path,
 };
 
-/** The section at a path, if it's one. A blog post isn't the blog itself. */
 export const sectionAt = (pathname: string) =>
   (Object.keys(SECTION_PATHS) as SectionKey[]).find(
     (key) => SECTION_PATHS[key] === pathname,

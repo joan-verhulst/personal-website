@@ -37,23 +37,11 @@ const nameSchema = v.object({
 });
 
 interface Props {
-  /** The names in use. Supabase refuses a second authenticator with one. */
   names: string[];
-  /**
-   * The authenticator the new one takes the place of. It's removed once the
-   * new one has proven itself with a code, so the account is never without.
-   */
   replaces?: { id: string; name: string };
-  /** Supabase wants this session's code again before it adds anything. */
   onNeedsCode: () => void;
 }
 
-/**
- * The button and dialog that add an authenticator, as a backup or in place
- * of another: first a name to tell it apart by, then the same QR code and
- * first code as the setup page. Closing the dialog before the code is in
- * adds nothing, and removes nothing either.
- */
 const AddAuthenticator = ({ names, replaces, onNeedsCode }: Props) => {
   const id = useId();
   const nameFormId = `${id}-name`;
@@ -98,7 +86,6 @@ const AddAuthenticator = ({ names, replaces, onNeedsCode }: Props) => {
       const { error } = await createBrowserSupabase().auth.mfa.unenroll({
         factorId: replaces.id,
       });
-      // Both work now, and the list offers Remove for the old one
       if (error) {
         toast.error(
           `The new authenticator works, but "${replaces.name}" couldn't be removed. Remove it from the list.`,
@@ -117,11 +104,8 @@ const AddAuthenticator = ({ names, replaces, onNeedsCode }: Props) => {
   const isPending = isStarting || code.isPending;
 
   const handleOpenChange = (open: boolean) => {
-    // Closing mid-request would hide how it went
     if (!open && isPending) return;
     if (open) {
-      // A fresh start each time. Not on closing, which would swap the
-      // dialog's content while it fades out
       reset();
       resetName({ name: freeFactorName(names) });
     } else {

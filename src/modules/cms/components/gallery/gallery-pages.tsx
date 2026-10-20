@@ -11,17 +11,10 @@ import ReorderGalleryButton from "~/modules/cms/components/gallery/reorder-galle
 import Header from "~/modules/cms/components/header";
 import { readRows } from "~/modules/cms/utils/read-rows";
 
-// The photography and digital art routes are the same screen with another
-// kind, so the routes only pick the kind and render this
-
 interface GalleryPageProps {
   kind: GalleryKind;
 }
 
-/**
- * A gallery's collection page: the header and its cards in sort order. The
- * pieces are edited in a dialog over the cards, so there are no edit pages.
- */
 export const GalleryPage = async ({ kind }: GalleryPageProps) => {
   const config = GALLERIES[kind];
   const rows = await readRows<GalleryRow>(config.table);
@@ -41,7 +34,6 @@ export const GalleryPage = async ({ kind }: GalleryPageProps) => {
             <span className="flex min-w-0 items-center gap-1.5">
               <Star aria-hidden />
               <span className="truncate">
-                {/* Without a chosen cover the site uses the first piece */}
                 {cover
                   ? `Cover: ${cover.title}`
                   : rows[0]
@@ -51,8 +43,6 @@ export const GalleryPage = async ({ kind }: GalleryPageProps) => {
             </span>
           </>
         }
-        // The same two on every collection. Uploading several at once is in
-        // the "New" dialog
         actions={
           <>
             <ReorderGalleryButton kind={kind} rows={rows} />

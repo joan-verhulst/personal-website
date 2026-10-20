@@ -32,7 +32,6 @@ const SliderLabel = ({
     return itemRefs.current.map((el) => el?.offsetWidth ?? 0);
   }, []);
 
-  // Animate position (following hovered stem)
   useEffect(() => {
     if (containerRef.current && position !== undefined) {
       const animate = hasMounted.current ? gsap.to : gsap.set;
@@ -45,9 +44,7 @@ const SliderLabel = ({
     }
   }, [position, isHorizontal]);
 
-  // Animate list translation, width, and visibility
   useEffect(() => {
-    // Use gsap.set (instant) on first mount OR when appearing from hidden (null → index)
     const wasHidden = prevActiveIndex.current === null;
     const animate = hasMounted.current && !wasHidden ? gsap.to : gsap.set;
     const animProps = {

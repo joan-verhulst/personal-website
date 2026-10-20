@@ -4,12 +4,6 @@ import type { ReactNode } from "react";
 import { pathOf } from "~/data/pages";
 import type { Events } from "~/utils/eyes";
 
-/**
- * Sections open like apps: as a layer over the home screen, which stays
- * mounted underneath. The layer is a single card. Its outline grows from the
- * tile to the full screen, while the section inside is laid out at full size
- * from the start and only scaled to cover the card, so the two can't drift.
- */
 
 export type Phase = "closed" | "opening" | "open" | "closing";
 
@@ -21,17 +15,11 @@ interface State {
 }
 
 export interface Elements {
-  // Holds the home screen, or a section that was loaded directly
   stage: HTMLElement;
-  // The card, clipped to its outline
   layer: HTMLElement;
-  // The section at full size, scaled to cover the card
   screen: HTMLElement;
-  // Scrolls the section, as the page behind is locked
   scroller: HTMLElement;
-  // Stands in for a page that was loaded directly, see `hold`
   snapshot: HTMLElement;
-  // A copy of the tile, which fades into the section like an app icon
   icon: HTMLElement;
 }
 
@@ -45,7 +33,6 @@ interface Outline {
 
 const OPEN_DURATION = 0.6;
 const CLOSE_DURATION = 0.5;
-// The corners keep their radius for most of the way, then square off
 const SQUARE_OFF_FROM = 0.85;
 // The tile copy fades as it grows, and is gone at this many times the tile's
 // size. Any later and it shows blown up over the section, which reads as a flash
@@ -71,8 +58,6 @@ const shouldAnimate = () => {
   }
 };
 
-// ── State ───────────────────────────────────────────────────────────────────
-
 let state: State = { phase: "closed", screen: null };
 const listeners = new Set<() => void>();
 
@@ -92,7 +77,6 @@ export const getState = () => state;
 
 let elements: Elements | null = null;
 
-/** Hands the layer's elements over. Returns the cleanup. */
 export const connect = (next: Elements) => {
   elements = next;
   return () => {
@@ -100,24 +84,15 @@ export const connect = (next: Elements) => {
   };
 };
 
-// 0 is the tile, 1 the full screen
 const progress = { value: 0 };
 let tween: gsap.core.Tween | null = null;
-// Where the card grows out of, and shrinks back into
 let origin: Outline | null = null;
-// The tile that was clicked, and the section it opened
 let originTile: HTMLElement | null = null;
 let href = "";
-// Size of the tile copy before scaling, if there is one
 let iconSize: { width: number; height: number } | null = null;
-// How much of the tile copy is still showing
 let iconOpacity = 0;
-// Whether the home screen is under the layer, and so one step back in history
 let isOverHome = true;
 
-// ── Geometry ────────────────────────────────────────────────────────────────
-
-// Used when there's no tile on screen to grow out of or shrink into
 const getFallback = (): Outline => {
   const width = window.innerWidth * 0.3;
   const height = window.innerHeight * 0.3;
@@ -132,7 +107,6 @@ const getFallback = (): Outline => {
 
 const measure = (tile: HTMLElement): Outline => {
   const rect = tile.getBoundingClientRect();
-  // Hovered tiles are scaled down, and their corners with them
   const scale = tile.offsetWidth ? rect.width / tile.offsetWidth : 1;
   const radius =
     Number.parseFloat(getComputedStyle(tile).borderTopLeftRadius) || 0;
@@ -146,20 +120,17 @@ const measure = (tile: HTMLElement): Outline => {
   };
 };
 
-// Tiles wiggle on hover. Stop that, so the tile is measured straight
 const straighten = (tile: HTMLElement) => {
   gsap.killTweensOf(tile, "rotation");
   gsap.set(tile, { rotation: 0 });
 };
 
-// Home may have been left scrolled away from the tile
 const reveal = (tile: HTMLElement) => {
   const { top, bottom } = tile.getBoundingClientRect();
   if (bottom < 0 || top > window.innerHeight)
     tile.scrollIntoView({ block: "center", behavior: "instant" });
 };
 
-// The tile on the home screen that opens the current section
 const findTile = () => {
   if (originTile?.isConnected) return originTile;
 
@@ -170,10 +141,6 @@ const findTile = () => {
   return link.querySelector<HTMLElement>("[data-tile]") ?? link;
 };
 
-/**
- * Scales a box of `width` by `height` to cover the card, centred. The scale is
- * the same both ways, so nothing is stretched: what doesn't fit is clipped.
- */
 const cover = (card: Outline, width: number, height: number) => {
   const scale = Math.max(card.width / width, card.height / height);
   const x = card.x + (card.width - width * scale) / 2;
@@ -183,9 +150,6 @@ const cover = (card: Outline, width: number, height: number) => {
 
 const clamp = (value: number) => Math.min(1, Math.max(0, value));
 
-// ── Card ────────────────────────────────────────────────────────────────────
-
-// Draws the card at the current progress
 const render = () => {
   if (!elements || !origin) return;
   const { layer, screen, icon } = elements;
@@ -211,7 +175,6 @@ const render = () => {
   const copy = icon.firstElementChild as HTMLElement | null;
   if (copy && iconSize) {
     const fit = cover(card, iconSize.width, iconSize.height);
-    // How much larger the copy is than the tile it was made from
     const growth =
       fit.scale / cover(origin, iconSize.width, iconSize.height).scale;
     copy.style.transform = fit.transform;
@@ -223,7 +186,6 @@ const render = () => {
   }
 };
 
-// Puts a copy of the tile in the card, or takes it out again
 const setIcon = (tile: HTMLElement | null) => {
   if (!elements) return;
   const { icon, layer } = elements;
@@ -247,20 +209,16 @@ const setIcon = (tile: HTMLElement | null) => {
     height: `${iconSize.height}px`,
     margin: "0",
     transformOrigin: "0 0",
-    // Its own hover transform is replaced by the card's
     translate: "none",
     rotate: "none",
     scale: "none",
-    // Scaled every frame, see render
     willChange: "transform",
   });
   icon.appendChild(copy);
 };
 
 // Tells the browser the section is about to be scaled, so it keeps the
-// layer it drew rather than drawing it again at every size on the way, or
-// that it's done: a section left like that would keep fixed elements in
-// it off the screen, like a leftover transform
+// layer it drew rather than drawing it again at every size on the way.
 const prepareScreen = (isMoving: boolean) => {
   if (elements) elements.screen.style.willChange = isMoving ? "transform" : "";
 };
@@ -268,14 +226,10 @@ const prepareScreen = (isMoving: boolean) => {
 const show = () => {
   if (!elements) return;
   elements.layer.style.visibility = "visible";
-  // Nothing in the card can be used until it's open
   elements.layer.style.pointerEvents = "none";
-  // Home stays where it is, so the tile is still there on the way back. Locked
-  // from global.css: the image popover writes the overflow style itself
   document.documentElement.setAttribute("data-app-open", "");
 };
 
-// The card is open: from here on it's a plain full screen layer
 const settle = () => {
   if (!elements) return;
   const { stage, layer, screen } = elements;
@@ -294,12 +248,10 @@ const settle = () => {
   setState({ phase: "open" });
 };
 
-// Home is drawn again, for the card to close into its tile
 const unhideStage = () => {
   if (elements) elements.stage.style.visibility = "";
 };
 
-// The card is closed: the section leaves, home is usable again
 const hide = () => {
   if (!elements) return;
   const { layer, screen, scroller, snapshot } = elements;
@@ -324,8 +276,6 @@ const hide = () => {
   setState({ phase: "closed", screen: null });
 };
 
-// Picks up from wherever the card is, so opening and closing can interrupt
-// each other
 const animate = (to: 0 | 1) => {
   tween?.kill();
   tween = gsap.to(progress, {
@@ -337,7 +287,6 @@ const animate = (to: 0 | 1) => {
   });
 };
 
-// Opens the card out of `tile`. The section itself can arrive later.
 const start = (tile: HTMLElement | null) => {
   if (!elements) return;
 
@@ -358,18 +307,12 @@ const start = (tile: HTMLElement | null) => {
   animate(1);
 };
 
-// Home shouldn't play its intro under a closing card
 const skipIntro = () => {
   try {
     sessionStorage.setItem("has-seen-intro", "true");
   } catch {}
 };
 
-/**
- * Keeps a copy of a directly loaded page in the layer. There's no home screen
- * under such a page yet, so the copy covers the wait and then closes into the
- * tile like any other section.
- */
 const hold = () => {
   if (!elements) return;
   const { stage, snapshot } = elements;
@@ -391,33 +334,16 @@ const hold = () => {
   setState({ phase: "open" });
 };
 
-// ── Eyes ────────────────────────────────────────────────────────────────────
-
-// Where a section was opened from, by a click on the site
 type OpenedFrom = Exclude<Events["Section Opened"]["from"], "direct">;
 
-// The section on its way, until its route is there, see takeOpened
 let opening: { to: string; from: OpenedFrom; isSwap: boolean } | null = null;
 
-/**
- * How the section at this path was opened, once its route is there: from
- * where, and whether it took another's place, which replaces the URL. Null
- * when it wasn't opened by a click here, like when it was loaded directly.
- */
 export const takeOpened = (pathname: string) => {
   const opened = opening?.to === pathname ? opening : null;
   opening = null;
   return opened;
 };
 
-// ── Actions ─────────────────────────────────────────────────────────────────
-
-/**
- * Opens a section out of the link that was clicked, or out of its tile on the
- * home screen when there's no link. The card starts right away, the section
- * is shown in it once its route has loaded. `to` may point at a part of the
- * section, like "/about#gear", which the section scrolls to itself.
- */
 export const openApp = (
   to: string,
   router: AppRouterInstance,
@@ -437,14 +363,9 @@ export const openApp = (
         : findTile(),
     );
   }
-  // Scrolling home to the top would move the tile away
   router.push(to, { scroll: false });
 };
 
-/**
- * Goes to a section from anywhere. From the home screen it opens out of its
- * tile, with another section open it takes that one's place.
- */
 export const visitApp = (
   to: string,
   router: AppRouterInstance,
@@ -457,8 +378,6 @@ export const visitApp = (
 
   if (state.phase !== "open") return;
   if (location.pathname === pathOf(to)) {
-    // Already here: at most a part of it to go to, which the section
-    // hears about like any change of hash
     if (to !== pathOf(to) && `${location.pathname}${location.hash}` !== to) {
       const oldURL = location.href;
       history.replaceState(history.state, "", to);
@@ -469,12 +388,9 @@ export const visitApp = (
     return;
   }
   opening = { to: pathOf(to), from, isSwap: true };
-  // Replaced, not pushed: the open section stays one step away from home, so
-  // going back still closes the layer
   router.replace(to, { scroll: false });
 };
 
-/** Goes back to the home screen. The layer closes once the route is there. */
 export const closeApp = (router: AppRouterInstance) => {
   if (state.phase === "closing") return;
 
@@ -484,8 +400,6 @@ export const closeApp = (router: AppRouterInstance) => {
       return;
     }
 
-    // Opened over a page that was loaded directly, so home isn't one step
-    // back. It loads under the layer, which then closes into its tile
     skipIntro();
     router.push("/");
     return;
@@ -495,14 +409,11 @@ export const closeApp = (router: AppRouterInstance) => {
   router.push("/");
 };
 
-// Set when a section's route is gone, cleared when another takes its place
 let isLeaving = false;
 
-/** Shows a section in the layer. Called when its route is on screen. */
 export const showScreen = (screen: ReactNode) => {
   const { phase } = state;
   const isNew = state.screen === null;
-  // Takes the place of the section that was open
   const isSwap = !isNew && isLeaving;
   isLeaving = false;
   setState({ screen });
@@ -520,7 +431,6 @@ export const showScreen = (screen: ReactNode) => {
   }
 
   if (isSwap) {
-    // Closing goes into the tile of the section that's open now
     href = location.pathname;
     originTile = null;
     elements.scroller.scrollTop = 0;
@@ -542,10 +452,6 @@ export const showScreen = (screen: ReactNode) => {
     );
 };
 
-/**
- * A section's route is gone. Unless another section takes its place right
- * away, in the same update, the layer closes.
- */
 export const leaveScreen = () => {
   isLeaving = true;
   queueMicrotask(() => {
@@ -555,10 +461,6 @@ export const leaveScreen = () => {
   });
 };
 
-/**
- * Closes the layer into its tile. Called when the route is back at the home
- * screen, by the back button or by the browser.
- */
 export const closeLayer = () => {
   if (!elements) return;
   if (state.phase === "closed" || state.phase === "closing") return;
@@ -574,7 +476,6 @@ export const closeLayer = () => {
     reveal(tile);
     straighten(tile);
   }
-  // Measured again: the window or the layout may have changed since opening
   origin = tile ? measure(tile) : (origin ?? getFallback());
   setIcon(tile);
   prepareScreen(true);

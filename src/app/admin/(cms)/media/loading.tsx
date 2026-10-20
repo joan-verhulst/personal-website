@@ -6,7 +6,6 @@ import { Skeleton } from "~/modules/cms/components/primitives/skeleton";
 const STATS = ["Files", "Images", "Videos", "Unused"];
 const CARDS = Array.from({ length: 8 }, (_, index) => index);
 
-/** The media page's shape while the bucket is listed. */
 const MediaLoading = () => (
   <>
     <Header

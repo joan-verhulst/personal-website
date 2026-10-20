@@ -1,9 +1,3 @@
-/**
- * The hue of a photo, averaged over colorful pixels only so dark sand or film
- * borders don't drag it to grey, and its chroma: how colorful it is overall.
- * Takes raw pixels of a small copy, 48px is plenty. Shared by the import
- * script (sharp) and the CMS upload (canvas), so both measure alike.
- */
 export const measureColor = (
   data: ArrayLike<number>,
   channels: number,

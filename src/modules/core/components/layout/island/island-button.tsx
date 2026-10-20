@@ -9,7 +9,6 @@ interface Props {
   children: ReactNode;
 }
 
-/** The small round button on the island, for going back and for closing it. */
 const IslandButton = ({ label, onClick, className, children }: Props) => {
   const haptic = useHapticSound();
 

@@ -1,24 +1,15 @@
-/**
- * The sky in the footer as a CSS gradient: a palette for each height of the
- * sun, blended between, with the sun and its glow on top. Drawn where
- * WebGL2 isn't there, and as a variant of its own, see SKY in use-sky.ts.
- */
-
 type Color = [number, number, number];
 
 interface Palette {
-  // Degrees of the sun above the horizon
   elevation: number;
   zenith: string;
   middle: string;
   horizon: string;
-  // The light around the sun, and how strong it is
   glow: string;
   glowStrength: number;
 }
 
 const PALETTES: Palette[] = [
-  // Night
   {
     elevation: -18,
     zenith: "#04060d",
@@ -27,7 +18,6 @@ const PALETTES: Palette[] = [
     glow: "#0e1528",
     glowStrength: 0,
   },
-  // Twilight, the last light low in the sky
   {
     elevation: -10,
     zenith: "#070c22",
@@ -36,7 +26,6 @@ const PALETTES: Palette[] = [
     glow: "#3a3a70",
     glowStrength: 0.5,
   },
-  // Blue hour
   {
     elevation: -5,
     zenith: "#142250",
@@ -45,7 +34,6 @@ const PALETTES: Palette[] = [
     glow: "#c07a90",
     glowStrength: 0.7,
   },
-  // Sunrise and sunset
   {
     elevation: -1,
     zenith: "#243f80",
@@ -54,7 +42,6 @@ const PALETTES: Palette[] = [
     glow: "#ff7a45",
     glowStrength: 0.9,
   },
-  // Golden hour
   {
     elevation: 3,
     zenith: "#3360a6",
@@ -71,7 +58,6 @@ const PALETTES: Palette[] = [
     glow: "#ffd590",
     glowStrength: 0.6,
   },
-  // Day
   {
     elevation: 25,
     zenith: "#2d6ccc",
@@ -107,21 +93,13 @@ const css = ([r, g, b]: Color, alpha = 1) =>
 
 const WHITE: Color = [255, 255, 255];
 
-// The sun's radius, in pixels
 const SUN_SIZE = 22;
 
-// Cloud greys the sky: a color pulled toward a grey as bright as itself, by
-// how much of the sky is covered
 const grey = (color: Color, cover: number): Color => {
   const light = 0.2126 * color[0] + 0.7152 * color[1] + 0.0722 * color[2];
   return mix(color, [light, light, light], cover * 0.85);
 };
 
-/**
- * The background for a sun at an elevation and across the width (0 to 1),
- * over `span` degrees of sky from the bottom edge up, under this much cloud
- * (0 to 1).
- */
 export const skyGradient = (
   elevation: number,
   sunX: number,
@@ -148,7 +126,6 @@ export const skyGradient = (
   const y = `${(100 - (elevation / span) * 100).toFixed(2)}%`;
   const layers = [];
 
-  // The sun shows through little cloud
   if (elevation > -1 && cover < 0.5) {
     layers.push(
       `radial-gradient(circle ${SUN_SIZE}px at ${x} ${y}, ${css(mix(glow, WHITE, 0.6))} 90%, transparent)`,

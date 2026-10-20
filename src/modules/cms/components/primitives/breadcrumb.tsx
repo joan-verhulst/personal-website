@@ -24,7 +24,6 @@ const BreadcrumbItem = ({ className, ...props }: ComponentProps<"li">) => (
   />
 );
 
-// Every crumb is a page inside the admin, so links take its canonical path
 const BreadcrumbLink = ({
   className,
   ...props

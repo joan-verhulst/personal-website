@@ -13,11 +13,9 @@ import { mediaUrl } from "~/modules/media/utils/media-url";
 
 interface Props {
   kind: GalleryKind;
-  // In their saved order
   rows: GalleryRow[];
 }
 
-/** The header's Reorder button and the dialog that puts the pieces in order. */
 const ReorderGalleryButton = ({ kind, rows }: Props) => {
   const { run, isPending } = useAction();
 
@@ -27,7 +25,6 @@ const ReorderGalleryButton = ({ kind, rows }: Props) => {
       items={rows.map((row) => ({
         id: row.id,
         title: row.title,
-        // A piece whose image was deleted from Media shows the empty box
         thumbnail: row.image && (
           <Image src={mediaUrl(row.image)} alt="" fill sizes="48px" />
         ),

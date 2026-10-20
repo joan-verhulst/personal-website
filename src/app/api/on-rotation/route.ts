@@ -15,7 +15,6 @@ interface LookupResult {
   trackViewUrl: string;
 }
 
-// Apple's answer is checked like any other input: only complete songs count
 const isTrack = (result: unknown): result is LookupResult => {
   if (typeof result !== "object" || result === null) return false;
   const track = result as Record<string, unknown>;
@@ -29,8 +28,6 @@ const isTrack = (result: unknown): result is LookupResult => {
   );
 };
 
-// Live recordings carry the venue in their name, e.g. "Come When I Call (Live
-// at the Nokia Theatre, ...)". The record already says it's live.
 const cleanTitle = (title: string) => title.replace(/\s*\(Live\b.*\)$/i, "");
 
 // The player carries on without sound when this isn't a 200

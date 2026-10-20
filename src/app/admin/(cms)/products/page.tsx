@@ -17,7 +17,6 @@ export const metadata: Metadata = { title: PRODUCTS.title };
 const ProductsAdmin = async () => {
   const products = await readNewerRows<ProductRow>("products");
 
-  // Until 0011 has run there's no table to add to, so no buttons either
   if (!products) {
     return (
       <>

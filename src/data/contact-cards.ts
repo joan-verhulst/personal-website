@@ -32,9 +32,7 @@ export const fallbackCards: Record<ContactCardKey, ContactCard> = {
   },
 };
 
-/** The section a card is about, named over it. */
 export const cardLabel = (key: ContactCardKey) => pages[key].title;
 
-/** The card a page's footer shows: its own section's, and UI/UX elsewhere. */
 export const cardForPath = (pathname: string): ContactCardKey =>
   CONTACT_CARDS.find((key) => pages[key].path === pathname) ?? "uiUx";

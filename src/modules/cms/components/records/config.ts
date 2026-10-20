@@ -1,4 +1,3 @@
-// What the collection page and its loading state both say about it
 export const RECORDS = {
   title: "On rotation",
   description:

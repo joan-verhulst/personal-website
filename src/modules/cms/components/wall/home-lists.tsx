@@ -17,31 +17,21 @@ import { mediaUrl } from "~/modules/media/utils/media-url";
 interface ListEditorProps {
   items: WallItemRow[];
   tags: WallTagRow[];
-  /**
-   * The list as it's being edited. The wall screen holds it, and saves it
-   * with the Save in the bottom bar.
-   */
   value: string[];
   onChange: (value: string[]) => void;
-  /** Holds the list still while the page saves. */
   isPending?: boolean;
 }
 
-// What a home page widget takes from the start of its list, by place
 type WidgetSlot = "image" | "video" | "any";
 
 interface ListCardProps {
   item?: WallItemRow;
   tags: WallTagRow[];
-  /** Its place, like "1" or "Highlight 1", over the thumbnail. */
   label: string;
-  /** A button right of the title, like Remove. */
   corner?: ReactNode;
-  /** Under the text: a badge, a button. */
   children?: ReactNode;
 }
 
-/** One place in a list: what fills it, with its place over the thumbnail. */
 const ListCard = ({ item, tags, label, corner, children }: ListCardProps) => (
   <li className={itemCardClass}>
     <ItemCard
@@ -61,13 +51,10 @@ const ListCard = ({ item, tags, label, corner, children }: ListCardProps) => (
 interface OrderedListProps extends ListEditorProps {
   title: string;
   description: string;
-  /** What the list holds, as in "No experiments yet". */
   noun: string;
-  /** What the home widget takes from the start of the list. */
   widgetSlots: readonly WidgetSlot[];
 }
 
-/** A home list in the order its modal shows it: add, reorder and remove. */
 const OrderedListEditor = ({
   items,
   tags,
@@ -97,7 +84,6 @@ const OrderedListEditor = ({
           <ReorderButton
             title={`Reorder ${noun}`}
             description="Drag the rows, or use their arrow buttons, to change the order. It's saved with the page."
-            // The order lands in the list here, the page's Save keeps it
             saveLabel="Apply order"
             disabled={isPending}
             items={list.map((id) => {
@@ -105,7 +91,6 @@ const OrderedListEditor = ({
               return {
                 id,
                 title: titleOf(id),
-                // Nothing to show for an item whose file was deleted
                 thumbnail: !item?.media ? undefined : item.media_type ===
                   "image" ? (
                   <Image
@@ -142,7 +127,6 @@ const OrderedListEditor = ({
                 tags={tags}
                 label={String(index + 1)}
                 corner={
-                  // Takes it out of the list only, so it isn't a delete
                   <Button
                     size="icon-sm"
                     variant="ghost"
@@ -189,7 +173,6 @@ const OrderedListEditor = ({
   );
 };
 
-/** Side projects and motion studies, in the order the modal shows them. */
 export const ExperimentsEditor = (props: ListEditorProps) => (
   <OrderedListEditor
     {...props}
@@ -201,7 +184,6 @@ export const ExperimentsEditor = (props: ListEditorProps) => (
 );
 
 
-/** The two screenshots that take turns on the home page's UI/UX widget. */
 export const HighlightsEditor = ({
   items,
   tags,
@@ -210,10 +192,7 @@ export const HighlightsEditor = ({
   isPending,
 }: ListEditorProps) => {
   const [isPicking, setIsPicking] = useState(false);
-  // Which highlight the picker chooses for. Kept after closing, so the
-  // title doesn't change during the exit animation.
   const [pickingFor, setPickingFor] = useState(0);
-  // The site needs both, so one on its own isn't saved
   const isHalfPicked = picks.some(Boolean) && !picks.every(Boolean);
 
   return (
@@ -262,7 +241,6 @@ export const HighlightsEditor = ({
         title={`Pick highlight ${pickingFor + 1}`}
         items={items}
         tags={tags}
-        // Images only, and not the one already in the other place
         disabledReason={(item) =>
           item.media_type !== "image"
             ? "Images only"

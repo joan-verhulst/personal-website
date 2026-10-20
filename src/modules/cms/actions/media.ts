@@ -34,10 +34,7 @@ import {
   signUpload,
 } from "~/modules/media/utils/storage";
 
-// ── Uploads ───────────────────────────────────────────────────────────────────
-
 const uploadSchema = v.object({
-  // Uploads for one kind of content share a folder, like "photography"
   folder: v.pipe(v.string(), v.regex(/^[a-z0-9-]{1,40}$/, "Unknown folder.")),
   type: v.pipe(
     v.string(),
@@ -58,12 +55,6 @@ const randomName = () =>
     byte.toString(36).padStart(2, "0"),
   ).join("");
 
-/**
- * Picks where a file goes and signs an upload for it, so the browser can send
- * it to the bucket without passing through the server. The URL only takes a
- * file of this type and size, and only for a few minutes. A file that would
- * take the bucket past R2's free storage gets no URL at all.
- */
 export async function createUpload(input: {
   folder: string;
   type: string;
@@ -98,12 +89,6 @@ const detailsSchema = v.object({
   chroma: v.pipe(v.number(), v.minValue(0), v.maxValue(1)),
 });
 
-/**
- * Remembers what the upload button measured about a file it just put in the
- * bucket: the name it had, its size and its color. The picker fills a form
- * with them later, like the upload did. Only a file that's really in the
- * bucket gets a row.
- */
 export async function saveMediaDetails(
   details: MediaDetails,
 ): Promise<ActionResult> {
@@ -120,9 +105,6 @@ export async function saveMediaDetails(
   return {};
 }
 
-// ── Library ───────────────────────────────────────────────────────────────────
-
-/** Every file in Media with its details and what uses it, for the picker. */
 export async function listMediaLibrary(): Promise<
   ActionResult & { files?: MediaFile[]; hasDetails?: boolean }
 > {
@@ -136,11 +118,6 @@ export async function listMediaLibrary(): Promise<
   }
 }
 
-/**
- * Deletes a file from Media, also one that's in use. What showed it keeps its
- * place without the file: the site leaves a photo, artwork, record or item
- * out until another file is picked, and the About page goes without a photo.
- */
 export async function deleteMediaFile(path: string): Promise<ActionResult> {
   const admin = await requireAdmin();
   if (admin.error) return failed(admin.error);
@@ -155,19 +132,14 @@ export async function deleteMediaFile(path: string): Promise<ActionResult> {
   if (cleared) return failed(cleared);
 
   const removed = await removeMedia(supabase, [parsed.output]);
-  // The site may have changed already, so it hears about it either way
   const result = published();
   return removed.length
     ? result
     : failed("Nothing uses the file anymore, but it couldn't be deleted. Try again.");
 }
 
-// ── Clean up ──────────────────────────────────────────────────────────────────
-
-// How many files are removed per round
 const PAGE = 100;
 
-/** Every path a row points at, or null when a table couldn't be read whole. */
 const readUsedPaths = async (supabase: SupabaseClient) => {
   const reads = await Promise.all(
     MEDIA_COLUMNS.map(async ([table, column]) => ({
@@ -178,10 +150,7 @@ const readUsedPaths = async (supabase: SupabaseClient) => {
 
   const used = new Set<string>();
   for (const { table, data, error, count } of reads) {
-    // A table that isn't there yet has no rows to use a file
     if (isTableToCome(table, error)) continue;
-    // The API cuts a long read off at its row limit without saying so. A
-    // short list here would mark media that's live as unused
     if (error || !data || count === null || count > data.length) {
       console.error("Couldn't read the media in use", error);
       return null;
@@ -195,11 +164,6 @@ const readUsedPaths = async (supabase: SupabaseClient) => {
   return used;
 };
 
-/**
- * The files in the bucket that no row points at, or null when that couldn't
- * be worked out. Nothing is ever removed on a guess. Files from the last day
- * are left alone: a form that's still open may be about to save one.
- */
 const findUnused = async (supabase: SupabaseClient) => {
   const [files, used] = await Promise.all([
     listMedia(),
@@ -220,11 +184,6 @@ const pathsSchema = v.pipe(
   v.maxLength(5000, "Too many files."),
 );
 
-/**
- * Removes the unused files the Media page listed. The bucket is checked again
- * first and only files that are still unused go, so a file that was saved
- * into a row since the page loaded stays.
- */
 export async function removeUnusedMedia(
   paths: string[],
 ): Promise<ActionResult & { removed?: number }> {

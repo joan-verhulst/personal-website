@@ -17,7 +17,6 @@ interface SlideCardProps {
   isActive: boolean;
   isHovered: boolean;
   isVertical: boolean;
-  // Take the index, so the slider can hand every card the same functions
   slideRef: (index: number, el: HTMLDivElement | null) => void;
   imgRef: (index: number, el: HTMLImageElement | null) => void;
   onSelect: (index: number) => void;
@@ -44,7 +43,6 @@ const SlideCard = ({
     <div
       ref={(el) => slideRef(index, el)}
       className={cn(
-        // The background stands in until the picture has loaded
         "relative shrink-0 overflow-hidden rounded-2xl bg-neutral-200",
         isVertical ? "w-full" : "h-full",
         !isActive && "cursor-pointer",
@@ -69,8 +67,6 @@ const SlideCard = ({
           width={item.width}
           height={item.height}
           sizes={getSlideSizes(item)}
-          // The first slides are on screen when the page opens, the rest
-          // load as they come near
           loading={index < FIRST_SLIDES ? "eager" : "lazy"}
           className={cn(
             "pointer-events-none h-full w-full object-cover transition-[filter] duration-300",

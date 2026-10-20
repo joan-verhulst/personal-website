@@ -1,4 +1,3 @@
-// Records as they were hard-coded, imported once by scripts/import-content.mts
 import type { RotationRecord } from "../../src/modules/content/types.ts";
 
 const COVERS = "/assets/images/on-rotation";

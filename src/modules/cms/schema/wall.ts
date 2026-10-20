@@ -12,14 +12,11 @@ import { WALL_BACKGROUNDS } from "~/modules/content/types";
 // Shared by the forms and their actions, so this file can't be "use server".
 // Every output is also valid input: the form parses once, the action again
 
-// One or two of: a side, center, or a percentage. It ends up in an inline
-// style on the site, so nothing else gets through
 const POSITION =
   /^$|^(?:(?:left|center|right|top|bottom|\d{1,3}(?:\.\d+)?%|0)(?:\s+(?!$)|$)){1,2}$/;
 
 export const wallItemSchema = v.object({
   title: requiredText("Give the item a title."),
-  // Empty for no tag
   tagId: v.string(),
   mediaType: v.picklist(["image", "video"]),
   media: v.pipe(
@@ -37,7 +34,6 @@ export const wallItemSchema = v.object({
     v.maxLength(40, 'Use something like "left top" or "50% 20%".'),
     v.regex(POSITION, 'Use something like "left top" or "50% 20%".'),
   ),
-  // Empty means no zoom, which is stored as null
   zoom: v.nullable(
     v.pipe(
       v.number("Zoom has to be a number."),
@@ -56,7 +52,6 @@ export type WallItemOutput = v.InferOutput<typeof wallItemSchema>;
 
 export const wallTagSchema = v.object({
   label: requiredText("Give the tag a label."),
-  // It ends up in inline styles on the site, so only a plain hex color
   color: v.pipe(
     v.string(),
     v.trim(),

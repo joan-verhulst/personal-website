@@ -8,7 +8,6 @@ import { describedPageMetadata } from "~/utils/page-metadata";
 
 export const metadata: Metadata = describedPageMetadata(ownPages.products);
 
-// Every product as a tile on the wall, opened from its widget on home
 const ProductsPage = async () => {
   // Without one, home shows the contact widget in its place
   const { products } = await getContent();
@@ -16,7 +15,6 @@ const ProductsPage = async () => {
 
   return (
     <PageWithFooter className="min-h-screen">
-      {/* The island names the section on screen, this names it for search */}
       <h1 className="sr-only">{ownPages.products.title}</h1>
       <ProductShowcase />
     </PageWithFooter>

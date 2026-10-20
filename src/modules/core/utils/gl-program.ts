@@ -1,11 +1,4 @@
-/**
- * Shader programs that compile in the background. Compiling takes a while,
- * and asking a program whether it linked waits for it: the page stood still
- * for as long as that took. Where the browser can compile in the
- * background, see KHR_parallel_shader_compile, a program is built here and
- * only asked once it says it's done, with whenLinked. The sky and the loupe
- * are made this way.
- */
+/** Compiles in the background (KHR_parallel_shader_compile): asking a program whether it linked blocks the page. */
 
 export interface Build {
   program: WebGLProgram;
@@ -13,10 +6,7 @@ export interface Build {
   fragment: WebGLShader;
 }
 
-/**
- * Compiles and links a program, without asking whether that worked, see
- * checkProgram. Null when the context can't make one.
- */
+/** Compiles and links without checking the result, see checkProgram. */
 export const buildProgram = (
   gl: WebGL2RenderingContext,
   vertexSource: string,
@@ -36,10 +26,6 @@ export const buildProgram = (
   return { program, vertex, fragment };
 };
 
-/**
- * Whether a program linked, which waits for it where it's still compiling.
- * Says what went wrong when it didn't, and lets go of the shaders either way.
- */
 export const checkProgram = (
   gl: WebGL2RenderingContext,
   { program, vertex, fragment }: Build,
@@ -58,7 +44,6 @@ export const checkProgram = (
   return isLinked;
 };
 
-/** Lets go of a program, and of its shaders if it still has them. */
 export const deleteProgram = (
   gl: WebGL2RenderingContext,
   { program, vertex, fragment }: Build,
@@ -68,18 +53,13 @@ export const deleteProgram = (
   gl.deleteProgram(program);
 };
 
-// Where the browser can't say when a program is done, it's asked this long
-// after it was made, in ms: Firefox compiles in its graphics process all the
-// same, and the page only waits once it asks
+// Delay in ms before asking where the browser cannot say: Firefox compiles in its graphics process
 const ASK_AFTER = 400;
 
 /**
- * Waits for programs that compile in the background, and calls back once
- * they have all linked. They're asked every frame whether they're done,
- * which doesn't wait, unlike asking whether they linked. Where the browser
- * can't say, like Firefox, they're asked a moment later, by when they're
- * usually done, rather than right away, which would hold the page up until
- * they are. Returns a way to stop waiting.
+ * Calls back once all programs linked. Polls every frame where parallel compile
+ * is available; Firefox cannot say, so they are asked after a delay instead of
+ * right away, which would block the page.
  */
 export const whenLinked = (
   gl: WebGL2RenderingContext,
@@ -111,15 +91,6 @@ export const whenLinked = (
   return () => cancelAnimationFrame(request);
 };
 
-/**
- * Hands a context back, rather than leaving it until its canvas is
- * collected: browsers only keep so many at once, and drop the oldest for a
- * new one. A moment later, and only once the canvas is off the page. React
- * sets an effect up again on the same canvas, in development and after a
- * fast refresh, sometimes only once it scrolls into view, and a canvas whose
- * context was handed back only ever gives that lost one again. A canvas
- * that's still on the page keeps its context, to draw with again.
- */
 export const releaseLater = (gl: WebGL2RenderingContext) => {
   setTimeout(() => {
     const { canvas } = gl;

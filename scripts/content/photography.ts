@@ -1,4 +1,3 @@
-// Photos as they were hard-coded, imported once by scripts/import-content.mts
 import type { PhotographyProject } from "../../src/modules/content/types.ts";
 
 const PHOTOS = "/assets/images/photography";
@@ -9,11 +8,6 @@ const photo = (id: string, title: string, file: string): PhotographyProject => (
   image: `${PHOTOS}/${file}`,
 });
 
-/**
- * The grid and popover follow this order, loosely grouped by color: white,
- * green, blue, grey, gold, violet. The table scatters them. Size and color
- * are read from each file.
- */
 export const photographyProjects: PhotographyProject[] = [
   photo("into-the-sea", "Into the sea", "s-joan-verhulst-4465-01.jpg"),
   photo("snow-on-the-dunes", "Snow on the dunes", "img-0038-pano-edit.jpg"),

@@ -7,11 +7,6 @@
  */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
-/*
- * The page's bottom corners as it lifts off the footer, set every frame by
- * use-curtain.ts. Not inherited, so changing it doesn't restyle everything
- * on the page.
- */
 @property --curtain-radius {
   syntax: "<length>";
   inherits: false;
@@ -19,7 +14,6 @@
 }
 
 @theme {
-  /* Neutral colors */
   --color-neutral-50: #faf9f9;
   --color-neutral-100: #f3f3f3;
   --color-neutral-200: #d8d8d8;
@@ -33,7 +27,6 @@
   --color-neutral-950: #0f0f0f;
   --color-neutral: #0f0f0f;
 
-  /* Primary colors */
   --color-primary-50: #ecf5fb;
   --color-primary-100: #d8ebf7;
   --color-primary-200: #b1d7f0;
@@ -47,7 +40,6 @@
   --color-primary-950: #05121a;
   --color-primary: #3a9bd8;
 
-  /* Feedback colors, for the CMS: errors, warnings and confirmations */
   --color-error-50: hsl(0, 57%, 89%);
   --color-error-100: hsl(0, 58%, 85%);
   --color-error-200: hsl(0, 58%, 77%);
@@ -84,12 +76,10 @@
   --color-success-900: hsl(113, 67%, 7%);
   --color-success-950: hsl(113, 67%, 2%);
 
-  /* Font sizes */
   --font-size-sm: 0.75rem;
   --font-size-base: 1rem;
   --font-size-lg: 1.125rem;
 
-  /* Bars of a level meter, for whatever is playing */
   --animate-meter: meter 0.9s ease-in-out infinite alternate;
 
   @keyframes meter {
@@ -98,7 +88,6 @@
     }
   }
 
-  /* Text coming up into place as the page opens */
   --animate-rise-in: rise-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
 
   @keyframes rise-in {
@@ -109,10 +98,6 @@
   }
 }
 
-/*
- * The footer's glass: tinted until the sky's shader draws it as glass
- * underneath. A button keeps a faint tint on hover
- */
 [data-glass-on] [data-glass] {
   background-color: transparent;
 }
@@ -125,19 +110,10 @@
   );
 }
 
-/*
- * The home widgets wait hidden while their intro is about to play, see
- * INTRO_SCRIPT in app/layout.tsx
- */
 [data-intro="pending"] [data-intro-grid] [data-tile] {
   opacity: 0;
 }
 
-/*
- * The admin's denser type scale, from the Spark dashboard design: 13px body,
- * 14px for navigation and descriptions, 20px titles. Only under data-cms, so
- * the site keeps Tailwind's sizes.
- */
 [data-cms] {
   --text-xs: 0.8125rem;
   --text-xs--line-height: 1.25;
@@ -148,12 +124,7 @@
   letter-spacing: 0.02em;
 }
 
-/*
- * Border drawn on top of the content instead of around it, so images reach
- * the rounded edge instead of leaving a strip of background between the image
- * and the border. The element needs to be positioned. Change the color with
- * [--inset-border-color:...].
- */
+/* Drawn over the content, so images reach the rounded edge */
 @utility inset-border {
   &::after {
     content: "";
@@ -169,10 +140,6 @@
   }
 }
 
-/*
- * A range input as the fader on a turntable: a slot in the surface with a
- * metal cap riding in it. Set --fader-fill to how far along it is.
- */
 @utility deck-fader {
   appearance: none;
   height: 0.375rem;
@@ -210,19 +177,16 @@
   }
 }
 
-/* Page transition container - prevent overflow during animations */
 html,
 body {
   overflow-x: hidden;
   background-color: #faf9f9;
 }
 
-/* A section is open over the home screen, which stays put underneath */
 html[data-app-open] {
   overflow: hidden;
 }
 
-/* Disable View Transitions API default animations (GSAP handles it) */
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation: none;

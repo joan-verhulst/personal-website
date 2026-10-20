@@ -15,8 +15,6 @@ const SelectGroup = SelectPrimitive.Group;
 
 const SelectValue = SelectPrimitive.Value;
 
-// The red border comes from an ancestor with group/error and
-// data-has-error="true", like the other form fields
 const SelectTrigger = ({
   className,
   children,

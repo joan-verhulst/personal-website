@@ -21,9 +21,6 @@ const INK = "#0f0f0f";
 const PAPER = "#faf9f9";
 const BLUE = "#3a9bd8";
 
-// ── The scattering ──────────────────────────────────────────────────────────
-
-/** The clear sky behind the clouds, with the sun wherever you put it. */
 export const ScatteringDemo = () => {
   const [sun, setSun] = useState(4);
 
@@ -51,8 +48,6 @@ export const ScatteringDemo = () => {
   );
 };
 
-// ── Coverage as a threshold ─────────────────────────────────────────────────
-
 const SHEET_STATS = { mean: 0.563, spread: 0.089 };
 const HEAPS_STATS = { mean: 0.553, spread: 0.135 };
 
@@ -64,7 +59,6 @@ const thresholdFor = (coverage: number, mean: number, spread: number) => {
 const C_WIDTH = 960;
 const C_HEIGHT = 140;
 
-/** The noise from above, cut at the threshold for a coverage. */
 export const CoverageDemo = () => {
   const [coverage, setCoverage] = useState(0.45);
   const [softness, setSoftness] = useState(0.15);
@@ -74,7 +68,6 @@ export const CoverageDemo = () => {
   const spread = SHEET_STATS.spread + (HEAPS_STATS.spread - SHEET_STATS.spread) * billow;
   const edge = thresholdFor(coverage, mean, spread);
 
-  // The noise's values as a bell, from four spreads under the mean to four over
   const from = mean - 4 * spread;
   const to = mean + 4 * spread;
   const xOf = (value: number) => ((value - from) / (to - from)) * C_WIDTH;
@@ -125,18 +118,10 @@ export const CoverageDemo = () => {
   );
 };
 
-// ── The real thing ──────────────────────────────────────────────────────────
-
 const { home } = siteData.owner;
 
-// Degrees of sky from the horizon to the top, as on the cover
 const SPAN = 50;
 
-/**
- * A canvas for the whole shader, with a renderer of its own once it's
- * scrolled into view. `paint` draws a frame with the latest values, and the
- * `draw` handed back calls it whenever one of them changes.
- */
 const useSkyCanvas = (
   paint: (renderer: SkyRenderer, pixelRatio: number) => void,
 ) => {
@@ -163,7 +148,6 @@ const useSkyCanvas = (
         () => {
           rendererRef.current = null;
         },
-        // Compiled in the background: drawn once it's ready
         draw,
       );
       if (!rendererRef.current) {
@@ -209,7 +193,6 @@ const SkyCanvas = ({
   </div>
 );
 
-// What falls from each sky, and whether it thunders
 const weatherFor = (state: number): SkyWeather => ({
   state,
   look: { ...SKY_DEFAULTS.clouds[state] },
@@ -222,12 +205,8 @@ const weatherFor = (state: number): SkyWeather => ({
 // How bright a flash of lightning still is, this long after it struck
 const flashAfter = (since: number) => (since < 1000 ? Math.exp(-since / 90) * 0.4 : 0);
 
-// ── Lighting ────────────────────────────────────────────────────────────────
-
-// The partly cloudy layer, with no high cloud over it
 const LIT_LOOK = { ...SKY_DEFAULTS.clouds[1], veil: 0 };
 
-/** A layer of cloud, as thick and as broken as you like, with the sun wherever you put it. */
 export const LightingDemo = () => {
   const [sun, setSun] = useState(2);
   const [coverage, setCoverage] = useState(0.5);
@@ -269,13 +248,8 @@ export const LightingDemo = () => {
   );
 };
 
-// ── Five skies ──────────────────────────────────────────────────────────────
-
-// How long the sky takes to ease into the next one here, in seconds: far
-// sooner than the twenty the weather takes
 const DEMO_EASE = 1.5;
 
-/** The five skies, easing from one into the next. */
 export const WeatherDemo = () => {
   const [state, setState] = useState(1);
   const valuesRef = useRef({
@@ -292,7 +266,6 @@ export const WeatherDemo = () => {
       sunX: 0.6,
       span: SPAN,
       starTurn: 0,
-      // Rain keeps falling until it has eased out
       weather: { ...weatherFor(state), look, falling: look.fall > 0.005 ? 1 : 0 },
       drift: [0, -drift],
       time,
@@ -302,8 +275,6 @@ export const WeatherDemo = () => {
     });
   });
 
-  // While in view: every number eases toward the sky picked, the wind
-  // carries the clouds, rain falls and lightning strikes
   useEffect(() => {
     if (!isInView) return;
     let request = 0;
@@ -348,9 +319,6 @@ export const WeatherDemo = () => {
   );
 };
 
-// ── All of it ───────────────────────────────────────────────────────────────
-
-// Home's clock, made once rather than for every frame it's read in
 const hourFormat = new Intl.DateTimeFormat("en-GB", {
   hour: "numeric",
   minute: "numeric",
@@ -358,7 +326,6 @@ const hourFormat = new Intl.DateTimeFormat("en-GB", {
   timeZone: home.timeZone,
 });
 
-// Home's hour now, so the slider starts there
 const hourAtHome = () => {
   const parts = hourFormat.formatToParts(new Date());
   const hour = Number(parts.find(({ type }) => type === "hour")?.value ?? 12);
@@ -369,7 +336,6 @@ const hourAtHome = () => {
 const formatHour = (hour: number) =>
   `${String(Math.floor(hour) % 24).padStart(2, "0")}:${String(Math.floor((hour % 1) * 60)).padStart(2, "0")}`;
 
-/** The whole shader, with its time, sky and wind in your hands. */
 export const SkyPlayground = () => {
   const [hour, setHour] = useState(12);
   const [state, setState] = useState(1);
@@ -380,7 +346,6 @@ export const SkyPlayground = () => {
   const valuesRef = useRef({ hour, state, drift, time: 0, flashAt: -1e9 });
   valuesRef.current = { ...valuesRef.current, hour, state };
 
-  // Dragged by hand, the drift is what the slider shows
   const moveDrift = (value: number) => {
     valuesRef.current.drift = value;
     setDrift(value);
@@ -411,15 +376,11 @@ export const SkyPlayground = () => {
     draw();
   }, [draw, hour, state, drift, isMoving, isInView]);
 
-  // Moving: rain and snow fall, the wind carries the clouds, lightning
-  // strikes. Only while in view, and drawn once a frame
   useEffect(() => {
     if (isMoving !== "moving" || !isInView) return;
     let request = 0;
     let last = performance.now();
     let nextStrike = last + 3000;
-    // The slider follows in tenths of a kilometer, so it renders again
-    // every few seconds rather than every frame
     let shown = Math.round(valuesRef.current.drift * 10);
     const loop = (now: number) => {
       const seconds = (now - last) / 1000;

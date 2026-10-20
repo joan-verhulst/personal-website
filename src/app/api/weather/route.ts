@@ -5,11 +5,7 @@ import type {
 } from "~/modules/core/utils/weather";
 
 // The radar updates every five minutes, the model every fifteen, so each
-// lookup is kept that long in Next's data cache, which every visitor on
-// every server shares: three requests upstream every five minutes, however
-// many visitors there are. Only good answers are kept, and a kept one keeps
-// standing in while a fresh one can't be had. Only the lookups, not this
-// route's answer: a cached route would hold on to a failed answer too
+// lookup is kept that long in Next's data cache, shared by every visitor.
 const LOOKUP_SECONDS = 300;
 
 // The CDN in front of the site keeps the route's answer as long, and hands
@@ -17,22 +13,14 @@ const LOOKUP_SECONDS = 300;
 // all. Browsers don't keep it, so a retry really asks again
 const CACHE_CONTROL = `public, max-age=0, s-maxage=${LOOKUP_SECONDS}, stale-while-revalidate=${LOOKUP_SECONDS * 3}`;
 
-// Open-Meteo answers "overloaded" now and then, at once, so a bad answer is
-// asked again up to this many times, while an error like a timeout is asked
-// again only once, to stay well within a serverless function's time. A
-// failed answer isn't cached, so asking again really asks
 const TRIES = 4;
 const ERROR_TRIES = 2;
 const TIMEOUT_MS = 3500;
 
-// The weather model, for the sky as a whole and the last day by the hour
 const OPEN_METEO = "https://api.open-meteo.com/v1/forecast";
-// Buienradar: the rain radar at a point, the next two hours in five-minute
-// steps, and the weather stations' measurements, every ten minutes
 const RADAR = "https://gpsgadget.buienradar.nl/data/raintext";
 const STATIONS = "https://data.buienradar.nl/2.0/feed/json";
 
-// From this much rain an hour it's raining
 const RAIN_FROM = 0.1;
 
 const CURRENT = [
@@ -54,7 +42,6 @@ const HOURLY = [
 type Current = Record<(typeof CURRENT)[number], number>;
 type Hourly = Record<(typeof HOURLY)[number], unknown[]>;
 
-// A Buienradar station, as far as the sky needs it
 interface Station {
   lat: number;
   lon: number;
@@ -62,15 +49,12 @@ interface Station {
   precipitation: number;
 }
 
-// What the sky over home is doing now, from whichever source knows best
 interface Sky {
   cover: number;
   code: number;
   precipitation: number;
 }
 
-// Every answer is checked like any other input: every field a number, and
-// every hourly field a list as long as the hours
 const isCurrent = (value: unknown): value is Current =>
   typeof value === "object" &&
   value !== null &&
@@ -106,14 +90,11 @@ const isSnow = (code: number) =>
 const isRain = (code: number) =>
   (code >= 51 && code <= 67) || (code >= 80 && code <= 82);
 
-// The WMO code for a sky with nothing coming down
 const coverCode = (cover: number) =>
   cover < 0.15 ? 0 : cover < 0.45 ? 1 : cover < 0.8 ? 2 : 3;
 
-// The code for rain this heavy, in millimeters an hour
 const rainCode = (rain: number) => (rain < 1 ? 51 : rain < 4 ? 61 : 63);
 
-/** Fetches through the data cache, trying again on a bad answer or an error. */
 const fetchWithTries = async (url: string, tries: number) => {
   for (let attempt = 1; ; attempt++) {
     try {
@@ -130,7 +111,6 @@ const fetchWithTries = async (url: string, tries: number) => {
   }
 };
 
-/** The model's weather now and by the hour over the last day and this one. */
 const fetchModel = async () => {
   const { latitude, longitude } = siteData.owner.home;
   const url = new URL(OPEN_METEO);
@@ -149,7 +129,6 @@ const fetchModel = async () => {
   };
   if (!isCurrent(current)) throw new Error("Open-Meteo answered without now");
 
-  // Hours the model has no numbers for are left out
   const hours: WeatherHour[] = [];
   if (isHourly(hourly)) {
     hourly.time.forEach((time, index) => {
@@ -166,10 +145,6 @@ const fetchModel = async () => {
   return { current, hours };
 };
 
-/**
- * The radar's rain over home right now, in millimeters an hour, from the
- * first of the five-minute steps it answers. Its scale is logarithmic.
- */
 const fetchRadar = async () => {
   const { latitude, longitude } = siteData.owner.home;
   const url = new URL(RADAR);
@@ -181,7 +156,6 @@ const fetchRadar = async () => {
   return value <= 0 ? 0 : Math.round(10 ** ((value - 109) / 32) * 100) / 100;
 };
 
-/** The weather station nearest home, with what it sees. */
 const fetchStation = async () => {
   const { latitude, longitude } = siteData.owner.home;
   const body: unknown = await (await fetchWithTries(STATIONS, 1)).json();
@@ -201,11 +175,6 @@ const fetchStation = async () => {
   return nearest;
 };
 
-/**
- * What a station's description of its sky says, in Buienradar's Dutch: how
- * covered it is, and a code when it names what comes down. Nothing for
- * words it doesn't know.
- */
 const skyFromDescription = (description: string) => {
   const text = description.toLowerCase();
   let cover: number | null = null;
@@ -225,11 +194,6 @@ const skyFromDescription = (description: string) => {
   return { cover, code };
 };
 
-/**
- * The sky now, from whoever knows best: the radar over home for rain, the
- * station a few kilometers off for how covered the sky is and for snow,
- * thunder and fog, and the model for whatever is left.
- */
 const skyNow = (
   model: Current,
   radar: number | null,
@@ -246,8 +210,6 @@ const skyNow = (
     precipitation = station.precipitation;
   }
 
-  // The radar has the last word on rain. Thunder and snow stay what they
-  // are, with the radar's amount
   if (radar !== null) {
     precipitation = radar;
     if (radar >= RAIN_FROM) {
@@ -259,19 +221,9 @@ const skyNow = (
   return { cover, code, precipitation };
 };
 
-// The sky stays as it was when this isn't a 200, and asks again soon. Said
-// plainly, so no cache along the way holds on to it
 const unavailable = () =>
   Response.json({}, { status: 502, headers: { "Cache-Control": "no-store" } });
 
-/**
- * The weather at home, for the sky in the footer: how cloudy it is, how
- * much of that is high cloud, rain, snow or thunder, how much comes down,
- * and the wind up where the clouds are. Now, and by the hour over the last
- * day. The model is Open-Meteo's, free and without a key; what's actually
- * happening over home now is read from Buienradar's radar and its nearest
- * station, and goes before the model.
- */
 export async function GET() {
   const [model, radar, station] = await Promise.allSettled([
     fetchModel(),

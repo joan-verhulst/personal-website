@@ -8,15 +8,6 @@ const GoogleSansFlexFont = Google_Sans_Flex({
   subsets: ["latin"],
 });
 
-/**
- * What a visitor gets when a page can't be built, like when the content
- * couldn't be read right after a save in the CMS. It heals on a later
- * request, so all this does is say so and offer a reload.
- *
- * It takes the place of the root layout, so it brings its own html, styles
- * and font. It's also built ahead of time as the site's 500 page, which is
- * why it reads no content and doesn't look at the error it's handed.
- */
 const GlobalError = () => (
   <html className={GoogleSansFlexFont.className} lang="en">
     <body>

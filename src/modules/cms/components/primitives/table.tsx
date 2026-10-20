@@ -47,7 +47,6 @@ const TableFooter = ({
   />
 );
 
-// data-state="last-edited" highlights the row that was just saved
 const TableRow = ({
   className,
   ...props

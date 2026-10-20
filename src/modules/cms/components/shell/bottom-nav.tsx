@@ -21,11 +21,9 @@ import {
 import cn from "~/utils/cn";
 
 interface BottomNavSection {
-  /** The section's root, the nav shows on it and every page under it. */
   url: string;
   label: string;
   pages: SidebarItem[];
-  /** Where the round + button goes, the section's main "new" action. */
   create: { href: string; label: string };
 }
 
@@ -38,17 +36,7 @@ const SECTIONS: BottomNavSection[] = [
   },
 ];
 
-/**
- * The bar at the bottom of the panel. In a section with sub-pages it holds
- * their tabs in a pill and a round + button; a page's own actions, from
- * <PageActions />, take the place of the +. Outside those sections it only
- * shows while the page has actions.
- *
- * It sits under the scrolling content instead of floating over it, so it
- * never covers anything.
- */
 const BottomNav = () => {
-  // Canonical, like the sections' own paths it's compared with
   const pathname = useAdminPathname();
   const searchParams = useSearchParams();
   const { setSlot, hasActions, hasWideActions } = usePageActionsSlot();
@@ -56,11 +44,8 @@ const BottomNav = () => {
 
   if (!section && !hasActions) return null;
 
-  // No "add" while you're editing something, or already on the new page
   const hasCreate =
     section && !hasActions && pathname !== section.create.href;
-  // On the Experiments tab of the items, a new item goes into that list,
-  // like the header's New item there
   const createHref =
     section &&
     pathname === "/admin/ui-ux/items" &&
@@ -103,7 +88,6 @@ const BottomNav = () => {
           })}
         </nav>
       )}
-      {/* <PageActions /> renders into this */}
       <div
         ref={setSlot}
         className="flex flex-wrap items-center justify-center gap-2 empty:hidden"

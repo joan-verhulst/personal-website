@@ -6,7 +6,6 @@ import { describedPageMetadata } from "~/utils/page-metadata";
 
 export const metadata: Metadata = describedPageMetadata(ownPages.blog);
 
-// Every post, opened from the blog widget on home
 const BlogPage = () => {
   return (
     <PageWithFooter className="min-h-screen">

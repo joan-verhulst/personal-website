@@ -28,21 +28,15 @@ import type { RecordValues } from "~/modules/cms/components/records/schema";
 import { useAction } from "~/modules/cms/hooks/use-action";
 import cn from "~/utils/cn";
 
-// An album is named after the album, a song after the song itself
 const titleFor = (song: ItunesSong, type: RecordValues["type"]) =>
   type === "album" ? song.album : song.song;
 
 interface DialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** The button that opens it, when something else doesn't. */
   trigger?: ReactNode;
 }
 
-/**
- * The dialog that adds a record: search Apple Music, pick the favorite song,
- * check the details. The cover is downloaded on the server.
- */
 export const NewRecordDialog = ({
   open,
   onOpenChange,
@@ -71,8 +65,6 @@ export const NewRecordDialog = ({
     event.preventDefault();
     if (!term.trim()) return;
     startSearch(async () => {
-      // A search that failed isn't "no songs found", and a throw here would
-      // take the whole screen down
       try {
         const result = await searchItunes(term);
         if (result.error) toast.error(result.error);
@@ -95,7 +87,6 @@ export const NewRecordDialog = ({
     });
   };
 
-  // Follows the type with the title, unless it was typed over
   const handleTypeChange = (type: RecordValues["type"]) => {
     if (!picked) return;
     if (getValues("title") === titleFor(picked, getValues("type"))) {
@@ -124,7 +115,6 @@ export const NewRecordDialog = ({
       submitLabel="Add record"
       isPending={isPending}
       isSubmitDisabled={!picked}
-      // Closing would drop the picked song and what's filled in for it
       isDirty={Boolean(picked)}
     >
       <form onSubmit={handleSearch} className="flex gap-2">
@@ -142,7 +132,6 @@ export const NewRecordDialog = ({
           isPending={isSearching}
           disabled={!term.trim()}
         >
-          {/* The spinner takes over from the icon while it searches */}
           {!isSearching && <Search size={16} aria-hidden />}
           {isSearching ? "Searching…" : "Search"}
         </Button>
@@ -152,7 +141,6 @@ export const NewRecordDialog = ({
       <output
         className={cn(
           "text-neutral-600 text-xs",
-          // Only the empty outcome needs showing: the songs show themselves
           results?.length !== 0 && "sr-only",
         )}
       >
@@ -166,7 +154,6 @@ export const NewRecordDialog = ({
         <div
           role="radiogroup"
           aria-label="Search results"
-          // Short enough that the details under it stay in view
           className="flex max-h-52 flex-col gap-1 overflow-y-auto rounded-xl border border-neutral-950/10 p-1"
         >
           {results.map((song) => {
@@ -242,7 +229,6 @@ export const NewRecordDialog = ({
   );
 };
 
-/** The label of every "New record" pill, in the header or elsewhere. */
 export const NewRecordLabel = () => (
   <>
     New record
@@ -250,7 +236,6 @@ export const NewRecordLabel = () => (
   </>
 );
 
-/** The header's "New record" pill, with the dialog it opens. */
 const NewRecordButton = () => {
   const [open, setOpen] = useState(false);
 

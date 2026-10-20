@@ -29,46 +29,29 @@ import {
 } from "~/modules/favorites/utils/ink-shader";
 import cn from "~/utils/cn";
 
-/**
- * How the sheets are inked. These are the Figma shader's own controls, tuned
- * by eye on the open spread. The ink weight isn't here: every department has
- * its own, see the brochure.
- */
 const INK_SETTINGS: InkSettings = {
-  // Blur amount, blur variation and patch size
   blur: 1.2,
   unevenness: 0,
   patchSize: 0.04,
-  // Sharp in the top left corner of the spread, softer towards the bottom right
   focusX: 0,
   focusY: 0,
   focusSize: 0,
   falloff: 1,
-  // Stroke length, stroke angle, spray density and detail scale
   strokeLength: 1,
   strokeAngle: 7,
   balance: 0.55,
   detailScale: 0.11,
-  // Clump size and edge hardness
   clump: 0.25,
   hardness: 3,
   ink: [0.086, 0.086, 0.086, 1],
   paper: [0.973, 0.965, 0.945, 1],
 };
 
-
-// Typeset at no less than this many device pixels per CSS pixel. Small type
-// comes through the ink far better when it's printed large and shown small.
 const MIN_SCALE = 2;
 const MAX_SCALE = 3;
-// Narrower than this, the two pages go one above the other. Matches @2xl
 const UPRIGHT_BELOW = 672;
 
-// A leaf is the sheet between two spreads: the right page of one, and on its
-// back the left page of the next. The covers are leaves too, so the book
-// opens and closes
 const LEAVES = pages.length / 2;
-// What lies open, from the front cover to the back cover
 const SPREADS = [
   "Cover",
   ...departments.map(({ title }) => title),
@@ -76,27 +59,21 @@ const SPREADS = [
 ];
 const LEAF_INDEXES = Array.from({ length: LEAVES }, (_, leaf) => leaf);
 
-// A whole turn in seconds. A leaf that's already part of the way takes less
 const TURN_DURATION = 0.9;
 const SHORTEST_TURN = 0.3;
-// How far a page lifts under the pointer, as a share of a turn
 const LIFT = 0.1;
 // A press becomes a drag after this many pixels
 const DRAG_FROM = 6;
-// Let go faster than this, in pixels per millisecond, a page goes where it's thrown
 const FLICK = 0.35;
 
 type Side = "previous" | "next";
 
-// A page held by its edge
 interface Hold {
   leaf: number;
   side: Side;
   startX: number;
   startY: number;
-  // How far from the fold it was taken hold of
   grip: number;
-  // Where the held point was across the fold when the drag began: 1 flat on the right, -1 flat on the left
   from: number;
   canDrag: boolean;
   isDragging: boolean;
@@ -108,7 +85,6 @@ interface Hold {
 const prefersReducedMotion = () =>
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-// "#3a9bd8" as the shader takes it: red, green, blue and alpha from 0 to 1
 const toRgba = (hex: string): InkSettings["ink"] => [
   Number.parseInt(hex.slice(1, 3), 16) / 255,
   Number.parseInt(hex.slice(3, 5), 16) / 255,
@@ -116,7 +92,6 @@ const toRgba = (hex: string): InkSettings["ink"] => [
   1,
 ];
 
-// The pages print in black on paper, the covers in their own colors
 const inkFor = (page: (typeof pages)[number]): InkSettings =>
   "colors" in page
     ? {
@@ -162,17 +137,9 @@ const loadImages = async () => {
   return images;
 };
 
-/**
- * The ink for one page. The sharp spot and its falloff are set on the open
- * spread, where they were tuned, and the shader measures them in diagonals of
- * whatever it prints. So a page gets its half of the spread: the spot moved
- * to where it lies seen from this page, the distances stretched from the
- * spread's diagonal to the page's.
- */
 const pageInk = (
   settings: InkSettings,
   inkWeight: number,
-  // 0 for the left or upper page, 1 for the right or lower one
   half: number,
   aspect: number,
   isUpright: boolean,
@@ -191,14 +158,6 @@ const pageInk = (
   };
 };
 
-/**
- * The gear as a store catalogue you page through: a spread per department,
- * every piece in its own cell with a plate, a line of copy and its figures.
- * Each page is typeset on a canvas and printed through the ink shader. The
- * pages are bound into leaves that turn over the fold: by the pager under the
- * book, by clicking a page's outer edge, or by dragging that edge across. It
- * starts shut on its front cover and closes again on the back one.
- */
 const Gear = () => {
   const [spread, setSpread] = useState(0);
 
@@ -211,7 +170,6 @@ const Gear = () => {
 
   // The open spread, known before the next render: turns can follow each other fast
   const spreadRef = useRef(spread);
-  // Where every leaf is in its turn: 0 lies on the right, 1 on the left
   const turns = useRef(LEAF_INDEXES.map(() => ({ value: 0 })));
   const hold = useRef<Hold | null>(null);
   const hovered = useRef<Side | null>(null);
@@ -219,7 +177,6 @@ const Gear = () => {
   const { animationsEnabled } = useAnimationPreference();
   const haptic = useHapticSound();
 
-  // The department open, none while the book is closed
   const department = departments[spread - 1];
   const previous = SPREADS[spread - 1];
   const next = SPREADS[spread + 1];
@@ -251,7 +208,6 @@ const Gear = () => {
       const height = canvas.clientHeight;
       if (width === 0 || height === 0) return;
 
-      // One sheet to typeset on for all pages: sizing it also wipes it
       source.width = Math.round(width * scale);
       source.height = Math.round(height * scale);
       const printer = printers[index];
@@ -274,7 +230,6 @@ const Gear = () => {
           pageInk(
             inkFor(page),
             page.inkWeight,
-            // The front of a leaf lies on the right
             (index + 1) % 2,
             width / height,
             isUpright,
@@ -341,19 +296,13 @@ const Gear = () => {
 
   const canAnimate = () => animationsEnabled && !prefersReducedMotion();
 
-  // Puts a leaf where it is in its turn
   const place = useCallback((leaf: number) => {
     const element = leafRefs.current[leaf];
     if (!element) return;
     const { value } = turns.current[leaf];
     element.style.setProperty("--turn", value.toFixed(4));
-    // Either pile has the leaf nearest the open spread on top, and over the
-    // fold a leaf changes pile
     element.style.zIndex = String(value < 0.5 ? LEAVES - leaf : leaf + 1);
 
-    // Shut, the book is one page wide. It slides over as a cover turns, so
-    // the closed book sits in the middle. Stacked, it's one page tall: it
-    // slides up to the top and the empty half folds away
     if (leaf === 0 || leaf === LEAVES - 1) {
       const front = turns.current[0].value;
       const back = turns.current[LEAVES - 1].value;
@@ -385,7 +334,6 @@ const Gear = () => {
     });
   };
 
-  // The top leaf of a pile: lifted while the pointer is on its edge, flat otherwise
   const settle = (side: Side, at: number, isLifted: boolean) => {
     const leaf = side === "next" ? at : at - 1;
     if (leaf < 0 || leaf >= LEAVES) return;
@@ -408,10 +356,8 @@ const Gear = () => {
     if (target < 0 || target > LEAVES) return;
     haptic.onClick();
 
-    // The leaf between the two spreads goes over, whichever way
     moveLeaf(Math.min(from, target), side === "next" ? 1 : 0);
     open(target);
-    // With the pointer still on that edge, the page now on top lifts in turn
     if (hovered.current === side) settle(side, target, true);
   };
 
@@ -433,7 +379,6 @@ const Gear = () => {
         width * 0.15,
       ),
       from: 0,
-      // Stacked pages only turn on a click: dragging them would fight the scroll
       canDrag: book.clientWidth >= UPRIGHT_BELOW && canAnimate(),
       isDragging: false,
       lastX: event.clientX,
@@ -449,15 +394,12 @@ const Gear = () => {
 
     if (!held.isDragging) {
       if (Math.abs(event.clientX - held.startX) < DRAG_FROM) return;
-      // Picked up where it is, so a lifted or still moving page doesn't jump
       gsap.killTweensOf(turn);
       held.isDragging = true;
       held.from = Math.cos(Math.PI * turn.value);
       held.startX = event.clientX;
     }
 
-    // The point held stays under the pointer. Seen from above it travels a
-    // half circle over the fold, so the turn is the arc cosine of where it is
     const reach = held.from + (event.clientX - held.startX) / held.grip;
     turn.value = Math.acos(Math.min(1, Math.max(-1, reach))) / Math.PI;
     place(held.leaf);
@@ -477,7 +419,6 @@ const Gear = () => {
     hold.current = null;
 
     if (!held.isDragging) {
-      // A press that went nowhere is a click. A cancelled one was a scroll
       const travel = Math.hypot(
         event.clientX - held.startX,
         event.clientY - held.startY,
@@ -516,8 +457,6 @@ const Gear = () => {
   };
 
   return (
-    // Fills the modal's height, so on small screens the book sits in the
-    // middle with the pager at the bottom
     <div className="@container flex w-full flex-1 flex-col">
       {/*
         The book. Its two halves lie side by side, or one above the other
@@ -531,7 +470,6 @@ const Gear = () => {
       <div className="flex @2xl:flex-none flex-1 flex-col justify-center overflow-y-clip @2xl:overflow-y-visible">
         <div
           ref={bookRef}
-          // Starts shut on the front cover, see place()
           style={
             {
               "--shift": "-0.25",
@@ -542,7 +480,6 @@ const Gear = () => {
           className="perspective-[1600cqw] @2xl:perspective-[400cqw] relative @2xl:mx-0 mx-auto @2xl:mb-0 mb-[calc(var(--shut)*-1*min(105cqw,100cqh))] @2xl:aspect-100/46 aspect-100/210 @2xl:w-full w-[min(100%,100cqh/1.05)] @2xl:translate-x-[calc(var(--shift)*100%)] @2xl:translate-y-0 translate-y-[calc(var(--lift)*100%)]"
         >
 
-          {/* Hinged on the fold. Its back is the left page of the next spread */}
           {LEAF_INDEXES.map((leaf) => (
             <div
               key={leaf}
@@ -631,7 +568,6 @@ const Gear = () => {
         </div>
       </div>
 
-      {/* The pages are pictures, so what's printed on the open ones is repeated here to be read out */}
       <div className="sr-only" aria-live="polite">
         <h3>{SPREADS[spread]}</h3>
         {department && (

@@ -12,12 +12,9 @@ import { useContent } from "~/modules/content/components/content-provider";
 import { useHapticSound } from "~/modules/core/hooks/use-haptic-sound";
 import cn from "~/utils/cn";
 
-// The cursor stays this far from the ends of the scale, in percent
 const EDGE = 12;
-// Movement before a press counts as a drag, in pixels
 const DRAG_THRESHOLD = 4;
 
-// Home first, then the sections, spread evenly over the scale
 const getStops = (sections: Section[]) =>
   [
   { href: "/", label: "Home", count: Object.keys(widgets).length },
@@ -50,24 +47,17 @@ const TICKS = {
 };
 
 interface Props {
-  // The page that's open, "/" for the home screen
   pathname: string;
   onVisit: (href: string) => void;
 }
 
-/**
- * The scale of a tuner, with the pages as stops. Click a stop, or drag the
- * cursor along: it snaps to the nearest stop when let go.
- */
 const IslandDial = ({ pathname, onVisit }: Props) => {
   const haptic = useHapticSound();
   const content = useContent();
   const stops = useMemo(() => getStops(getSections(content)), [content]);
   const scaleRef = useRef<HTMLDivElement>(null);
   const justDragged = useRef(false);
-  // Where the cursor is while it's dragged, in percent
   const [dragX, setDragX] = useState<number | null>(null);
-  // The stop the cursor is on its way to, until the page is there
   const [over, setOver] = useState<number | null>(null);
 
   const current = Math.max(
@@ -110,7 +100,6 @@ const IslandDial = ({ pathname, onVisit }: Props) => {
       if (nearest !== target) {
         target = nearest;
         setOver(nearest);
-        // A tick for every stop it passes
         haptic.onMouseEnter();
       }
     };
@@ -121,7 +110,6 @@ const IslandDial = ({ pathname, onVisit }: Props) => {
       window.removeEventListener("pointercancel", handleUp);
       if (!moved) return;
 
-      // The click that follows a drag isn't a choice of stop
       justDragged.current = true;
       setTimeout(() => {
         justDragged.current = false;
@@ -172,7 +160,6 @@ const IslandDial = ({ pathname, onVisit }: Props) => {
           </button>
         ))}
 
-        {/* The cursor of a slide rule: a glass window with a hairline */}
         <div
           className={cn(
             "pointer-events-none absolute top-1.25 bottom-0 -ml-7.25 w-14.5 rounded-t-[7px] border border-neutral-50/30 border-b-0 bg-neutral-50/15",

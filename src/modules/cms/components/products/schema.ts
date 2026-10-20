@@ -9,16 +9,12 @@ import {
 } from "~/modules/cms/schema/shared";
 import { WALL_BACKGROUNDS } from "~/modules/content/types";
 
-// Shared by the product forms and their actions, so this file can't be
-// "use server". Every output is also valid input: the form parses once, the
-// action again
+// Shared with the actions, so not "use server"
 
 export const productSchema = v.object({
   name: requiredText("Give the product a name."),
-  // Null for no logo
   logo: v.nullable(mediaPath("Upload the logo again.")),
   description: longText,
-  // Empty says "Try" and the name on the site
   linkLabel: shortText,
   linkHref: link,
   mediaType: v.picklist(["image", "video"]),

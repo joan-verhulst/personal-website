@@ -1,12 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
 
-/*
- * The home screen as an image for link previews. It's drawn by next/og, which
- * only knows flexbox and a subset of CSS, so this rebuilds the home grid at
- * its desktop size (768px wide) instead of reusing its components. Every
- * measure below is the one on the site, times SCALE.
- */
-
 export type OgTile =
   | "about"
   | "on-rotation"
@@ -24,7 +17,6 @@ const s = (value: number) => value * SCALE;
 
 const COLUMN_GAP = s(32);
 const ROW_GAP = s(48);
-// A third of the 768px grid, less the gaps
 const CELL = (s(768) - COLUMN_GAP * 2) / 3;
 const HALF = (CELL - COLUMN_GAP) / 2;
 const RADIUS = s(32);
@@ -34,18 +26,14 @@ const PAPER = "#faf9f9";
 const WARM = "linear-gradient(to bottom, #EBCA10, #EB7E10)";
 const SLATE = "linear-gradient(to bottom, #626D77, #1E2D3C)";
 const GREEN = "linear-gradient(to bottom, #B1EB10, #2FC72F)";
-// The chips over the UI/UX and Blog widgets. No blur behind them here
 const CHIP = "rgba(15, 15, 15, 0.33)";
-// Laid over the tiles of the other sections when one is shared
 const DIM = "rgba(216, 216, 216, 0.85)";
 
 export interface HomeScreenCardProps {
   name: string;
-  // The section the link is to. The other tiles are greyed out
   active?: OgTile;
   labels: Record<OgTile, string>;
   images: {
-    // The headshot on the island
     avatar?: string;
     about?: string;
     record?: string;
@@ -53,14 +41,10 @@ export interface HomeScreenCardProps {
     highlight?: string;
     digitalArt?: string;
     photography?: string;
-    // The newest post's cover, and the sky card that peeks over it, as a
-    // CSS gradient
     blog?: string;
     sky?: string;
   };
-  // The background behind the UI/UX widget's screenshot
   highlightBackground: string;
-  // The project labels on the UI/UX widget
   highlightTags: string[];
   postCount: number;
   contact: { instagram: boolean; email: boolean; linkedin: boolean };
@@ -102,11 +86,9 @@ interface TileProps {
   background: string;
   isDimmed: boolean;
   children?: ReactNode;
-  // Drawn outside the tile, like the UI/UX widget's slide indicators
   outside?: ReactNode;
 }
 
-/** A widget: its picture, the hairline over it and its label underneath. */
 const Tile = ({
   label,
   width,
@@ -177,7 +159,6 @@ const Chip = ({ children }: { children: ReactNode }) => (
   </div>
 );
 
-/** The record that's on, at rest: grooves, its cover as the label, the spindle. */
 const Record = ({ size, cover }: { size: number; cover?: string }) => {
   const ring = (share: number) => (
     <div
@@ -241,8 +222,6 @@ const Record = ({ size, cover }: { size: number; cover?: string }) => {
   );
 };
 
-// The contact icons, from lucide. The renderer only takes plain elements
-// inside an <svg>, so each is written out whole
 const iconProps = {
   width: s(24),
   height: s(24),
@@ -290,7 +269,6 @@ const HomeScreenCard = ({
   const isDimmed = (tile: OgTile) => active !== undefined && tile !== active;
   const wide = CELL * 2 + COLUMN_GAP;
   const [firstTag, secondTag] = highlightTags;
-  // A 4:3 card, like on the site
   const skyWidth = CELL * 0.44;
   const skyHeight = skyWidth * 0.75;
 
@@ -308,7 +286,6 @@ const HomeScreenCard = ({
         fontFamily: "Google Sans Flex",
       }}
     >
-      {/* The island at rest, as it is on the home screen */}
       <div
         style={{
           display: "flex",
@@ -354,7 +331,6 @@ const HomeScreenCard = ({
           marginTop: s(38),
         }}
       >
-        {/* About with On Rotation and Gear under it, then UI/UX */}
         <div style={{ display: "flex", gap: COLUMN_GAP }}>
           <div style={{ display: "flex", flexDirection: "column", gap: COLUMN_GAP }}>
             <Tile
@@ -420,7 +396,6 @@ const HomeScreenCard = ({
             background={highlightBackground}
             isDimmed={isDimmed("ui-ux")}
             outside={
-              // Which of the two highlights is showing
               <div
                 style={{
                   display: "flex",
@@ -491,7 +466,6 @@ const HomeScreenCard = ({
           </Tile>
         </div>
 
-        {/* Digital Art, Photography, then the blog over Contact */}
         <div style={{ display: "flex", gap: COLUMN_GAP }}>
           <Tile
             label={labels["digital-art"]}
@@ -519,7 +493,6 @@ const HomeScreenCard = ({
               background={PAPER}
               isDimmed={isDimmed("blog")}
             >
-              {/* Scaled up a quarter, like on the site */}
               {images.blog && (
                 <img
                   src={images.blog}
@@ -536,14 +509,12 @@ const HomeScreenCard = ({
                   }}
                 />
               )}
-              {/* The tilted sky card peeking up from the bottom edge */}
               {images.sky && (
                 <div
                   style={{
                     display: "flex",
                     position: "absolute",
                     right: CELL * 0.08,
-                    // Sunk past the bottom edge by 28% of its height
                     top: HALF - skyHeight * 0.72,
                     width: skyWidth,
                     height: skyHeight,

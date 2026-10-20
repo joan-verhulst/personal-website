@@ -24,7 +24,6 @@ const LoginPage = async ({ searchParams }: Props) => {
       title="Sign in"
       description="Sign in with your email and password to edit the site."
       footer={
-        // A full address on the admin host, where "/" is the dashboard
         <a href={siteUrl} className={authLinkClass}>
           <ArrowLeft size={16} aria-hidden />
           Back to the site

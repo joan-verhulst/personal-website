@@ -24,27 +24,10 @@ interface ItemPickerDialogProps {
   tags: WallTagRow[];
   /** Why an item can't be picked here, shown on its card. */
   disabledReason?: (item: WallItemRow) => string | undefined;
-  /** A short label on a card, like where the item sits now. */
   note?: (item: WallItemRow) => string | undefined;
-  /** Gets the picked item's id. The dialog closes itself afterwards. */
   onPick: (id: string) => void;
 }
 
-/**
- * A searchable grid of wall items to choose one from: the keyboard and touch
- * way to fill a slot or a list, next to dragging.
- *
- * @example
- * <ItemPickerDialog
- *   open={isPicking}
- *   onOpenChange={setIsPicking}
- *   title="Add to the experiments"
- *   items={items}
- *   tags={tags}
- *   disabledReason={(item) => (list.includes(item.id) ? "Already in the list" : undefined)}
- *   onPick={(id) => setList([...list, id])}
- * />
- */
 const ItemPickerDialog = ({
   open,
   onOpenChange,
@@ -60,7 +43,6 @@ const ItemPickerDialog = ({
   const [wasOpen, setWasOpen] = useState(open);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  // Every opening starts with an empty search
   if (open !== wasOpen) {
     setWasOpen(open);
     if (open) setQuery("");
@@ -68,7 +50,6 @@ const ItemPickerDialog = ({
 
   const tagOf = (item: WallItemRow) =>
     tags.find((tag) => tag.id === item.tag_id);
-  // Matches the tag too, like the search on the items page
   const needle = query.trim().toLowerCase();
   const shown = items.filter(
     (item) =>
@@ -83,13 +64,10 @@ const ItemPickerDialog = ({
         title={title}
         description={description}
         onOpenAutoFocus={(event) => {
-          // Focus on the search field would bring up a phone's keyboard, over
-          // half the grid, before anything is typed
           if (!window.matchMedia("(pointer: coarse)").matches) return;
           event.preventDefault();
           contentRef.current?.focus();
         }}
-        // Only the grid scrolls, so the search stays in reach
         toolbar={
           <Input.SearchField
             aria-label="Search items"
@@ -105,7 +83,6 @@ const ItemPickerDialog = ({
         }
       >
         {shown.length ? (
-          // Four cards per row in the full dialog, fewer when it's narrower
           <ul className={cardGridClass("compact")}>
             {shown.map((item) => {
               const reason = disabledReason?.(item);

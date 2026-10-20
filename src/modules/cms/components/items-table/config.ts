@@ -1,4 +1,3 @@
-// What the items page and its loading state both say about it
 export const ITEMS = {
   title: "Items",
   description:

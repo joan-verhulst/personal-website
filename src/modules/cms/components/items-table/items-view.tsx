@@ -29,7 +29,6 @@ const toTab = (value: string | null): ItemsTab =>
 // Tag ids are slugs of letters, digits and dashes, so "*" can't clash with
 // one. A select item can't have an empty value
 const ALL_TAGS = "*";
-// The filter for items without a tag
 const NO_TAG = "none";
 
 const NEW_ITEM = "/admin/ui-ux/items/new";
@@ -37,15 +36,9 @@ const NEW_ITEM = "/admin/ui-ux/items/new";
 interface Props {
   items: ItemCardData[];
   tags: WallTagRow[];
-  /** The experiments list, in its own order. */
   experimentIds: string[];
 }
 
-/**
- * The items page: its header, one toolbar with the UI/UX and Experiments
- * tabs, the tag filter and the search, and the cards of the open tab. New
- * item knows the tab, so an item made on Experiments lands in that list.
- */
 const ItemsView = ({ items, tags, experimentIds }: Props) => {
   const searchParams = useSearchParams();
   const tabsId = useId();
@@ -55,7 +48,6 @@ const ItemsView = ({ items, tags, experimentIds }: Props) => {
 
   const byId = new Map(items.map((item) => [item.id, item]));
   const lists: Record<ItemsTab, ItemCardData[]> = {
-    // An experiment that's also on the wall shows on both tabs
     "ui-ux": items.filter((item) => !item.isInExperiments || item.isOnWall),
     experiments: experimentIds.flatMap((id) => byId.get(id) ?? []),
   };
@@ -77,7 +69,6 @@ const ItemsView = ({ items, tags, experimentIds }: Props) => {
     // items
     setTagId(ALL_TAGS);
     setQuery("");
-    // Kept in the address without a round trip, so a refresh stays on it
     const url = new URL(window.location.href);
     if (next === "experiments") url.searchParams.set("tab", next);
     else url.searchParams.delete("tab");
@@ -89,7 +80,6 @@ const ItemsView = ({ items, tags, experimentIds }: Props) => {
     (item) => !liveUsage(item.usage).length,
   ).length;
 
-  // Knows the tab, so an item made on Experiments lands in that list
   const newItem = (
     <Button
       variant="primary"
@@ -105,8 +95,6 @@ const ItemsView = ({ items, tags, experimentIds }: Props) => {
       <Header
         title={ITEMS.title}
         description={ITEMS.description}
-        // Counts as a line, like the other collections. The tabs carry the
-        // counts per list
         meta={
           <>
             <span className="flex items-center gap-1.5">

@@ -11,7 +11,6 @@ interface Props {
   params: Promise<{ slug: string }>;
 }
 
-// Written in code, so every post is known when the site is built
 export const generateStaticParams = () => posts.map(({ slug }) => ({ slug }));
 export const dynamicParams = false;
 

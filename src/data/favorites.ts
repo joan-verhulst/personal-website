@@ -1,10 +1,7 @@
-// A favorite song as Apple Music has it, served by /api/on-rotation
 export interface RotationTrack {
   title: string;
   artist: string;
-  // 30 second clip
   previewUrl: string;
-  // Where the song lives on Apple Music, credited in the player
   url: string;
 }
 
@@ -19,9 +16,7 @@ export interface GearItem {
   id: string;
   name: string;
   type: GearType;
-  // Cut-out with a transparent background
   image: string;
-  // Images cropped at the edges fill the art window instead of floating in it
   fit?: "contain" | "cover";
   blurb: string;
   stats: GearStat[];

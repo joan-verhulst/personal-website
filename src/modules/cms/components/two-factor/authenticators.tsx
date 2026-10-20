@@ -24,28 +24,14 @@ const SECURITY_PATH = "/admin/security";
 export interface Authenticator {
   id: string;
   name: string;
-  /** The day it was added, ready to show. */
   added: string;
 }
 
 interface Props {
   authenticators: Authenticator[];
-  /**
-   * Whether supabase/migrations/0004_two_factor.sql still has to be run.
-   * Until then only the CMS asks for the code, and the database doesn't.
-   */
   needsMigration: boolean;
 }
 
-/**
- * The Security screen: the authenticator apps that can make a sign in code,
- * with a way to add a backup and to remove one, and what to do when they're
- * all lost.
- *
- * The only authenticator can be replaced but not removed. An account without
- * one is open to whoever has the password until a new one is set up, and
- * replacing never passes through that.
- */
 const Authenticators = ({ authenticators, needsMigration }: Props) => {
   const router = useRouter();
   const { href, onAdminHost } = useAdminPath();
@@ -54,10 +40,6 @@ const Authenticators = ({ authenticators, needsMigration }: Props) => {
   const names = authenticators.map((authenticator) => authenticator.name);
   const isOnly = authenticators.length === 1;
 
-  // Supabase goes by the session, the CMS by the session's token. When the
-  // authenticator this session signed in with was removed on another device,
-  // the token still says a code was entered for up to an hour. Renewing it
-  // makes the two agree, and the proxy then lets the code step through
   const askForCode = async () => {
     await createBrowserSupabase().auth.refreshSession();
     toast.error("Enter your authenticator code again first.");
@@ -84,18 +66,12 @@ const Authenticators = ({ authenticators, needsMigration }: Props) => {
       return;
     }
 
-    // The session's token still says a code was entered until it's renewed.
-    // Renewing it now makes what the database sees match what was removed
     const { data } = await supabase.auth.refreshSession();
     toast.success("Authenticator removed");
 
-    // The other one was removed elsewhere since this list loaded, so this
-    // was the last after all
     if (data.user && !hasVerifiedFactor(data.user)) {
       router.replace(href(SETUP_PATH));
     }
-    // Shows the shorter list. Or the code step, when the one that's gone is
-    // the one this session signed in with
     router.refresh();
     setRemovingId(null);
   };

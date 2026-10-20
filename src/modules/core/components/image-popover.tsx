@@ -12,7 +12,6 @@ import { useAnimationPreference } from "~/modules/core/context/animation-prefere
 import { useHapticSound } from "~/modules/core/hooks/use-haptic-sound";
 import cn from "~/utils/cn";
 
-// Width and height are optional, without them the size is known once the image has preloaded
 type PopoverItem = DigitalArtProject & { width?: number; height?: number };
 
 interface Props {
@@ -81,8 +80,6 @@ const ImagePopover = ({
     activeIndexRef.current = activeIndex;
   }, [activeIndex]);
 
-  // ── Preload ───────────────────────────────────────────────────────────────────
-
   const preloadAround = useCallback(
     (index: number) => {
       const start = Math.max(0, index - PRELOAD_RADIUS);
@@ -96,7 +93,6 @@ const ImagePopover = ({
             width: img.naturalWidth,
             height: img.naturalHeight,
           };
-          // Decoding ahead keeps the slide smooth, a failed decode just happens on show instead
           img.decode().catch(() => {});
         };
         img.src = items[i].image;
@@ -109,7 +105,6 @@ const ImagePopover = ({
     preloadAround(activeIndex);
   }, [activeIndex, preloadAround]);
 
-  // Natural size of an item: from the preload, or from the item itself before that
   const getKnownSize = useCallback(
     (index: number) => {
       const cached = imageCache.current[index];
@@ -119,8 +114,6 @@ const ImagePopover = ({
     },
     [items],
   );
-
-  // ── Text ──────────────────────────────────────────────────────────────────────
 
   const triggerTextAnimations = useCallback(() => {
     titleRef.current?.triggerAnimation();
@@ -133,8 +126,6 @@ const ImagePopover = ({
       descriptionRef.current?.resplit();
     }, 0);
   }, []);
-
-  // ── Open ──────────────────────────────────────────────────────────────────────
 
   const animateOpen = useCallback(() => {
     if (
@@ -216,8 +207,6 @@ const ImagePopover = ({
     animationsEnabled,
   ]);
 
-  // ── Close ─────────────────────────────────────────────────────────────────────
-
   const animateClose = useCallback(() => {
     if (!overlayRef.current || !contentRef.current || !actionBarRef.current)
       return;
@@ -259,8 +248,6 @@ const ImagePopover = ({
   useEffect(() => {
     if (isOpen) animateOpen();
   }, [isOpen, animateOpen]);
-
-  // ── Navigate ──────────────────────────────────────────────────────────────────
 
   useEffect(() => {
     if (
@@ -314,7 +301,6 @@ const ImagePopover = ({
     const cached = getKnownSize(toIndex);
 
     if (!animationsEnabled) {
-      // Instant snap: position incoming image, hide outgoing
       gsap.set(outgoingImg, { opacity: 0, x: 0 });
       gsap.set(incomingImg, { x: 0, opacity: 1 });
       if (cached) {
@@ -381,8 +367,6 @@ const ImagePopover = ({
     animationsEnabled,
   ]);
 
-  // ── Keyboard ──────────────────────────────────────────────────────────────────
-
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -403,8 +387,6 @@ const ImagePopover = ({
     onActiveIndexChange,
   ]);
 
-  // ── Scroll lock ───────────────────────────────────────────────────────────────
-
   useEffect(() => {
     document.body.style.overflow = isOpen ? "hidden" : "";
     document.documentElement.style.overflow = isOpen ? "hidden" : "";
@@ -413,8 +395,6 @@ const ImagePopover = ({
       document.documentElement.style.overflow = "";
     };
   }, [isOpen]);
-
-  // ── Resize ────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
     if (!isOpen) return;
@@ -437,8 +417,6 @@ const ImagePopover = ({
     return () => window.removeEventListener("resize", handleResize);
   }, [isOpen, getKnownSize]);
 
-  // ── Cleanup all GSAP animations on unmount ────────────────────────────────────
-
   useEffect(() => {
     return () => {
       [
@@ -453,8 +431,6 @@ const ImagePopover = ({
       });
     };
   }, []);
-
-  // ── Render ────────────────────────────────────────────────────────────────────
 
   if (!mounted || !item) return null;
 

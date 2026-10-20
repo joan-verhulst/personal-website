@@ -31,16 +31,11 @@ import {
   updateOne,
 } from "~/modules/cms/utils/shared";
 
-// Photography and digital art work the same, they only differ in table, and
-// in photos keeping their color for the photo table. GalleryKind is imported
-// from the gallery config, never re-exported here: a "use server" file may
-// only export async functions, and Next turns a re-export into a runtime
-// value that doesn't exist
+// GalleryKind comes from the gallery config, never re-exported: a "use server"
+// file may only export async functions
 
-// Actions can be called with anything, so the kind and ids are checked too
 const kindSchema = v.picklist(GALLERY_KINDS, "Unknown gallery.");
 
-/** Signs in and checks the kind, the start of every action here. */
 const start = async (kind: unknown) => {
   const admin = await requireAdmin();
   if (admin.error) return { error: failed(admin.error) } as const;
@@ -65,11 +60,6 @@ const imageColumns = (kind: GalleryKind, image: GalleryImage) => ({
   ...(kind === "photos" ? { hue: image.hue ?? 0, chroma: image.chroma ?? 0 } : {}),
 });
 
-/**
- * Adds a piece at the end, with a file from Media: one just uploaded or one
- * picked there. When it fails the file stays in Media, and the dialog still
- * holds it for another try.
- */
 export async function addGalleryItem(
   kind: GalleryKind,
   input: NewGalleryItemValues,
@@ -130,10 +120,6 @@ export async function updateGalleryItem(
   return failure ?? published();
 }
 
-/**
- * Swaps the file, keeping title, place and cover. The old file stays in
- * Media, where it can be used again or removed.
- */
 export async function replaceGalleryImage(
   kind: GalleryKind,
   id: string,
@@ -160,7 +146,6 @@ export async function replaceGalleryImage(
   return failure ?? published();
 }
 
-/** The piece shown on the home page widget. One per gallery. */
 export async function setGalleryCover(
   kind: GalleryKind,
   id: string,
@@ -172,8 +157,6 @@ export async function setGalleryCover(
   const parsedId = parseArgument(idSchema, id);
   if (!parsedId.success) return parsedId.failure;
 
-  // The new cover first: a piece that's gone then changes nothing, and when
-  // the second step fails there are two covers for a moment rather than none
   const failure = await updateOne(
     supabase,
     table,
@@ -188,7 +171,6 @@ export async function setGalleryCover(
     .update({ is_cover: false })
     .eq("is_cover", true)
     .neq("id", parsedId.output);
-  // The new cover did land, so the site has to hear about it either way
   const result = published();
   return error ? dbFailed(error, "Couldn't set the cover.") : result;
 }
@@ -207,7 +189,6 @@ export async function reorderGallery(
   return error ? dbFailed(error, "Couldn't save the order.") : published();
 }
 
-/** Deletes a piece. Its file stays in Media. */
 export async function deleteGalleryItem(
   kind: GalleryKind,
   id: string,

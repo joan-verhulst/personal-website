@@ -11,7 +11,6 @@ import {
 // Every output is also valid input: the form parses once, the action again
 
 export const aboutSchema = v.object({
-  // A headline runs longer than a title, the current one is 160 characters
   headline: requiredText("Add a headline.", 300),
   intro: longText,
   image: v.nullable(mediaPath("Upload the photo again.")),
@@ -24,8 +23,6 @@ export const aboutSchema = v.object({
 
 export type AboutValues = v.InferInput<typeof aboutSchema>;
 
-// A card's lines. Empty, the site uses a line of its own, see
-// data/contact-cards.ts. Short, since a card is small and its button smaller
 const cardLine = (max: number) =>
   v.pipe(
     v.string(),
@@ -42,7 +39,6 @@ export const contactSchema = v.object({
   email: v.pipe(
     v.string(),
     v.trim(),
-    // People paste the mailto: link as often as the address
     v.transform((value) => value.replace(/^mailto:/i, "")),
     v.check(
       (value) => !value || v.EMAIL_REGEX.test(value),
@@ -63,8 +59,6 @@ export const contactSchema = v.object({
 
 export type ContactValues = v.InferInput<typeof contactSchema>;
 
-// Search results cut a description off at about 155 characters, link
-// previews a little sooner. Longer than this is a paragraph, not a snippet
 const description = v.pipe(
   v.string(),
   v.trim(),

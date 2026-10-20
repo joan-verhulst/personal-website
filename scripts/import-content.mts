@@ -1,13 +1,4 @@
-/**
- * Copies the content that used to be hard-coded into the CMS: uploads every
- * image and video from public/ to the media bucket on R2 and fills the tables
- * in Supabase. Run once, after supabase/migrations/0001_cms.sql:
- *
- *   node --env-file=.env.local scripts/import-content.mts
- *
- * It refuses to run over content that's already there, since that would undo
- * CMS edits. Pass --force to import anyway.
- */
+/* Copies the content that used to be hard-coded into the CMS: uploads every image and video from public/ to the media bucket on R2 and fills the tables */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { createClient } from "@supabase/supabase-js";
@@ -46,7 +37,6 @@ if (
   process.exit(1);
 }
 
-// The secret key skips row level security, it only ever runs here
 const supabase = createClient(url, secretKey, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
@@ -65,8 +55,6 @@ const fail = (what: string, error: { message: string } | null) => {
   process.exit(1);
 };
 
-// ── Guard ─────────────────────────────────────────────────────────────────────
-
 const { count, error: countError } = await supabase
   .from("photos")
   .select("id", { count: "exact", head: true });
@@ -78,8 +66,6 @@ if (count && !process.argv.includes("--force")) {
   );
   process.exit(1);
 }
-
-// ── Media ─────────────────────────────────────────────────────────────────────
 
 const CONTENT_TYPES: Record<string, string> = {
   ".jpg": "image/jpeg",
@@ -93,10 +79,6 @@ const CONTENT_TYPES: Record<string, string> = {
 
 const uploaded = new Map<string, string>();
 
-/**
- * Uploads a file from public/ and returns its path in the bucket, keeping the
- * folders: /assets/images/work/a.jpg becomes work/a.jpg.
- */
 const upload = async (publicPath: string) => {
   const known = uploaded.get(publicPath);
   if (known) return known;
@@ -126,7 +108,6 @@ const upload = async (publicPath: string) => {
   return storagePath;
 };
 
-// Size as displayed: EXIF orientations 5 to 8 are rotated a quarter turn
 const measureSize = async (publicPath: string) => {
   const file = path.join(PUBLIC_DIR, publicPath);
   const { width = 1, height = 1, orientation } = await sharp(file).metadata();
@@ -146,10 +127,7 @@ const measureHue = async (publicPath: string) => {
   return measureColor(data, info.channels);
 };
 
-// ── Site ──────────────────────────────────────────────────────────────────────
-
 console.log("About and contact");
-// The widget and the modal start out with the same photo
 const aboutImage = await upload(about.image);
 fail(
   "Saving site",
@@ -171,8 +149,6 @@ fail(
   ).error,
 );
 
-// ── Photography ───────────────────────────────────────────────────────────────
-
 console.log(`Photography (${photographyProjects.length})`);
 const photoRows = [];
 for (const [index, photo] of photographyProjects.entries()) {
@@ -188,8 +164,6 @@ for (const [index, photo] of photographyProjects.entries()) {
   });
 }
 fail("Saving photos", (await supabase.from("photos").upsert(photoRows)).error);
-
-// ── Digital art ───────────────────────────────────────────────────────────────
 
 console.log(`Digital art (${digitalArtProjects.length})`);
 const artworkRows = [];
@@ -209,8 +183,6 @@ fail(
   (await supabase.from("artworks").upsert(artworkRows)).error,
 );
 
-// ── On rotation ───────────────────────────────────────────────────────────────
-
 console.log(`On rotation (${onRotation.length})`);
 const recordRows = [];
 for (const [index, record] of onRotation.entries()) {
@@ -227,8 +199,6 @@ for (const [index, record] of onRotation.entries()) {
 }
 fail("Saving records", (await supabase.from("records").upsert(recordRows)).error);
 
-// ── UI/UX ─────────────────────────────────────────────────────────────────────
-
 const allItems = new Map<string, WallItem>();
 for (const item of [
   ...uiUxWall.flatMap((block) => block.items),
@@ -238,7 +208,6 @@ for (const item of [
   allItems.set(item.id, item);
 }
 
-// Tags are objects in the old data, keyed by label here
 const tagId = (label: string) =>
   label
     .toLowerCase()
@@ -286,7 +255,6 @@ fail(
   (await supabase.from("wall_items").upsert(itemRows)).error,
 );
 
-// Blocks have generated ids, so they're replaced as a whole
 fail(
   "Clearing wall blocks",
   (await supabase.from("wall_blocks").delete().gte("sort_order", 0)).error,

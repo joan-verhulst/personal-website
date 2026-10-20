@@ -20,14 +20,9 @@ import {
 import { track, useEyes } from "~/utils/eyes";
 
 interface Props {
-  // The parallel route that holds the section that's open, if any
   slot: ReactNode;
 }
 
-/**
- * The home screen, with a layer over it for the section that's open. Home
- * stays mounted underneath. The animation itself lives in ~/utils/app-layer.
- */
 const AppLayer = ({ children, slot }: PropsWithChildren<Props>) => {
   const { phase, screen } = useSyncExternalStore(subscribe, getState, getState);
   const pathname = usePathname();
@@ -62,14 +57,10 @@ const AppLayer = ({ children, slot }: PropsWithChildren<Props>) => {
     });
   }, []);
 
-  // Back on the home screen, by the back button or the browser: the section
-  // closes into its tile
   useEffect(() => {
     if (pathname === "/") closeLayer();
   }, [pathname]);
 
-  // Tells Eyes a section opened, and how. One taking another's place
-  // replaces the URL, which Eyes doesn't count as a pageview by itself
   useEffect(() => {
     const opened = takeOpened(pathname);
     if (opened?.isSwap) page();
@@ -81,9 +72,6 @@ const AppLayer = ({ children, slot }: PropsWithChildren<Props>) => {
       pathname.startsWith(`${ownPages.blog.path}/`) &&
       opened?.from !== "blog"
     ) {
-      // A post is in the blog. Coming in on one, from a search or another
-      // site, opens the blog as much as its tile does: the funnel's first
-      // step. Going from post to post, or from the list, stays in it
       track("Section Opened", {
         section: "blog",
         from: opened?.from ?? "direct",
@@ -93,7 +81,6 @@ const AppLayer = ({ children, slot }: PropsWithChildren<Props>) => {
 
   return (
     <>
-      {/* Out of reach while a section covers it */}
       <div
         ref={stageRef}
         data-app-stage
@@ -105,7 +92,6 @@ const AppLayer = ({ children, slot }: PropsWithChildren<Props>) => {
 
       {slot}
 
-      {/* Under the island (z-10), which floats over whatever is open */}
       <div ref={layerRef} className="invisible fixed inset-0 z-5 bg-neutral-50">
         <div ref={screenRef} className="absolute inset-0 origin-top-left">
           <div

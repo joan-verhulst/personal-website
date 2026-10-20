@@ -63,14 +63,12 @@ import type { WallItemRow, WallTagRow } from "~/modules/content/utils/rows";
 import { wallBackgrounds } from "~/modules/ui-ux/utils/wall-backgrounds";
 
 const FORM_ID = "wall-item-form";
-// The select's value for an item without a tag
 const NO_TAG = "none";
 
 const fromRow = (row: WallItemRow): WallItemValues => ({
   title: row.title,
   tagId: row.tag_id ?? "",
   mediaType: row.media_type,
-  // Empty when its file was deleted from Media, which asks for another
   media: row.media ?? "",
   width: row.width,
   height: row.height,
@@ -83,7 +81,6 @@ const fromRow = (row: WallItemRow): WallItemValues => ({
   linkHref: row.link_href ?? "",
 });
 
-/** What the new item page starts with. */
 const emptyWallItem = (): WallItemValues => ({
   title: "",
   tagId: "",
@@ -105,10 +102,6 @@ const describeMedia = (
 ) =>
   `${values.mediaType === "video" ? "Video" : "Image"}, ${values.width}×${values.height}`;
 
-/**
- * What deleting an item does, for the confirm dialog. The server takes it
- * off the wall and the lists itself.
- */
 export const describeDelete = (usage: string[]) => {
   if (!usage.length) return "It's not on the site, so nothing else changes.";
   const places = [...liveUsage(usage), ...hiddenUsage(usage)];
@@ -119,27 +112,19 @@ export const describeDelete = (usage: string[]) => {
   return `It's used in: ${places.join(", ")}, and comes off there too.${wallNote}`;
 };
 
-// ── Fields ────────────────────────────────────────────────────────────────────
-
 type WallItemControl = Control<WallItemValues, unknown, WallItemOutput>;
 
 interface MediaButtonsProps {
   hasMedia: boolean;
   setValue: UseFormSetValue<WallItemValues>;
-  /** True while a file goes up, so Save can wait for it. */
   onUploadingChange: (isUploading: boolean) => void;
 }
 
-/**
- * Uploads a screenshot or reel, or picks one from Media, and fills in its
- * type and size. A file that was replaced stays in Media.
- */
 const MediaButtons = ({
   hasMedia,
   setValue,
   onUploadingChange,
 }: MediaButtonsProps) => {
-  // Revalidates, so an "upload first" error clears once there's media
   const handleMedia = (media: UploadedMedia) => {
     const options = { shouldDirty: true, shouldValidate: true };
     setValue("mediaType", media.type, options);
@@ -226,12 +211,10 @@ const TagSelect = ({ control, tags, error, id }: TagSelectProps) => (
 );
 
 interface BackgroundPickerProps {
-  /** register("background"), spread on every radio. */
   registration: UseFormRegisterReturn<"background">;
   error?: FieldError;
 }
 
-/** The swatches themselves. Inside the field, so they know its hint. */
 const BackgroundSwatches = ({
   registration,
 }: Pick<BackgroundPickerProps, "registration">) => {
@@ -272,10 +255,6 @@ const BackgroundSwatches = ({
   );
 };
 
-/**
- * The card backgrounds as swatches, six in a row. They're native radios, so
- * Tab lands on the chosen one and the arrow keys move the choice.
- */
 const BackgroundPicker = ({ registration, error }: BackgroundPickerProps) => (
   <Input.Root error={error}>
     <BackgroundSwatches registration={registration} />
@@ -286,33 +265,20 @@ const BackgroundPicker = ({ registration, error }: BackgroundPickerProps) => (
   </Input.Root>
 );
 
-// ── The page ──────────────────────────────────────────────────────────────────
-
 interface Props {
-  /** The item to edit. Without one this is the new item page. */
   item?: WallItemRow;
   tags: WallTagRow[];
-  /** Where the item is used, so deleting can warn. */
   usage?: string[];
-  /** For a new item: "experiments" also puts it at the end of that list. */
   list?: "experiments";
 }
 
-/**
- * The whole page of a wall item, for a new one and for editing: its header,
- * the live preview and the fields, stacked in that order. Save and Delete sit
- * in the bottom bar. Saving a new item creates it and carries on at its own
- * edit page.
- */
 const WallItemForm = ({ item, tags, usage = [], list }: Props) => {
   const router = useRouter();
   const { href } = useAdminPath();
   const confirm = useConfirm();
   const { run, isPending } = useAction();
-  // Separate, so a delete doesn't spin the Save button
   const remove = useAction();
   const [isUploading, setIsUploading] = useState(false);
-  // A new item that's saved, while its own page loads
   const [isCreated, setIsCreated] = useState(false);
   const {
     control,
@@ -329,7 +295,6 @@ const WallItemForm = ({ item, tags, usage = [], list }: Props) => {
     defaultValues: item ? fromRow(item) : emptyWallItem(),
   });
 
-  // Leaving the page would drop unsaved changes, so it asks first
   useUnsavedWarning(isDirty);
 
   const values = watch();
@@ -357,8 +322,6 @@ const WallItemForm = ({ item, tags, usage = [], list }: Props) => {
   const onSubmit = handleSubmit(
     async (input) => {
       if (!item) {
-        // A failed add to Experiments still creates the item, so the toast
-        // doesn't promise more than that
         const result = await run(
           () => saveWallItem(null, input, list),
           "Item added",
@@ -371,11 +334,7 @@ const WallItemForm = ({ item, tags, usage = [], list }: Props) => {
         if (result.listError) toast.error(result.listError);
         // Turns Save off, so a second click can't create the item twice
         setIsCreated(true);
-        // Nothing is unsaved any more, so leaving doesn't ask
         reset(input);
-        // Replaces the new page, so Back from the item goes to the items.
-        // An item made for Experiments remembers that, so the way back
-        // opens the tab it's on
         router.replace(
           href(`/admin/ui-ux/items/${result.id}${list ? `?from=${list}` : ""}`),
         );
@@ -385,12 +344,9 @@ const WallItemForm = ({ item, tags, usage = [], list }: Props) => {
       const result = await run(() => saveWallItem(item.id, input), "Item saved");
       if (result?.fieldErrors) setErrors(result.fieldErrors);
       else if (result && !result.error) {
-        // What was saved is the new starting point, so Save turns off again
         reset(input);
       }
     },
-    // The media fields have no input to focus, so without a toast clicking
-    // the button would seem to do nothing
     (fieldErrors) => {
       const isMediaError =
         fieldErrors.media ||
@@ -414,7 +370,6 @@ const WallItemForm = ({ item, tags, usage = [], list }: Props) => {
       tone: "danger",
     });
     if (!isConfirmed) return;
-    // The action sends the browser back to the items itself
     await remove.run(() => deleteWallItem(item.id, true), "Item deleted");
   };
 
@@ -520,7 +475,6 @@ const WallItemForm = ({ item, tags, usage = [], list }: Props) => {
                   onUploadingChange={setIsUploading}
                 />
               </div>
-              {/* Replace only changes the form here, unlike in the dialogs */}
               {item && dirtyFields.media && (
                 <Input.Hint>Save to keep the new media.</Input.Hint>
               )}
@@ -619,7 +573,6 @@ const WallItemForm = ({ item, tags, usage = [], list }: Props) => {
               max="10"
               placeholder="1"
               {...register("zoom", {
-                // Empty means no zoom, not 0
                 setValueAs: (value: unknown) =>
                   value === "" || value === null || value === undefined
                     ? null
@@ -688,7 +641,6 @@ const WallItemForm = ({ item, tags, usage = [], list }: Props) => {
         isDirty={isDirty}
         isPending={isPending}
         isDisabled={isUploading || remove.isPending || isCreated}
-        // On the new page pressing it says what's still missing
         isAlwaysEnabled={!item}
         start={
           item && (
@@ -698,7 +650,6 @@ const WallItemForm = ({ item, tags, usage = [], list }: Props) => {
               disabled={isPending || isUploading}
               onClick={handleDelete}
             >
-              {/* The spinner takes over from the icon while it deletes */}
               {!remove.isPending && <Trash2 size={16} aria-hidden />}
               Delete
             </Button>

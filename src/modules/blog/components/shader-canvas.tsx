@@ -17,25 +17,18 @@ void main() {
   gl_Position = vec4(corner * 2.0 - 1.0, 0.0, 1.0);
 }`;
 
-// Canvas pixels to a CSS pixel at most: the demos are soft enough
 const MAX_PIXEL_RATIO = 2;
 
 export type Uniforms = Record<string, number | readonly number[]>;
 
-// An image by its address, or something already drawn, like a canvas
 export type TextureSource = string | TexImageSource;
 
 interface Props {
-  // A whole fragment shader, GLSL ES 3.00. It gets uResolution, in canvas
-  // pixels, and uTime, in seconds, on top of its own uniforms
   fragment: string;
-  // Numbers become floats, lists of two to four become vectors
   uniforms?: Uniforms;
   // Bound to texture units in this order, by their sampler's name
   textures?: Record<string, TextureSource | null>;
-  // Drawn every frame while on screen, rather than when something changes
   animate?: boolean;
-  // Where a press or a drag is, 0 to 1 from the top left
   onPointer?: (x: number, y: number) => void;
   className?: string;
   style?: CSSProperties;
@@ -93,11 +86,6 @@ const locate = ({ gl, program, locations }: Gl, name: string) => {
   return locations.get(name) ?? null;
 };
 
-/**
- * A canvas that runs one fragment shader over itself, for the demos in the
- * posts. Nothing is set up until it scrolls into view, and it only draws
- * when its uniforms change, or every frame while it's animated and showing.
- */
 const ShaderCanvas = ({
   fragment,
   uniforms = {},
@@ -111,7 +99,6 @@ const ShaderCanvas = ({
   const glRef = useRef<Gl | null>(null);
   const [isVisible, setVisible] = useState(false);
   const [isSupported, setSupported] = useState(true);
-  // Read by the drawing, which shouldn't be set up again for every change
   const uniformsRef = useRef(uniforms);
   uniformsRef.current = uniforms;
   const texturesRef = useRef(textures);
@@ -120,7 +107,6 @@ const ShaderCanvas = ({
   const frameRef = useRef(0);
   const startRef = useRef(performance.now());
 
-  // Drawn on the next frame, once however many things changed
   const schedule = () => {
     if (frameRef.current) return;
     frameRef.current = requestAnimationFrame(() => {
@@ -216,9 +202,7 @@ const ShaderCanvas = ({
   }, [isVisible, fragment]);
 
   // Sized to the canvas on screen, which clears it, so it's drawn again.
-  // It keeps up while it's out of view, so a window resized or a phone
-  // turned in the meantime doesn't leave it stretched, but it's only drawn
-  // once it shows again, right away. schedule only touches refs
+  // Keeps up while out of view so a resize or rotation doesn't leave it stretched; schedule only touches refs
   // biome-ignore lint/correctness/useExhaustiveDependencies: see above
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -242,12 +226,10 @@ const ShaderCanvas = ({
     };
   }, [isVisible]);
 
-  // Something changed: drawn again
   useEffect(() => {
     if (glRef.current) schedule();
   });
 
-  // Animated, it draws every frame while it shows
   useEffect(() => {
     if (!animate || !isVisible) return;
     let request = 0;
@@ -270,9 +252,7 @@ const ShaderCanvas = ({
       }
       created.gl.deleteProgram(created.program);
       // Browsers only keep so many contexts at once, so it's handed back
-      // once the canvas is off the page, see releaseLater, rather than
-      // whenever it's collected. Not when it only leaves view: the same one
-      // draws again when it's back
+      // once the canvas is off the page, see releaseLater, rather than at once.
       releaseLater(created.gl);
     },
     [],

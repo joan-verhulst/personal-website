@@ -7,15 +7,12 @@ import PageLoading from "~/modules/cms/components/page-loading";
 import { Skeleton } from "~/modules/cms/components/primitives/skeleton";
 import Toolbar from "~/modules/cms/components/toolbar";
 
-// This also covers the pages below it, new and edit, which get the form's
-// placeholder instead of the grid
 const ItemsLoading = () => {
   const pathname = useAdminPathname();
 
   if (pathname !== "/admin/ui-ux/items") {
     const isNew = pathname === "/admin/ui-ux/items/new";
 
-    // The preview, then media, card and modal text
     return (
       <PageLoading
         width="form"
@@ -30,7 +27,6 @@ const ItemsLoading = () => {
     <CollectionLoading
       title={ITEMS.title}
       description={ITEMS.description}
-      // The tabs, then the tag select and the search
       toolbar={
         <Toolbar
           start={

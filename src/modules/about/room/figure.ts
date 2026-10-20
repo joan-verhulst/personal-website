@@ -1,10 +1,3 @@
-// Me, as a small figure for the room: a mop of dark curls, a mustache, a
-// white tee, dark trousers. Rounded shapes on joints at the shoulders,
-// elbows, hips, knees and ankles, so it can stand, walk, sit, type, stretch
-// and lie down. Shapes that move together are merged into one, so the whole
-// figure is a handful of draw calls.
-//
-// The figure faces +z, so its own left is +x
 
 import {
   type BufferGeometry,
@@ -21,26 +14,18 @@ import {
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
-// Every joint angle, in radians. How high the hips are follows from the
-// legs: the lower foot is on the floor
 export interface Pose {
-  // Forward swing at the hips (negative is forward), bend at the knees
   legL: number;
   legR: number;
   kneeL: number;
   kneeR: number;
-  // Forward swing at the shoulders (negative is forward, toward -π is up),
-  // and how far out from the body each arm hangs (negative is in, across)
   armLx: number;
   armLz: number;
   armRx: number;
   armRz: number;
-  // Bend at the elbows, the forearm coming forward
   elbowL: number;
   elbowR: number;
-  // Leaning forward from the hips
   lean: number;
-  // The head turned toward its left, and nodded down
   headTurn: number;
   headTilt: number;
 }
@@ -61,18 +46,12 @@ export const STAND: Pose = {
   headTilt: 0,
 };
 
-// From the hip joint to the knee, and from the knee to the sole: standing,
-// the hips are their sum over the floor
 const THIGH = 0.42;
 const SHIN = 0.43;
 const HIP_HEIGHT = THIGH + SHIN;
-// Where the hips are over the floor seated: the desk chair's cushion is
-// 0.55 up, and the thighs rest on it. They slope down just enough for the
-// soles to reach the floor, the shins upright
 const SEAT_HEIGHT = 0.6;
 const THIGH_SLOPE = Math.asin((SEAT_HEIGHT - SHIN) / THIGH);
 
-/** On a chair or the edge of the bed: thighs out, shins down, hands on the thighs. */
 export const SIT: Pose = {
   ...STAND,
   legL: -(Math.PI / 2 - THIGH_SLOPE),
@@ -87,7 +66,6 @@ export const SIT: Pose = {
   elbowR: 0.6,
 };
 
-/** At the desk, leaning in, hands on the keyboard, eyes on the screens. */
 export const TYPE: Pose = {
   ...SIT,
   armLx: -0.85,
@@ -100,7 +78,6 @@ export const TYPE: Pose = {
   headTilt: 0.05,
 };
 
-/** On the bed with the guitar: the left hand up the neck, the right over the strings. */
 export const STRUM: Pose = {
   ...SIT,
   armLx: -0.9,
@@ -112,42 +89,28 @@ export const STRUM: Pose = {
   lean: 0.12,
 };
 
-/** Asleep on my back: the head turned a little on the pillow. */
 export const SLEEP: Pose = { ...STAND, headTurn: 0.35 };
 
-// Where the head's middle is over the hips
 const HEAD_Y = 0.725;
-// Where the shoulder joints are, over the hips and out from the middle
 const SHOULDER_Y = 0.48;
 const SHOULDER_X = 0.205;
 
-// ── At work ─────────────────────────────────────────────────────────────────
-//
-// Sitting at the desk I don't just type: I look from one screen to the
-// other, take the mouse, lean back, now and then stretch. Each a change to
-// the typing pose, held a few seconds
-
 interface Gesture {
   weight: number;
-  // How long it's held, at least and at most, in seconds
   seconds: [number, number];
-  // How much each hand keeps typing meanwhile, 0 to 1
   typing: [left: number, right: number];
   pose: Partial<Pose>;
 }
 
 const GESTURES: Gesture[] = [
-  // A look at the left screen, and at the right
   { weight: 3, seconds: [1.5, 3], typing: [0.4, 0.4], pose: { headTurn: 0.3 } },
   { weight: 3, seconds: [1.5, 3], typing: [0.4, 0.4], pose: { headTurn: -0.26, headTilt: -0.04 } },
-  // The right hand on the mouse, out beside the keyboard
   {
     weight: 4,
     seconds: [3, 7],
     typing: [0.6, 0],
     pose: { armRx: -0.9, armRz: 0.32, elbowR: 0.6, headTurn: -0.06 },
   },
-  // Back in the chair, hands on the thighs
   {
     weight: 2,
     seconds: [3, 6],
@@ -163,7 +126,6 @@ const GESTURES: Gesture[] = [
       headTilt: -0.04,
     },
   },
-  // A stretch, both arms up
   {
     weight: 1,
     seconds: [1.6, 2.4],
@@ -193,9 +155,6 @@ const pickGesture = () => {
 
 const between = ([least, most]: [number, number]) => least + Math.random() * (most - least);
 
-// ── Building ────────────────────────────────────────────────────────────────
-
-// A shape, sized and moved into place before it's merged with others
 const placed = (
   geometry: BufferGeometry,
   x: number,
@@ -213,8 +172,6 @@ const solid = (geometry: BufferGeometry, material: MeshStandardMaterial) => {
   return mesh;
 };
 
-// Shapes merged into one. A rounded box comes without an index and the
-// rest with one: where they're mixed, all of them go without
 const merged = (geometries: BufferGeometry[]) => {
   const isMixed = geometries.some(({ index }) => index === null);
   const parts = isMixed
@@ -226,9 +183,6 @@ const merged = (geometries: BufferGeometry[]) => {
   return made;
 };
 
-// The tee, from the waist up: narrow at the waist, full at the chest,
-// rounding over the shoulders to the collar. Turned about its middle, then
-// flattened front to back
 const TORSO = [
   [0, -0.03],
   [0.13, -0.03],
@@ -244,8 +198,6 @@ const TORSO = [
   [0, 0.572],
 ].map(([radius, y]) => new Vector2(radius, y));
 
-// The curls: small balls over the back and top of the head, down to the
-// nape, clear of the face and the ears, on a spiral so they spread evenly
 const curls = () => {
   const balls: BufferGeometry[] = [];
   const count = 110;
@@ -261,7 +213,6 @@ const curls = () => {
     const size = 0.034 + ((i * 7919) % 13) / 13 * 0.013;
     balls.push(placed(new SphereGeometry(size, 8, 6), x * 0.112, y * 0.112 + 0.012, z * 0.112 - 0.008));
   }
-  // Fuller over the forehead
   for (const [x, y, z, size] of [
     [-0.05, 0.085, 0.082, 0.042],
     [0.0, 0.098, 0.088, 0.044],
@@ -273,35 +224,22 @@ const curls = () => {
 };
 
 export interface Figure {
-  // Its feet, facing +z
   root: Group;
-  // Shows only the head, its eyes shut, for sleeping under the duvet
   showBody: (isShown: boolean) => void;
-  // Where a guitar goes while it's played, across the lap
   lap: Group;
-  // Eases the joints toward a pose, with what I do at the desk on top, then
-  // adds the walk, the breath and the typing. Returns whether the joints are
-  // still on their way, so the room draws their shadows meanwhile
   update: (target: Pose, dt: number, motion: Motion) => boolean;
 }
 
 export interface Motion {
-  // Where the walk cycle is, in radians, and how much of it shows: 1 while
-  // walking, 0 at rest
   walk: number;
   stepping: number;
   breath: number;
-  // The right arm over the strings
   strum: number;
-  // Real time, in seconds, and since the last frame: what I do at the desk
-  // runs on it, also while a day is played fast
   seconds: number;
   realDt: number;
-  // Settled at the desk, working
   isWorking: boolean;
 }
 
-/** Builds the figure, standing at the origin. Its materials are its own. */
 export const createFigure = (): Figure => {
   const skin = new MeshStandardMaterial({ color: "#e4c3a2", roughness: 0.85 });
   const hair = new MeshStandardMaterial({ color: "#3b2416", roughness: 1 });
@@ -317,15 +255,12 @@ export const createFigure = (): Figure => {
   const pelvis = solid(placed(new SphereGeometry(0.15, 20, 12), 0, 0.01, 0, 0.95, 0.55, 0.66), trousers);
   hips.add(pelvis);
 
-  // Everything above the waist leans and turns from the hips
   const chest = new Group();
   hips.add(chest);
   const torso = solid(
     merged([
       new LatheGeometry(TORSO, 28).scale(1, 1, 0.64),
-      // The collar
       placed(new TorusGeometry(0.052, 0.011, 8, 24).rotateX(Math.PI / 2), 0, 0.562, 0, 1, 1, 0.8),
-      // The shoulders, rounding into the sleeves
       placed(new SphereGeometry(0.062, 16, 12), SHOULDER_X, SHOULDER_Y, 0, 1, 1, 0.8),
       placed(new SphereGeometry(0.062, 16, 12), -SHOULDER_X, SHOULDER_Y, 0, 1, 1, 0.8),
     ]),
@@ -335,7 +270,6 @@ export const createFigure = (): Figure => {
   const neck = solid(placed(new CapsuleGeometry(0.042, 0.05, 4, 12), 0, 0.6, 0), skin);
   chest.add(neck);
 
-  // The head: a face with ears and a nose, the curls, a mustache, the brows
   const head = new Group();
   head.position.y = HEAD_Y;
   chest.add(head);
@@ -358,14 +292,12 @@ export const createFigure = (): Figure => {
         placed(new SphereGeometry(0.127, 24, 12, 0, Math.PI * 2, 0, Math.PI * 0.58), 0, 0.014, -0.012),
         ...curls(),
         mustache,
-        // The brows, lying across, tipped down at the outer ends
         placed(new CapsuleGeometry(0.0045, 0.026, 2, 6).rotateZ(Math.PI / 2 - 0.12), 0.042, 0.044, 0.108),
         placed(new CapsuleGeometry(0.0045, 0.026, 2, 6).rotateZ(Math.PI / 2 + 0.12), -0.042, 0.044, 0.108),
       ]),
       hair,
     ),
   );
-  // The eyes, about their own middle, so they shut by flattening
   const eyePair = solid(
     merged([
       placed(new SphereGeometry(0.0115, 10, 8), 0.04, 0, 0),
@@ -376,7 +308,6 @@ export const createFigure = (): Figure => {
   eyePair.position.set(0, 0.012, 0.106);
   head.add(eyePair);
 
-  // An arm: a sleeve over the upper arm, the forearm and the hand as one
   const arm = (side: 1 | -1) => {
     const shoulder = new Group();
     shoulder.position.set(side * SHOULDER_X, SHOULDER_Y, 0);
@@ -390,7 +321,6 @@ export const createFigure = (): Figure => {
       solid(
         merged([
           placed(new CapsuleGeometry(0.04, 0.17, 4, 12), 0, -0.125, 0),
-          // The hand, a flattened ball
           placed(new SphereGeometry(0.03, 12, 10), 0, -0.29, 0.004, 0.95, 1.45, 0.55),
         ]),
         skin,
@@ -401,7 +331,6 @@ export const createFigure = (): Figure => {
   const armL = arm(1);
   const armR = arm(-1);
 
-  // A leg: the thigh, the shin, and a shoe on an ankle that keeps it flat
   const leg = (side: 1 | -1) => {
     const hip = new Group();
     hip.position.set(side * 0.085, 0, 0);
@@ -411,7 +340,6 @@ export const createFigure = (): Figure => {
     knee.position.y = -THIGH;
     hip.add(knee);
     knee.add(solid(placed(new CapsuleGeometry(0.062, 0.29, 4, 14), 0, -0.19, 0), trousers));
-    // The sole is 0.05 under the ankle
     const ankle = new Group();
     ankle.position.y = -(SHIN - 0.05);
     knee.add(ankle);
@@ -421,7 +349,6 @@ export const createFigure = (): Figure => {
   const legL = leg(1);
   const legR = leg(-1);
 
-  // In front of the belly, at the height of the thighs when sitting
   const lap = new Group();
   lap.position.set(0.02, 0.05, 0.22);
   hips.add(lap);
@@ -437,18 +364,15 @@ export const createFigure = (): Figure => {
   const goal: Pose = { ...STAND };
   const keys = Object.keys(current) as (keyof Pose)[];
 
-  // What I'm doing at the desk, and for how long
   let gesture: Gesture | null = null;
   let gestureLeft = 0;
   let nextGesture = 4;
-  // The next blink, and how long the eyes stay shut
   let nextBlink = 3;
   let blinkLeft = 0;
 
   const update: Figure["update"] = (target, dt, motion) => {
     const { walk, stepping, breath, strum, seconds, realDt, isWorking } = motion;
 
-    // At the desk, something else now and then
     if (isWorking) {
       if (gesture) {
         gestureLeft -= realDt;
@@ -469,7 +393,6 @@ export const createFigure = (): Figure => {
     }
     Object.assign(goal, target, gesture?.pose);
 
-    // Eased, so a change of pose is a movement and not a jump
     const share = 1 - Math.exp(-dt * 7);
     let farthest = 0;
     for (const key of keys) {
@@ -477,36 +400,27 @@ export const createFigure = (): Figure => {
       farthest = Math.max(farthest, Math.abs(goal[key] - current[key]));
     }
 
-    // The walk on top: the legs swing against the arms, a knee bends as its
-    // leg comes forward, the hips drop as the legs part and sway over the
-    // foot that's down, and the shoulders turn against the hips
     const swing = Math.sin(walk) * stepping;
     const lift = Math.cos(walk) * stepping;
     const stride = 0.42 * swing;
     const breathing = Math.sin(breath);
 
-    // Sets a leg's joints. Returns how far its sole reaches under the hip
     const legAngles = (side: typeof legL, base: number, bend: number, forward: number, rising: number) => {
       const hipAngle = base + forward;
       const kneeAngle = bend + 0.85 * Math.max(0, rising) + 0.06 * stepping;
       side.hip.rotation.x = hipAngle;
       side.knee.rotation.x = kneeAngle;
-      // Flat on the floor, mostly, whatever the leg does
       side.ankle.rotation.x = -(hipAngle + kneeAngle) * 0.75;
       return THIGH * Math.cos(hipAngle) + SHIN * Math.cos(hipAngle + kneeAngle);
     };
     const reachL = legAngles(legL, current.legL, current.kneeL, -stride, lift);
     const reachR = legAngles(legR, current.legR, current.kneeR, stride, -lift);
 
-    // The hips are as high as the lower foot holds them: standing, seated,
-    // halfway up out of the chair, or over the foot that's down mid-step,
-    // the feet stay on the floor
     hips.position.set(0.012 * swing, Math.max(reachL, reachR) + breathing * 0.003, 0);
     hips.rotation.set(0, 0.07 * swing, -0.035 * swing);
     chest.rotation.set(current.lean + 0.04 * stepping, -0.14 * swing, 0.035 * swing);
     torso.scale.y = 1 + breathing * 0.012;
 
-    // The hands type in bursts while I work, and the head drifts a little
     const typing = gesture?.typing ?? (isWorking ? [1, 1] : [0, 0]);
     const burst = MathUtils.smoothstep(Math.sin(seconds * 0.9) * Math.sin(seconds * 0.37 + 1.3), -0.2, 0.4);
     const tapL = 0.07 * Math.sin(seconds * 13) * burst * typing[0];
@@ -528,7 +442,6 @@ export const createFigure = (): Figure => {
       "YXZ",
     );
 
-    // A blink every few seconds; shut while asleep
     nextBlink -= realDt;
     if (nextBlink <= 0) {
       blinkLeft = 0.13;

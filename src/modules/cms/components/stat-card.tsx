@@ -5,18 +5,10 @@ import cn from "~/utils/cn";
 interface StatCardProps {
   label: ReactNode;
   value: ReactNode;
-  /** Makes the whole card a link, like to the list it counts. */
   href?: string;
   className?: string;
 }
 
-/**
- * A label and a number side by side, for the row of stats under a page
- * header.
- *
- * @example
- * <StatCard label="Prints" value={prints.length} href="/admin/photography" />
- */
 const StatCard = ({ label, value, href, className }: StatCardProps) => {
   const classes = cn(
     "flex min-w-0 items-center justify-between gap-3 rounded-xl border border-neutral-950/10 bg-white px-4 py-3",

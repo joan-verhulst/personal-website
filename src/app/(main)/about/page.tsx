@@ -6,8 +6,6 @@ import { describedPageMetadata } from "~/utils/page-metadata";
 
 export const metadata: Metadata = describedPageMetadata(ownPages.about);
 
-// Who this is, written like a post: the room at the top, then the words.
-// Opened from the about widget
 const About = () => {
   return (
     <PageWithFooter className="min-h-screen">

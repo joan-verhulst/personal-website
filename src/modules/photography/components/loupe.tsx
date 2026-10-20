@@ -21,38 +21,22 @@ import {
 
 gsap.registerPlugin(Draggable, InertiaPlugin);
 
-// How much larger the loupe shows the table
 const ZOOM = 2.5;
 
-// The glass across, in CSS pixels: on small screens, and from md up. Its
-// bezel goes around it
 const SIZE = { small: 130, large: 160 };
 
-// It's put down this far in from the frame's bottom right corner, in CSS
-// pixels, clear of the hint at the bottom
 const INSET = 48;
 
-// Picked up, it comes off the table a little, like a print does
 const LIFTED = 1.05;
 
-// What's under the lens is drawn a little past its edge, in CSS pixels, for
-// its soft edge to blend into
 const EDGE_ROOM = 2;
 
-// Canvas pixels to a CSS pixel, at most
 const MAX_PIXEL_RATIO = 3;
 
-// The photos under the loupe are the originals, straight from the media
-// bucket: it zooms in, so it might as well have every pixel, and nothing has
-// to be resized for it. The ones most recently looked at are kept
 const KEPT_PHOTOS = 6;
 
-// How long an original takes to fade in over the card's own copy, in ms.
-// Swapped at once, the soft copy's edges seemed to jump as they sharpened
 const SHARPEN_MS = 200;
 
-// A print as print-card.tsx lays it out, in CSS pixels, and the colors from
-// global.css: the table is the page behind it
 const PAPER_RADIUS = 16;
 const PHOTO_RADIUS = 10;
 const CAPTION_SIZE = 10;
@@ -66,18 +50,15 @@ const OUTLINE = "rgba(15, 15, 15, 0.1)";
 const prefersReducedMotion = () =>
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-// A computed `rotate`, in degrees, and a computed `scale`, the same both ways
 const toDegrees = (rotate: string) =>
   rotate === "none" ? 0 : Number.parseFloat(rotate);
 const toScale = (scale: string) =>
   scale === "none" ? 1 : Number.parseFloat(scale);
 
-// A card as it lies on the table now
 interface Lying {
   card: HTMLButtonElement;
   print: Print;
   number: number;
-  // Its center on the screen, its turn in degrees, and its size and scale
   x: number;
   y: number;
   rotation: number;
@@ -85,7 +66,6 @@ interface Lying {
   height: number;
   scaleX: number;
   scaleY: number;
-  // The paper's own turn and scale inside it, while it's picked up
   paperRotation: number;
   paperScale: number;
 }
@@ -93,34 +73,18 @@ interface Lying {
 interface Photo {
   image: HTMLImageElement;
   isReady: boolean;
-  // When it came in, for it to fade in from then
   readyAt: number;
 }
 
 interface Props {
   stageRef: RefObject<HTMLDivElement | null>;
-  // The prints' cards, and the prints and their numbers in the same order
   cardRefs: RefObject<(HTMLButtonElement | null)[]>;
   prints: Print[];
   numbers: number[];
-  // On the table: it's taken off while the prints are in a grid
   isOn: boolean;
-  // The lens couldn't be made, or the GPU dropped it
   onLost: () => void;
 }
 
-/**
- * A loupe lying on the photo table: a round lens of the footer's glass, see
- * loupe-glass.ts, that shows what's under it larger. It's put down in the
- * frame's bottom right corner, and picked up, dragged and thrown like the
- * table itself. It stays where it was put while the table moves under it.
- *
- * A canvas can't see the page, so each frame the prints under the lens are
- * drawn again, larger: where each card lies now, read from the page, so the
- * loupe follows the table as it's dragged, thrown and shuffled. The photos
- * are sharp copies once those are in, the cards' own until then. Only drawn
- * when something under it moved.
- */
 // A lens on the canvas. What it says goes to whoever is drawing with it at
 // the time, or, before anyone is, the loupe's own `onLost`
 const glassOn = (
@@ -146,7 +110,6 @@ const Loupe = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const handleRef = useRef<HTMLDivElement>(null);
   const { animationsEnabled } = useAnimationPreference();
-  // Read in the drawing, which shouldn't be set up again when these change
   const printsRef = useRef(prints);
   printsRef.current = prints;
   const numbersRef = useRef(numbers);
@@ -155,28 +118,16 @@ const Loupe = ({
   onLostRef.current = onLost;
   const animateRef = useRef(animationsEnabled);
   animateRef.current = animationsEnabled;
-  // The lens last made on the canvas, for handing its context back
   const glassRef = useRef<LoupeGlass | null>(null);
 
-  // The canvas's context is handed back once the loupe leaves the page. Not
-  // when it's taken off: it's put back on the same canvas
   useEffect(() => () => glassRef.current?.release(), []);
 
-  // What the glass says, passed on to whoever is drawing with it now
   const readyRef = useRef<(() => void) | null>(null);
   const lostRef = useRef<(() => void) | null>(null);
 
   // The lens is made first thing, before it's in view: its context and its
-  // shader then go ahead of heavier graphics work on the page, like the
-  // about page's room. In Firefox every canvas's work waits in one line,
-  // and what's in it first is done first, so the loupe is there to play
-  // with while the room is still being made
+  // shader then go ahead of heavier graphics work on the page.
   const warmRef = useRef<LoupeGlass | null>(null);
-  //
-  // Heavier work waits until the lens is entirely ready, see gpu-busy.ts:
-  // asking whether its shader linked, and where its settings go, waits for
-  // everything ahead of it in that line, and with the room's shaders in it,
-  // the page would stand still meanwhile
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -213,7 +164,6 @@ const Loupe = ({
     const handle = handleRef.current;
     if (!isOn || !stage || !canvas || !handle) return;
 
-    // What's under the lens, magnified, for the glass to bend
     const content = document.createElement("canvas");
     const context = content.getContext("2d", { alpha: false });
     if (!context) return;
@@ -223,8 +173,6 @@ const Loupe = ({
       hide();
       onLostRef.current();
     };
-    // Compiled in the background: what's under the lens is drawn once it's
-    // ready
     readyRef.current = () => {
       needsDraw = true;
       if (isShown) frame();
@@ -238,9 +186,6 @@ const Loupe = ({
     }
     glassRef.current = glass;
 
-    // The captions, in the page's font. Measured once: tabular figures are
-    // all about as wide as a zero, and CSS centers a line's text by the
-    // font's ascent and descent
     const font = `${CAPTION_SIZE}px ${getComputedStyle(stage).fontFamily}`;
     context.font = font;
     const zero = context.measureText("0");
@@ -250,15 +195,11 @@ const Loupe = ({
         (zero.fontBoundingBoxDescent || CAPTION_SIZE * 0.25)) /
       2;
 
-    // ── Size ─────────────────────────────────────────────────────────────────
-
     let size = 0;
     let pixelRatio = 1;
-    // What was last drawn, and whether it has to be drawn again regardless
     let drawn: number[] = [];
     let needsDraw = true;
 
-    // Its center stays on the table, from the frame's top left
     const tableBounds = () => ({
       minX: 0,
       maxX: stage.clientWidth,
@@ -277,25 +218,17 @@ const Loupe = ({
       canvas.height = pixels;
       canvas.style.width = `${pixels / pixelRatio}px`;
       canvas.style.height = `${pixels / pixelRatio}px`;
-      // Smaller than the canvas by as much on every side, so their pixels
-      // line up and the lens doesn't blur what's under it
       const contentPixels =
         pixels - 2 * Math.floor((LENS_ROOM - EDGE_ROOM) * pixelRatio);
       content.width = contentPixels;
       content.height = contentPixels;
-      // What's picked up is the lens with its bezel, round, so the prints
-      // around it can still be clicked
       const across = size + BEZEL_WIDTH * 2;
       gsap.set(handle, { width: across, height: across });
       needsDraw = true;
     };
 
-    // ── Photos and captions ──────────────────────────────────────────────────
-
     const photos = new Map<string, Photo>();
 
-    // A print's original photo, or null until it's in. Asked for the first
-    // time it's under the lens
     const sharpPhoto = (print: Print): Photo | null => {
       let photo = photos.get(print.id);
       if (photo) {
@@ -303,9 +236,7 @@ const Loupe = ({
       } else {
         const image = new Image();
         // From another domain, so the lens may only draw it when it was
-        // asked for with CORS. Under an address of its own: the same file
-        // opened full screen was loaded without, and the browser would hand
-        // that copy back, which the lens can't use
+        // asked for with CORS. Under an address of its own, so a cached copy without CORS can't be reused.
         image.crossOrigin = "anonymous";
         const source = new URL(print.image, location.href);
         source.searchParams.set("loupe", "");
@@ -317,12 +248,10 @@ const Loupe = ({
             loading.readyAt = performance.now();
             needsDraw = true;
           },
-          // The card's own photo stays in its place
           () => {},
         );
         photo = loading;
       }
-      // The most recently looked at last, so the oldest is let go
       photos.set(print.id, photo);
       if (photos.size > KEPT_PHOTOS) {
         const oldest = photos.keys().next().value;
@@ -339,8 +268,6 @@ const Loupe = ({
 
     const captions = new Map<string, { number: string; title: string }>();
 
-    // The number, and the title cut short with an ellipsis where it doesn't
-    // fit, like on the paper
     const captionFor = (print: Print, number: number, width: number) => {
       const key = `${print.id} ${number} ${Math.round(width)}`;
       let caption = captions.get(key);
@@ -363,9 +290,6 @@ const Loupe = ({
       return caption;
     };
 
-    // ── Drawing ──────────────────────────────────────────────────────────────
-
-    // Fills the box and crops the rest, like object-cover
     const drawCover = (
       image: HTMLImageElement,
       x: number,
@@ -392,8 +316,6 @@ const Loupe = ({
       );
     };
 
-    // A print the way PrintCard draws it: the paper fits inside the card,
-    // with the photo inset and the caption below it
     const drawPrint = (lying: Lying) => {
       const { card, print, number, width, height } = lying;
       const aspect = print.width / print.height;
@@ -411,7 +333,6 @@ const Loupe = ({
       context.translate(lying.x, lying.y);
       context.rotate((lying.rotation * Math.PI) / 180);
       context.scale(lying.scaleX, lying.scaleY);
-      // The paper turns and scales around the card's center, which it shares
       context.rotate((lying.paperRotation * Math.PI) / 180);
       context.scale(lying.paperScale, lying.paperScale);
 
@@ -432,8 +353,6 @@ const Loupe = ({
       context.clip();
       context.fillStyle = PHOTO_EMPTY;
       context.fill();
-      // The card's own copy until the original is in, which then fades in
-      // over it
       const sharp = sharpPhoto(print);
       const shown = sharp
         ? Math.min((performance.now() - sharp.readyAt) / SHARPEN_MS, 1)
@@ -457,12 +376,10 @@ const Loupe = ({
           photoWidth,
           photoHeight,
         );
-        // Drawn again until it's all the way in
         if (shown < 1) needsDraw = true;
       }
       context.restore();
 
-      // The outline, inside the paper's edge
       context.strokeStyle = OUTLINE;
       context.lineWidth = 1;
       context.beginPath();
@@ -475,7 +392,6 @@ const Loupe = ({
       );
       context.stroke();
 
-      // The number faint, each figure in a cell of its own, then the title
       const caption = captionFor(print, number, photoWidth);
       const baseline =
         top + PAPER_BORDER + photoHeight + PAPER_LABEL / 2 + middle;
@@ -494,16 +410,12 @@ const Loupe = ({
       context.restore();
     };
 
-    // Everything under the lens, magnified around its center. The frame's
-    // edge needn't be: the frame cuts the lens off, and magnifying only
-    // pushes what's past that edge further out
     const paint = (centerX: number, centerY: number, lying: Lying[]) => {
       const scale = ZOOM * pixelRatio;
       const half = content.width / 2;
       context.setTransform(1, 0, 0, 1, 0, 0);
       context.fillStyle = TABLE;
       context.fillRect(0, 0, content.width, content.height);
-      // From here on in CSS pixels on the screen
       context.setTransform(
         scale,
         0,
@@ -518,8 +430,6 @@ const Loupe = ({
       for (const print of lying) drawPrint(print);
     };
 
-    // Where the lens is and what lies under it, drawn when any of that
-    // changed since the last frame
     const frame = () => {
       const bounds = stage.getBoundingClientRect();
       const originX = bounds.left + stage.clientLeft;
@@ -527,8 +437,6 @@ const Loupe = ({
       const wantX = originX + (gsap.getProperty(handle, "x") as number);
       const wantY = originY + (gsap.getProperty(handle, "y") as number);
 
-      // The canvas on whole device pixels, so it isn't blurred. The lens
-      // magnifies around its own center, where it's held within a pixel
       const canvasSize = canvas.width / pixelRatio;
       const left =
         Math.round((wantX - canvasSize / 2) * pixelRatio) / pixelRatio;
@@ -544,9 +452,7 @@ const Loupe = ({
       const lying: Lying[] = [];
       const raised: Lying[] = [];
       // Compared from the table's corner, not the window's: scrolling moves
-      // the table and the lens together and changes nothing under the lens,
-      // and every new picture is sent up to the graphics card, which in
-      // Firefox can keep the page waiting
+      // the table and the lens together and changes nothing under the lens.
       const seen = [left - originX, top - originY];
       for (const [index, card] of cardRefs.current.entries()) {
         const print = printsRef.current[index];
@@ -561,11 +467,8 @@ const Loupe = ({
           continue;
         }
 
-        // A print picked up under the pointer straightens and grows a little,
-        // see PrintCard: its paper's, read as it is mid-transition
         const paper = getComputedStyle(card.firstElementChild ?? card);
 
-        // A card turned around its center shares that center with its box
         const placed: Lying = {
           card,
           print,
@@ -616,8 +519,6 @@ const Loupe = ({
       glass.draw(content, (size / 2) * pixelRatio, pixelRatio);
     };
 
-    // ── Showing ──────────────────────────────────────────────────────────────
-
     let frameRequest = 0;
     const loop = () => {
       frame();
@@ -631,7 +532,6 @@ const Loupe = ({
     const show = () => {
       if (isShown) return;
       isShown = true;
-      // In place and drawn first, so it doesn't come in with an old picture
       needsDraw = true;
       frame();
       const motion = hasMotion();
@@ -652,13 +552,11 @@ const Loupe = ({
       frameRequest = requestAnimationFrame(loop);
     };
 
-    // Taken off the table, with the picture it last drew
     const hide = () => {
       if (!isShown) return;
       isShown = false;
       cancelAnimationFrame(frameRequest);
       frameRequest = 0;
-      // Stopped mid-throw, too
       gsap.killTweensOf(handle);
       gsap.set(handle, { visibility: "hidden" });
       gsap.killTweensOf(canvas);
@@ -670,8 +568,6 @@ const Loupe = ({
       });
     };
 
-    // ── Picking up ───────────────────────────────────────────────────────────
-
     const lift = (isLifted: boolean) =>
       gsap.to(canvas, {
         scale: isLifted ? LIFTED : 1,
@@ -681,7 +577,6 @@ const Loupe = ({
       });
 
     fit();
-    // Put down in the frame's bottom right corner, centered on where it's held
     gsap.set(handle, {
       xPercent: -50,
       yPercent: -50,
@@ -693,10 +588,8 @@ const Loupe = ({
       type: "x,y",
       bounds: tableBounds(),
       edgeResistance: 1,
-      // Raising the z-index on press would lift it over the hint
       zIndexBoost: false,
       onPress: function (this: Draggable) {
-        // Thrown like the table, where there's motion. Read on release
         this.vars.inertia = hasMotion();
         lift(true);
       },
@@ -705,8 +598,6 @@ const Loupe = ({
       },
     })[0];
 
-    // The table's Draggable listens on the frame, for pointers and touches
-    // both, so a press on the lens is kept from it
     const keepPress = (event: Event) => event.stopPropagation();
 
     const handleResize = () => {
@@ -735,8 +626,6 @@ const Loupe = ({
     };
   }, [isOn, stageRef, cardRefs]);
 
-  // Clipped to the frame, so in the grid, which scrolls, it doesn't make
-  // room for itself where it last lay
   return (
     <div
       aria-hidden

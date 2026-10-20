@@ -1,22 +1,14 @@
-/**
- * A page can hand the island its own controls, like the photography view
- * switch. The island holds a slot under its label for them to render into,
- * and grows to fit. While they're there, the page can also have the island
- * name what's pointed at, and say what its counter shows.
- */
 
 export interface Controls {
   // The page that owns them, so one that's leaving can't clear the next
   owner: string;
   // The things on the page in order, like the pieces of digital art
   labels?: string[];
-  // Which of them the label names instead of the section, if any
   pointed?: number | null;
   count?: number;
 }
 
 interface State {
-  // Where the controls render into, see `IslandControls`
   slot: HTMLElement | null;
   controls: Controls | null;
 }

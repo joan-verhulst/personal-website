@@ -8,24 +8,16 @@ import Input from "~/modules/cms/components/input";
 import { Skeleton } from "~/modules/cms/components/primitives/skeleton";
 import type { Enrollment } from "~/modules/cms/hooks/use-enrollment";
 
-// In fours, which is how an app's own field shows a key while it's typed
 const grouped = (secret: string) =>
   secret.match(/.{1,4}/g)?.join(" ") ?? secret;
 
 interface Props {
-  /** Null while the secret is being made, which shows the outline of it. */
   enrollment: Enrollment | null;
 }
 
-/**
- * What an authenticator app needs to add this site: the QR code to scan,
- * and the same secret as text for an app that can't scan, like one on the
- * phone the page itself is open on.
- */
 const EnrollmentDetails = ({ enrollment }: Props) => {
   const [isCopied, setIsCopied] = useState(false);
 
-  // The check mark turns back into the copy icon after a moment
   useEffect(() => {
     if (!isCopied) return;
     const timeout = window.setTimeout(() => setIsCopied(false), 2000);
@@ -53,7 +45,6 @@ const EnrollmentDetails = ({ enrollment }: Props) => {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* White around the code, which a scanner needs to find its edges */}
       <div className="mx-auto rounded-xl border border-neutral-950/10 bg-white p-3">
         {/* A data URL straight from Supabase, so there's nothing for
             next/image to optimise */}

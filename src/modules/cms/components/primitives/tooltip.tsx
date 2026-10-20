@@ -11,9 +11,7 @@ const Tooltip = TooltipPrimitive.Root;
 
 const TooltipTrigger = TooltipPrimitive.Trigger;
 
-// Rendered in a portal, so a transformed or stacked ancestor can't hide it.
-// That puts it outside the admin wrapper, so it brings the admin type scale
-// and font along
+// In a portal, outside the admin wrapper, so it brings the admin type scale and font
 const TooltipContent = ({
   className,
   sideOffset = 4,

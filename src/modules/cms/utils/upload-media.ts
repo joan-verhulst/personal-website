@@ -6,13 +6,10 @@ import {
 } from "~/modules/media/utils/media-types";
 import { mediaUrl } from "~/modules/media/utils/media-url";
 
-/** A file in Media, as a form takes it: just uploaded, or picked there. */
 export interface UploadedMedia {
-  // Path in the media bucket, what the database stores
   path: string;
   url: string;
   type: "image" | "video";
-  /** The name it was uploaded with, without its extension. */
   name: string;
   width: number;
   height: number;
@@ -21,11 +18,9 @@ export interface UploadedMedia {
 }
 
 interface Options {
-  // Longest side for images; bigger ones are scaled down before uploading
   maxSize?: number;
 }
 
-// Below this, an image that's small enough is uploaded untouched
 const KEEP_ORIGINAL_BYTES = 1.5e6;
 const JPEG_QUALITY = 0.85;
 
@@ -70,8 +65,6 @@ const imageSize = (file: Blob) =>
     image.src = url;
   });
 
-// "120", "120.5" or "120px": a size that says how many pixels it is. Anything
-// relative, like 100% or 2em, counts as no size
 const pixels = (value: string | null) => {
   const match = value?.trim().match(/^(\d+(?:\.\d+)?)(?:px)?$/);
   return match ? Number(match[1]) : 0;
@@ -82,12 +75,6 @@ const isSize = (width: number, height: number) => width > 0 && height > 0;
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 const XLINK_NAMESPACE = "http://www.w3.org/1999/xlink";
 
-/**
- * An SVG copied out of a web page often comes without its namespace: inline
- * in HTML it doesn't need one, but as a file of its own a browser shows it as
- * plain XML, and it draws nothing as an image or a logo. Adds the namespace
- * when it's missing, and xlink's when the file uses xlink.
- */
 const withNamespaces = (text: string) =>
   text.replace(/<svg\b[^>]*>/, (tag) => {
     let fixed = tag;
@@ -100,11 +87,6 @@ const withNamespaces = (text: string) =>
     return fixed;
   });
 
-/**
- * The size of an SVG, read from the file itself: its width and height, or
- * else its viewBox. Browsers disagree on the size of an SVG that only has a
- * viewBox, so asking them is the last resort.
- */
 const svgSize = async (file: Blob) => {
   const root = new DOMParser().parseFromString(
     await file.text(),
@@ -122,14 +104,11 @@ const svgSize = async (file: Blob) => {
     height = box.length === 4 ? box[3] : 0;
   }
   if (!isSize(width, height)) ({ width, height } = await imageSize(file));
-  // Without any size at all, an SVG is drawn 300 by 150
   if (!isSize(width, height)) {
     width = 300;
     height = 150;
   }
 
-  // A vector has no pixels of its own, and a viewBox can be tiny or
-  // fractional. Scaled up, rounding to whole pixels keeps its proportions
   const scale = Math.max(1, 1000 / Math.max(width, height));
   return {
     width: Math.max(1, Math.round(width * scale)),
@@ -137,7 +116,6 @@ const svgSize = async (file: Blob) => {
   };
 };
 
-/** An SVG as it goes up: as it is, unless it needs its namespace. */
 const prepareSvg = async (file: File) => {
   const blob = new Blob([withNamespaces(await file.text())], {
     type: "image/svg+xml",
@@ -153,13 +131,10 @@ const hasTransparency = (context: CanvasRenderingContext2D, width: number, heigh
   return false;
 };
 
-/** Scales a photo down to the size the site shows at most, keeping its format. */
 const prepareImage = async (file: File, options: Options) => {
   const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
   const { width, height } = bitmap;
 
-  // Every image gets its hue and colorfulness, which the photo table sorts
-  // by: any file in Media can end up a photo. 48px is plenty for an average
   let hue = 0;
   let chroma = 0;
   const colorScale = Math.min(1, 48 / Math.max(width, height));
@@ -177,8 +152,6 @@ const prepareImage = async (file: File, options: Options) => {
 
   const maxSize = options.maxSize ?? 2560;
   const scale = Math.min(1, maxSize / Math.max(width, height));
-  // Animated GIFs would lose their frames on a canvas. A format the site
-  // doesn't take, like BMP, is redrawn as one it does
   const keepOriginal =
     file.type === "image/gif" ||
     (scale === 1 &&
@@ -199,7 +172,6 @@ const prepareImage = async (file: File, options: Options) => {
   context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   bitmap.close();
 
-  // Cut-outs keep their transparency, everything else becomes a JPEG
   const keepsAlpha =
     file.type !== "image/jpeg" &&
     hasTransparency(context, canvas.width, canvas.height);
@@ -214,10 +186,6 @@ const wrongType = (file: File, type: string) =>
     `${file.name} is a ${type} file. Use JPEG, PNG, WebP, GIF, AVIF, SVG, MP4 or WebM.`,
   );
 
-/**
- * Uploads a file from the browser straight to the media bucket, so large
- * files never pass through the server. Images are scaled down first.
- */
 export const uploadMedia = async (
   file: File,
   folder: string,
@@ -229,7 +197,6 @@ export const uploadMedia = async (
   if (!isVideo && !file.type.startsWith("image/")) {
     throw new Error(`${file.name} isn't an image or a video.`);
   }
-  // A video goes up as it is, so a .mov can be turned away before it's read
   if (isVideo && !isMediaType(file.type)) throw wrongType(file, file.type);
 
   const prepared = isVideo
@@ -238,20 +205,15 @@ export const uploadMedia = async (
       ? await prepareSvg(file)
       : await prepareImage(file, options);
 
-  // Checked on what goes up, not on the file that was picked: a large photo
-  // has been scaled down by now
   if (!isMediaType(prepared.type)) throw wrongType(file, prepared.type);
   if (prepared.blob.size > MAX_MEDIA_BYTES) {
     const megabytes = (prepared.blob.size / (1024 * 1024)).toFixed(1);
     throw new Error(`${file.name} is ${megabytes} MB. The limit is 40 MB.`);
   }
-  // The site divides by these. A video without a picture has none
   if (!isSize(prepared.width, prepared.height)) {
     throw new Error(`Couldn't read the size of ${file.name}.`);
   }
 
-  // The server picks the file's name and signs an upload for exactly this
-  // file, then the browser sends it to the bucket itself
   const upload = await createUpload({
     folder,
     type: prepared.type,
@@ -270,7 +232,6 @@ export const uploadMedia = async (
       headers: upload.headers,
     });
   } catch {
-    // A dropped connection, or a site the bucket's CORS policy doesn't list
     throw new Error(`Couldn't upload ${file.name}. Check your connection and try again.`);
   }
   if (!response.ok) {
@@ -288,9 +249,6 @@ export const uploadMedia = async (
     chroma: prepared.chroma,
   };
 
-  // Media remembers the name, size and color, so the file can be picked for
-  // something else later. The upload worked either way, so a failure here
-  // only means Media shows the file without them
   saveMediaDetails({
     path,
     name: media.name,
@@ -308,7 +266,6 @@ export const uploadMedia = async (
   return media;
 };
 
-/** Turns a file name into a title: "img-0027-pano edit.jpg" → "Img 0027 pano edit". */
 export const titleFromFile = (name: string) => {
   const words = name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ").trim();
   return words.charAt(0).toUpperCase() + words.slice(1);

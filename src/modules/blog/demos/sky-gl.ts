@@ -1,12 +1,4 @@
-/**
- * Pieces of the footer's sky shader, see core/utils/sky-shader.ts, cut out
- * for the post's demos: the scattering with each part of the air switched
- * on or off, the clouds' noise and its ingredients seen from straight above.
- */
 
-// The scattered light, as the footer's sky pass draws it, with a switch for
-// each part of the air: Rayleigh for the blue, Mie for the haze around the
-// sun, ozone for the blue hour's purple
 export const SCATTER_FRAGMENT = /* glsl */ `#version 300 es
 precision highp float;
 
@@ -110,9 +102,6 @@ void main() {
   outColor = vec4(pow(aces(light * exposure()), vec3(1.0 / 2.2)), 1.0);
 }`;
 
-// The noise the clouds are shaped from, as the footer draws it into its
-// texture, computed here per pixel instead. Value noise stacked in octaves
-// for the soft channels, Worley for the round ones
 const NOISE_GLSL = /* glsl */ `
 float hash(vec2 p) {
   vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -164,8 +153,6 @@ float worley(vec2 uv, float n, float seed) {
   return nearest;
 }
 
-// The texture's four channels: a soft sheet, round heaps, fine detail, and
-// small heaps with that detail in them
 float sheetNoise(vec2 t) { return fbm(t, 4.0, 5, 0.0); }
 float heapsNoise(vec2 t) { return 1.0 - smoothstep(0.0, 0.95, worley(t, 6.0, 3.3)); }
 float detailNoise(vec2 t) { return fbm(t, 32.0, 3, 11.0); }
@@ -173,7 +160,6 @@ float smallHeapsNoise(vec2 t) {
   return 0.6 * (1.0 - smoothstep(0.0, 0.9, worley(t, 16.0, 5.5))) + 0.4 * detailNoise(t);
 }
 
-// The shapes the footer cuts its clouds from, see shapeAt there
 float sheetAt(vec2 t) {
   vec2 r = mat2(0.8, 0.6, -0.6, 0.8) * t * 5.0 + vec2(0.37, 0.71);
   return sheetNoise(t) * 0.6 + sheetNoise(r) * 0.4;
@@ -191,12 +177,10 @@ float threshold(float coverage, vec2 stats) {
 const vec2 SHEET_STATS = vec2(0.563, 0.089);
 const vec2 HEAPS_STATS = vec2(0.553, 0.135);
 
-// A tile of noise across the canvas, half a tile high
 vec2 tileAt(vec2 uv, vec2 resolution) {
   return vec2(uv.x, uv.y * resolution.y / resolution.x);
 }
 
-// The clouds over the sky, the way the demos from above draw them
 vec3 cloudsOver(float shape, float edge, float soft, float y) {
   float mask = smoothstep(edge - soft, edge + soft, shape);
   float core = smoothstep(edge, edge + 0.3, shape);
@@ -206,8 +190,6 @@ vec3 cloudsOver(float shape, float edge, float soft, float y) {
 }
 `;
 
-// The clouds' noise from straight above, one tile of it, cut at the
-// threshold for a coverage the way the footer cuts it
 export const COVERAGE_FRAGMENT = /* glsl */ `#version 300 es
 precision highp float;
 

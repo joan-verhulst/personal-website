@@ -32,15 +32,11 @@ const Page = () => {
 
   const { about, contact, covers, highlights, products, records } =
     useContent();
-  // Two pieces from the UI/UX wall rotate in the widget
   const [firstHighlight, secondHighlight = firstHighlight] = highlights;
-  // The record that's on spins on the On Rotation widget
   const [currentRecord] = records;
 
   // The intro, once per visit: the grid zooms out into place while the
   // widgets come in one by one. The script in the root layout decides whether
-  // it plays and hides them before the first paint, see INTRO_SCRIPT, so
-  // they're never seen in place first
   useLayoutEffect(() => {
     const root = document.documentElement;
     const grid = gridRef.current;
@@ -48,7 +44,6 @@ const Page = () => {
     sessionStorage.setItem("has-seen-intro", "true");
 
     const tiles = grid.querySelectorAll<HTMLElement>("[data-tile]");
-    // Hidden inline from here on, so the stylesheet can let go
     gsap.set(tiles, { opacity: 0, scale: 0.9 });
     delete root.dataset.intro;
 
@@ -85,7 +80,6 @@ const Page = () => {
     };
   }, []);
 
-  // Function to animate to a specific slide
   const animateToSlide = (targetSlide: number) => {
     if (targetSlide === activeSlide) return;
 
@@ -121,14 +115,12 @@ const Page = () => {
     });
     slideTimelineRef.current = timeline;
 
-    // Step 1: Scale down the active slide
     timeline.to(currentSlide, {
       scale: 0.9,
       duration: 0.3,
       ease: "power2.inOut",
     });
 
-    // Step 2: Move out the active slide upwards
     timeline.to(
       currentSlide,
       {
@@ -139,7 +131,6 @@ const Page = () => {
       "-=0.1",
     );
 
-    // Step 3: Set initial position for incoming slide and move it in
     timeline.fromTo(
       nextSlide,
       {
@@ -154,7 +145,6 @@ const Page = () => {
       "-=0.2",
     );
 
-    // Step 4: Scale up the new active slide
     timeline.to(
       nextSlide,
       {
@@ -165,7 +155,6 @@ const Page = () => {
       "-=0.1",
     );
 
-    // Animate indicators
     timeline.to(
       currentIndicator,
       {
@@ -186,7 +175,6 @@ const Page = () => {
       "-=0.3",
     );
 
-    // Animate text opacity
     timeline.to(
       currentText,
       {
@@ -208,7 +196,6 @@ const Page = () => {
     );
   };
 
-  // Slide animation every 5 seconds
   // biome-ignore lint/correctness/useExhaustiveDependencies: animateToSlide is new every render. The timer starts over with each slide, which is when what it reads changes
   useEffect(() => {
     const interval = setInterval(() => {
@@ -224,18 +211,15 @@ const Page = () => {
 
   return (
     <PageWithFooter className="min-h-screen">
-      {/* The widgets say what's here, this says whose it is, for search */}
       <h1 className="sr-only">{siteData.owner.name}</h1>
       <div className="z-10 flex min-h-screen items-center justify-center px-16 py-24 md:h-screen md:px-0 md:py-0">
         <div className="w-full md:w-3xl">
-          {/* Main grid - mobile: single column, desktop: 2 equal-height rows */}
           <div
             ref={gridRef}
             data-intro-grid
             className="grid grid-cols-1 md:h-full md:grid-rows-2"
             style={{ gap: "3rem" }}
           >
-            {/* TOP ROW WRAPPER */}
             <div
               className="grid grid-cols-1 md:h-full md:grid-cols-3"
               style={{ gap: "2rem" }}
@@ -246,7 +230,6 @@ const Page = () => {
                 className="grid aspect-square w-full grid-cols-1"
                 style={{ gap: "2rem" }}
               >
-                {/* About */}
                 <TransitionLink
                   href={ownPages.about.path}
                   className="block aspect-2/1 md:h-full"
@@ -259,12 +242,10 @@ const Page = () => {
                   />
                 </TransitionLink>
 
-                {/* On Rotation + Gear in a row */}
                 <div
                   className="grid grid-cols-2 md:h-full"
                   style={{ gap: "2rem" }}
                 >
-                  {/* On Rotation */}
                   <div className="aspect-square md:aspect-auto md:h-full">
                     <WidgetCard
                       label={widgets.onRotation.label}
@@ -291,7 +272,6 @@ const Page = () => {
                     </WidgetCard>
                   </div>
 
-                  {/* Gear: the camera is a cut-out, shown whole */}
                   <div className="aspect-square md:aspect-auto md:h-full">
                     <WidgetCard
                       label={widgets.gear.label}
@@ -312,7 +292,6 @@ const Page = () => {
                 </div>
               </div>
 
-              {/* TOP ROW - Columns 2-3: UI/UX spanning 2 columns */}
               <TransitionLink
                 href="/ui-ux"
                 className="relative block aspect-2/1 md:col-span-2 md:h-full"
@@ -321,9 +300,7 @@ const Page = () => {
                   label={widgets.uiux.label}
                   className="h-full bg-neutral-50"
                 >
-                  {/* Slides wrapper with overflow hidden */}
                   <div className="relative h-full w-full overflow-hidden rounded-2xl">
-                    {/* First highlight slide */}
                     <div
                       ref={projectsSlideRef}
                       className="absolute inset-0 rounded-4xl"
@@ -346,7 +323,6 @@ const Page = () => {
                       </div>
                     </div>
 
-                    {/* Second highlight slide */}
                     <div
                       ref={snippetsSlideRef}
                       className="absolute inset-0 -translate-y-full rounded-4xl"
@@ -389,7 +365,6 @@ const Page = () => {
                   </div>
                 </WidgetCard>
 
-                {/* Slide Indicators */}
                 <div className="absolute top-1/2 right-0 flex translate-x-4 -translate-y-1/2 flex-col gap-1">
                   <div
                     ref={indicator1Ref}
@@ -413,12 +388,10 @@ const Page = () => {
               </TransitionLink>
             </div>
 
-            {/* BOTTOM ROW WRAPPER */}
             <div
               className="grid grid-cols-1 md:h-full md:grid-cols-3"
               style={{ gap: "2rem" }}
             >
-              {/* BOTTOM ROW - Column 1: Digital Art */}
               <TransitionLink
                 href="/digital-art"
                 className="block aspect-2/1 w-full md:aspect-square"
@@ -431,7 +404,6 @@ const Page = () => {
                 />
               </TransitionLink>
 
-              {/* BOTTOM ROW - Column 2: Photography */}
               <TransitionLink
                 href="/photography"
                 className="aspect-2/1 w-full md:aspect-square md:h-full"
@@ -444,12 +416,10 @@ const Page = () => {
                 />
               </TransitionLink>
 
-              {/* BOTTOM ROW - Column 3: Experiments + Contact subgrid */}
               <div
                 className="grid aspect-square grid-cols-1 md:grid-rows-2"
                 style={{ gap: "2rem" }}
               >
-                {/* The blog, in the experiments' old spot */}
                 <div className="aspect-2/1 md:aspect-auto md:h-full">
                   <BlogWidget />
                 </div>
@@ -461,7 +431,6 @@ const Page = () => {
                   {products.length > 0 ? (
                     <ProductsWidget products={products} />
                   ) : (
-                    // The icons are a picture, the modal has the links
                     <WidgetCard
                       label={widgets.contact.label}
                       className="h-full bg-linear-to-b from-[#B1EB10] to-[#2FC72F]"

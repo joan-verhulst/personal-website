@@ -22,9 +22,7 @@ import cn from "~/utils/cn";
 
 export interface ReorderItem {
   id: string;
-  /** Also names the row's move buttons, so it has to be plain text. */
   title: string;
-  /** A small image, cropped to fill a 4:3 box. */
   thumbnail?: ReactNode;
 }
 
@@ -33,16 +31,9 @@ interface ReorderDialogProps {
   onOpenChange: (open: boolean) => void;
   title: ReactNode;
   description?: ReactNode;
-  /** In their current order. */
   items: ReorderItem[];
-  /** Gets every id in the new order. Return true to close the dialog. */
   onSave: (ids: string[]) => Promise<boolean> | boolean;
-  /**
-   * The main button. "Save order" unless the order only lands in a draft that
-   * saves later, like "Apply order".
-   */
   saveLabel?: string;
-  /** Spins the main button, and keeps the dialog open until the save ends. */
   isPending?: boolean;
 }
 
@@ -61,21 +52,6 @@ const move = (ids: string[], from: number, to: number) => {
   return next;
 };
 
-/**
- * Puts a collection in a new order: drag the rows, or use each row's arrow
- * buttons from the keyboard or on a touch screen. Nothing changes until Save
- * order.
- *
- * @example
- * <ReorderDialog
- *   open={isReordering}
- *   onOpenChange={setIsReordering}
- *   title="Reorder prints"
- *   items={prints.map((print) => ({ id: print.id, title: print.title }))}
- *   onSave={(ids) => run(() => reorderPrints(ids), "Order saved")}
- *   isPending={isPending}
- * />
- */
 const ReorderDialog = ({
   open,
   onOpenChange,
@@ -90,8 +66,6 @@ const ReorderDialog = ({
   const [order, setOrder] = useState(() => items.map((item) => item.id));
   const [wasOpen, setWasOpen] = useState(open);
   const [dragId, setDragId] = useState<string | null>(null);
-  // Where the dragged row would land: 0 is above the first row, the length
-  // is below the last
   const [dropIndex, setDropIndex] = useState<number | null>(null);
   const [announcement, setAnnouncement] = useState("");
   const listRef = useRef<HTMLOListElement>(null);
@@ -100,7 +74,6 @@ const ReorderDialog = ({
     direction: "up" | "down";
   } | null>(null);
 
-  // Every opening starts from the order that's saved now
   if (open !== wasOpen) {
     setWasOpen(open);
     if (open) {
@@ -110,7 +83,6 @@ const ReorderDialog = ({
   }
 
   const byId = new Map(items.map((item) => [item.id, item]));
-  // Items deleted meanwhile drop out, and ones added meanwhile go last
   const rows = [
     ...order.flatMap((id) => byId.get(id) ?? []),
     ...items.filter((item) => !order.includes(item.id)),
@@ -168,7 +140,6 @@ const ReorderDialog = ({
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
 
-    // The top half of a row drops above it, the bottom half below it
     const rect = event.currentTarget.getBoundingClientRect();
     const isBelow = event.clientY > rect.top + rect.height / 2;
     setDropIndex(isBelow ? index + 1 : index);
@@ -179,7 +150,6 @@ const ReorderDialog = ({
     const from = rows.findIndex((row) => row.id === dragId);
 
     if (from !== -1 && dropIndex !== null) {
-      // Taking the row out first shifts everything after it up by one
       const to = dropIndex > from ? dropIndex - 1 : dropIndex;
       if (to !== from) {
         setOrder(
@@ -203,14 +173,12 @@ const ReorderDialog = ({
   };
 
   const fromIndex = rows.findIndex((row) => row.id === dragId);
-  // No line where dropping would leave the row where it is
   const indicatorIndex =
     dropIndex === null || dropIndex === fromIndex || dropIndex === fromIndex + 1
       ? null
       : dropIndex;
 
   const handleOpenChange = async (isOpen: boolean) => {
-    // Closing mid-save would hide the result, and any error with it
     if (!isOpen && isPending) return;
     if (!isOpen && isChanged && !(await confirm(DISCARD_ORDER))) return;
     onOpenChange(isOpen);
@@ -219,7 +187,6 @@ const ReorderDialog = ({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogShell
-        // A list of rows doesn't need the width of a form
         size="compact"
         title={title}
         description={description}
@@ -255,14 +222,11 @@ const ReorderDialog = ({
           <ol
             ref={listRef}
             className="flex flex-col gap-2"
-            // The list takes the drop, not the rows, so letting go in the
-            // gap between two rows lands where the line shows
             onDragOver={(event) => {
               if (dragId) event.preventDefault();
             }}
             onDrop={handleDrop}
             onDragLeave={(event) => {
-              // Only when the pointer leaves the list, not between rows
               const to = event.relatedTarget as Node | null;
               if (!event.currentTarget.contains(to)) setDropIndex(null);
             }}

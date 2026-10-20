@@ -16,7 +16,6 @@ import {
   updateOne,
 } from "~/modules/cms/utils/shared";
 
-// 0001_cms.sql makes the one row these actions save to
 const NO_SITE_ROW =
   "The site's row is missing from the database. Run supabase/migrations/0001_cms.sql first.";
 
@@ -29,7 +28,6 @@ export async function saveAbout(input: unknown): Promise<ActionResult> {
   if (!parsed.success) return parsed.failure;
   const about = parsed.output;
 
-  // Uploaded here or picked from Media, the photos have to be in the bucket
   for (const image of [about.image, about.modalImage]) {
     if (!image) continue;
     const missing = await missingMedia(image);
@@ -50,11 +48,9 @@ export async function saveAbout(input: unknown): Promise<ActionResult> {
       currently_blurb: orNull(about.currentlyBlurb),
       currently_url: orNull(about.currentlyUrl),
     },
-    // Most likely before the modal's photo has a column
     "Couldn't save the about page. Run supabase/migrations/0008_about_modal_image.sql if you haven't yet.",
     NO_SITE_ROW,
   );
-  // A photo that was replaced or removed stays in Media
   return failure ?? published();
 }
 
@@ -85,7 +81,6 @@ export async function saveContact(input: unknown): Promise<ActionResult> {
       card_digital_art_text: orNull(contact.digitalArtText),
       card_digital_art_button: orNull(contact.digitalArtButton),
     },
-    // Most likely before the cards have columns
     "Couldn't save the contact details. Run supabase/migrations/0009_contact_cards.sql if you haven't yet.",
     NO_SITE_ROW,
   );
@@ -110,17 +105,12 @@ export async function saveSearch(input: unknown): Promise<ActionResult> {
       search_digital_art: orNull(search.digitalArt),
       search_photography: orNull(search.photography),
     },
-    // Most likely before the columns exist
     "Couldn't save the search descriptions. Run supabase/migrations/0007_search_descriptions.sql if you haven't yet.",
     NO_SITE_ROW,
   );
   return failure ?? published();
 }
 
-/**
- * Clears the site's cache without changing anything, for edits made outside
- * the CMS, like in the Supabase dashboard or by the import script.
- */
 export async function refreshSite(): Promise<ActionResult> {
   const admin = await requireAdmin();
   if (admin.error) return failed(admin.error);

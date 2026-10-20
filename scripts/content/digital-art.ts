@@ -1,4 +1,3 @@
-// Digital art as it was hard-coded, imported once by scripts/import-content.mts
 import type { DigitalArtProject } from "../../src/modules/content/types.ts";
 
 const project = (

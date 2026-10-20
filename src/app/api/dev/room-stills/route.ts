@@ -2,9 +2,6 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { STILL_PHASES } from "~/modules/about/room/stills";
 
-// Where the room's tuner saves its loading pictures, see
-// modules/about/room/stills.ts. Only while developing locally: everywhere
-// else there's nothing here
 const FOLDER = join(process.cwd(), "public", "about", "room");
 const MOST_BYTES = 2_000_000;
 

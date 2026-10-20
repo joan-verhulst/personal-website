@@ -13,36 +13,25 @@ import useInView from "~/modules/about/hooks/use-in-view";
 import { useAnimationPreference } from "~/modules/core/context/animation-preference-context";
 
 export interface DoodleProps {
-  // Drawn in, once its heading is on screen
   isShown: boolean;
-  // Counts the hovers on its heading: each one plays it again
   plays: number;
-  // Whether it moves at all
   canMove: boolean;
 }
 
-// How long a line takes to draw, and how long after its heading it starts,
-// in seconds
 const DRAW = 0.9;
 const DRAW_AFTER = 0.25;
 
-/** A line drawing itself in from its start. The line has pathLength 1 */
 const ink = (isShown: boolean, delay = 0): CSSProperties => ({
   strokeDasharray: 1,
   strokeDashoffset: isShown ? 0 : 1,
   transition: `stroke-dashoffset ${DRAW}s cubic-bezier(0.65, 0, 0.35, 1) ${DRAW_AFTER + delay}s`,
 });
 
-/** Dots and fills, which come once the lines are there */
 const dot = (isShown: boolean, delay = 0): CSSProperties => ({
   opacity: isShown ? 1 : 0,
   transition: `opacity 0.3s ease ${DRAW_AFTER + delay}s`,
 });
 
-/**
- * Plays the doodle's little move once it's drawn, and again on every hover
- * of its heading.
- */
 const usePlay = ({ isShown, plays, canMove }: DoodleProps, play: () => void) => {
   const playRef = useRef(play);
   playRef.current = play;
@@ -60,7 +49,6 @@ const usePlay = ({ isShown, plays, canMove }: DoodleProps, play: () => void) => 
 
 type Point = [number, number];
 
-// The pen tool's curve: its two anchors and their handles
 const ANCHOR_A: Point = [3, 18];
 const ANCHOR_B: Point = [21, 6];
 const HANDLE_A: Point = [9, 4];
@@ -68,7 +56,6 @@ const HANDLE_B: Point = [15, 20];
 
 const at = ([x, y]: Point) => `${x} ${y}`;
 
-// The point, turned around the origin by degrees
 const turn = ([x, y]: Point, [ox, oy]: Point, degrees: number): Point => {
   const angle = (degrees * Math.PI) / 180;
   const dx = x - ox;
@@ -79,7 +66,6 @@ const turn = ([x, y]: Point, [ox, oy]: Point, degrees: number): Point => {
   ];
 };
 
-// The curve, with its handles pulled round by bend degrees
 const pen = (bend: number) => {
   const a = turn(HANDLE_A, ANCHOR_A, bend * -0.6);
   const b = turn(HANDLE_B, ANCHOR_B, bend);
@@ -92,10 +78,6 @@ const pen = (bend: number) => {
   };
 };
 
-/**
- * Graphic design's: a curve from the pen tool, its handles out. Played, a
- * handle is pulled round and lets go, and the curve follows.
- */
 export const PenDoodle = (props: DoodleProps) => {
   const { isShown } = props;
   const curveRef = useRef<SVGPathElement>(null);
@@ -143,14 +125,9 @@ export const PenDoodle = (props: DoodleProps) => {
   );
 };
 
-// A lens's aperture: six blades, each a line from the opening to the rim
 const BLADES =
   "M14.31 8 20.05 17.94M9.69 8h11.48M7.38 12l5.74-9.94M9.69 16 3.95 6.06M14.31 16H2.83M16.62 12l-5.74 9.94";
 
-/**
- * Photography's: a lens's aperture. Played, the shutter goes: the blades
- * turn, the lens dips and a flash of dark crosses the opening.
- */
 export const ShutterDoodle = (props: DoodleProps) => {
   const { isShown } = props;
   const svgRef = useRef<SVGSVGElement>(null);
@@ -179,10 +156,6 @@ export const ShutterDoodle = (props: DoodleProps) => {
   );
 };
 
-/**
- * Product design's: a pointer. Played, it moves in and clicks, and the
- * click rings out from its tip.
- */
 export const CursorDoodle = (props: DoodleProps) => {
   const { isShown } = props;
   const arrowRef = useRef<SVGGElement>(null);
@@ -215,10 +188,6 @@ export const CursorDoodle = (props: DoodleProps) => {
   );
 };
 
-/**
- * A section heading with its doodle after it, which draws itself when the
- * heading comes on screen and plays again whenever the heading is hovered.
- */
 export const Heading = ({
   doodle: Doodle,
   children,

@@ -1,8 +1,3 @@
-// The room's style, in its materials and its models rather than laid over
-// the picture: every light falls across a surface in a few flat bands, its
-// shadows with hard edges, like cel animation; every object has an outline
-// that's part of it, an inside-out copy a little larger, drawn in the line
-// colour; and the painted surfaces can be toned down toward flat colour
 
 import {
   BackSide,
@@ -18,8 +13,6 @@ import {
   ShaderMaterial,
 } from "three";
 
-// A share of light, 0 to 1, stepped into uBands flat bands with a soft edge
-// uSoftness wide between them. With no bands it stays as it is
 const BANDING = /* glsl */ `
   uniform float uBands;
   uniform float uSoftness;
@@ -32,15 +25,11 @@ const BANDING = /* glsl */ `
   }
 `;
 
-// How much of each light reaches a surface as it turns away from it, banded
 const LIGHTS = ShaderChunk.lights_physical_pars_fragment.replace(
   "vec3 irradiance = dotNL * directLight.color;",
   "vec3 irradiance = roomBand( dotNL ) * directLight.color;",
 );
 
-// How much of each light its shadows let through, banded, so they have
-// edges. And the light bounced around the room, from the probe grid baked
-// in room-scene.ts, as strong as the layout asks
 const SHADOWS = ShaderChunk.lights_fragment_begin
   .replace(
     /directLight\.color \*= \( directLight\.visible && receiveShadow \) \? (.+?) : 1\.0;/g,
@@ -51,15 +40,11 @@ const SHADOWS = ShaderChunk.lights_fragment_begin
     "irradiance += uBounce * getLightProbeGridIrradiance( probeWorldPos, probeWorldNormal );",
   );
 
-// The room captured as an environment gives reflections only: its diffuse
-// light is the probe grid's, which knows where in the room a surface is
 const REFLECTIONS = ShaderChunk.lights_fragment_maps.replace(
   "iblIrradiance += getIBLIrradiance( geometryNormal );",
   "",
 );
 
-// A surface's picture mixed with its own average colour, read from its
-// smallest mipmap: at 0 a painted wall is a flat one
 const DETAIL = /* glsl */ `
   #ifdef USE_MAP
     vec4 sampledDiffuseColor = texture2D( map, vMapUv );
@@ -68,30 +53,20 @@ const DETAIL = /* glsl */ `
   #endif
 `;
 
-// Flat things have no inside to turn out
 const FLAT = new Set(["PlaneGeometry", "RingGeometry", "CircleGeometry"]);
 
-/** Whether a mesh gets an outline: solid, painted, and not one of many. */
 export const wantsOutline = (mesh: Mesh) =>
   !(mesh instanceof InstancedMesh) &&
   mesh.material instanceof MeshStandardMaterial &&
   !mesh.userData.isOutline &&
   !FLAT.has(mesh.geometry.type);
 
-// Positions closer than this are one corner
 const WELD = 1e-4;
-// Corners on a grid of WELD, as whole numbers, packed into one number each:
-// 17 bits a side covers ±6.5 m, three sides fit in a double exactly
 const SIDE = 131_072;
 const HALF = SIDE / 2;
 
 const hulls = new WeakMap<BufferGeometry, BufferGeometry>();
 
-/**
- * A shape's outline shape: its corners joined, with normals averaged over
- * the faces around each, so a box's outline is a slightly larger box with
- * no gaps at its edges. Made once per shape.
- */
 export const hullGeometry = (geometry: BufferGeometry) => {
   const made = hulls.get(geometry);
   if (made) return made;
@@ -99,7 +74,6 @@ export const hullGeometry = (geometry: BufferGeometry) => {
   const index = geometry.index;
   const count = index ? index.count : position.count;
 
-  // Each corner's welded number, and the first of its kind
   const welded = new Map<number, number>();
   const remap = new Uint32Array(position.count);
   const corners: number[] = [];
@@ -117,8 +91,6 @@ export const hullGeometry = (geometry: BufferGeometry) => {
     remap[i] = at;
   }
 
-  // The faces, on the welded corners, and each corner's normal from the
-  // faces around it, weighted by their size
   const faces = new Uint32Array(count);
   const normals = new Float32Array(corners.length);
   for (let i = 0; i < count; i += 3) {
@@ -159,20 +131,13 @@ export const hullGeometry = (geometry: BufferGeometry) => {
 };
 
 export interface Style {
-  // Gives every material in it the style, once. Call again for anything new
   style: (root: Object3D) => void;
-  // Gives every solid object in it an outline, once
   outline: (root: Object3D) => void;
   setBands: (bands: number, softness: number) => void;
   setDetail: (detail: number) => void;
-  // How strong the bounced light from the probe grid is
   setBounce: (bounce: number) => void;
-  // Hides the outlines, for a capture of the room's light
   hideOutlines: (isHidden: boolean) => void;
-  // Lets go of the outlines of something taken out of the room
   forget: (root: Object3D) => void;
-  // Line width in screen pixels, and the size of a pixel one meter from the
-  // camera, from its field of view and the canvas's height
   setOutline: (width: number, pixel: number, color: string) => void;
   dispose: () => void;
 }
@@ -184,7 +149,6 @@ export const createStyle = (): Style => {
     uDetail: { value: 1 },
     uBounce: { value: 1 },
   };
-  // The bump of each surface that tones down, as painted
   const bumps = new Map<MeshStandardMaterial, number>();
 
   const style = (root: Object3D) => {
@@ -193,8 +157,6 @@ export const createStyle = (): Style => {
       const material = child.material;
       if (!(material instanceof MeshStandardMaterial) || material.userData.isStyled) return;
       material.userData.isStyled = true;
-      // Pictures that show something stay as they are: the screens and the
-      // leaves' cut-outs, and the art in the frames, which loads later
       const tones =
         Boolean(material.map) && !material.emissiveMap && material.alphaTest === 0 && !material.userData.isPicture;
       if (tones) bumps.set(material, material.bumpScale);
@@ -217,10 +179,6 @@ export const createStyle = (): Style => {
     });
   };
 
-  // ── Outlines ─────────────────────────────────────────────────────────────
-
-  // Pushed out along the surface by the same number of screen pixels near
-  // or far, drawn from the inside, so only the rim around the object shows
   const line = new ShaderMaterial({
     uniforms: {
       uWidth: { value: 1.4 },
@@ -246,8 +204,6 @@ export const createStyle = (): Style => {
     side: BackSide,
   });
 
-  // Every outline made, to hide for a capture: hidden as objects, so a
-  // capture doesn't even consider them, where a hidden material still would
   const rims: Mesh[] = [];
   let isHidden = false;
 
@@ -255,13 +211,11 @@ export const createStyle = (): Style => {
     const meshes: Mesh[] = [];
     root.traverse((child) => {
       if (!(child instanceof Mesh) || child.userData.hasOutline || child.userData.noOutline) return;
-      // Merged shapes bring the outlines of their parts, see merge.ts
       if (child.userData.hull || wantsOutline(child)) meshes.push(child);
     });
     for (const mesh of meshes) {
       const rim = new Mesh((mesh.userData.hull as BufferGeometry | undefined) ?? hullGeometry(mesh.geometry), line);
       rim.userData.isOutline = true;
-      // Never what the pointer is on: the object inside it is
       rim.raycast = () => {};
       rim.castShadow = false;
       rim.receiveShadow = false;

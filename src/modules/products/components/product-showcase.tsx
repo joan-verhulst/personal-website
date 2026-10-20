@@ -12,23 +12,16 @@ import { getWallBackground } from "~/modules/ui-ux/utils/wall-backgrounds";
 import cn from "~/utils/cn";
 import { track } from "~/utils/eyes";
 
-// The same padding as the UI/UX wall's tiles, scaling with the card
 const PADDING_X = "px-[clamp(1.25rem,6cqw,3rem)]";
 const PADDING_LEFT = "pl-[clamp(1.25rem,6cqw,3rem)]";
 const PADDING_TOP = "pt-[clamp(1.25rem,6cqw,3rem)]";
 
 const SIZES = "(min-width: 1024px) 50vw, 100vw";
 
-/**
- * A product as a tile on the UI/UX wall: its name and what it is over its
- * background, the way in where the wall has its button, and its shot running
- * off the right and bottom edges. The whole tile opens the product.
- */
 const ProductTile = ({ product }: { product: Product }) => {
   const haptic = useHapticSound();
   const { animationsEnabled } = useAnimationPreference();
   const { link } = product;
-  // Matches the wall tiles: neutral cards and light reels get dark text
   const isNeutral = product.background === "neutral";
   const item = { title: product.name, media: product.media, bare: product.bare };
 
@@ -37,7 +30,6 @@ const ProductTile = ({ product }: { product: Product }) => {
     "--media-aspect": product.media.width / product.media.height,
   } as CSSProperties;
 
-  // Scales up from the bottom left so the shot stays anchored to the card
   const hoverScale =
     link &&
     animationsEnabled &&
@@ -63,7 +55,6 @@ const ProductTile = ({ product }: { product: Product }) => {
           )}
           <span className="truncate">{product.name}</span>
         </h2>
-        {/* The wall's round button, wide enough for the link's label */}
         {link && (
           <span
             className={cn(
@@ -92,7 +83,6 @@ const ProductTile = ({ product }: { product: Product }) => {
   );
 
   const content = product.bare ? (
-    // A reel is the card, with the header over its top
     <>
       <span className={cn("absolute inset-0 overflow-hidden", hoverScale)}>
         <WallMedia item={item} sizes={SIZES} />
@@ -103,15 +93,12 @@ const ProductTile = ({ product }: { product: Product }) => {
       <span className="absolute inset-x-0 top-0">{header}</span>
     </>
   ) : (
-    // The shot fills the space below the header and runs off the right and
-    // bottom edges, so it reads as intentionally cut off
     <span className="flex h-full flex-col">
       {header}
       <span className={cn("flex lg:min-h-0 lg:flex-1", PADDING_LEFT)}>
         <span className="relative w-full">
           <span
             className={cn(
-              // bg-clip-padding lets the card show through the translucent rim
               "relative block aspect-(--media-aspect) w-full overflow-hidden rounded-tl-3xl border-t-6 border-l-6 bg-neutral-50 bg-clip-padding lg:absolute lg:inset-0 lg:aspect-auto",
               isNeutral ? "border-neutral-950/5" : "border-neutral-50/20",
               hoverScale,
@@ -124,10 +111,8 @@ const ProductTile = ({ product }: { product: Product }) => {
     </span>
   );
 
-  // Stacks at its natural height on mobile, the row sizes it on desktop
   const tileClassName = cn(
     "group @container relative inset-border block w-full overflow-hidden rounded-4xl",
-    // Grid items with an aspect ratio don't stretch, so drop it on desktop
     product.bare && "aspect-(--media-aspect) lg:aspect-auto",
   );
 
@@ -161,11 +146,6 @@ const ProductTile = ({ product }: { product: Product }) => {
   );
 };
 
-/**
- * The products, laid out like the UI/UX wall: tiles two to a row of equal
- * 4:3 halves, in the CMS's order. The island names the section, and the
- * products widget on home leads here.
- */
 const ProductShowcase = () => {
   const { products } = useContent();
   const rows = Array.from(
@@ -173,15 +153,12 @@ const ProductShowcase = () => {
     (_, row) => products.slice(row * 2, row * 2 + 2),
   );
 
-  // No entrance of its own: like the other sections, the tiles are there as
-  // the card opens around them
   return (
     <div className="px-3 pt-16 pb-3 md:px-4 lg:px-6">
       <div className="@container flex flex-col gap-3">
         {rows.map((row) => (
           <div
             key={row[0].id}
-            // Two equal 4:3 halves, like the wall's double row
             className="flex flex-col gap-3 lg:grid lg:h-(--block-height) lg:grid-cols-2"
             style={
               {

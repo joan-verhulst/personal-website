@@ -1,8 +1,6 @@
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-// Where the room's tuner saves to, see modules/about/room/tuner.ts. Only
-// while developing locally: everywhere else there's nothing here
 const FILE = join(process.cwd(), "src", "modules", "about", "room", "layout.json");
 
 export const POST = async (request: Request) => {

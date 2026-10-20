@@ -25,26 +25,12 @@ interface AnimatedTextOwnProps {
   duration?: number;
   stagger?: number;
   className?: string;
-  /** For hover mode: optionally provide a parent element ref to listen for hover */
   hoverRef?: React.RefObject<HTMLElement | null>;
 }
 
 type AnimatedTextProps = AnimatedTextOwnProps &
   Omit<ComponentPropsWithoutRef<"span">, keyof AnimatedTextOwnProps>;
 
-/**
- * A component that animates text by lines on load, hover, or manually.
- *
- * @param as - The HTML element type to render. Default is "span".
- * @param children - The text content to animate.
- * @param trigger - When to trigger: "load", "hover", or "manual". Default is "load".
- * @param delay - Delay before animation starts (seconds). Default is 0.
- * @param duration - Duration of each line animation (seconds). Default is 0.5.
- * @param stagger - Delay between each line animation (seconds). Default is 0.08.
- * @param className - Additional CSS classes to apply.
- * @param hoverRef - For hover mode: optionally provide a parent element ref to listen for hover.
- * @param ref - Exposes triggerAnimation() and resetAnimation() methods for manual control.
- */
 const AnimatedText = forwardRef<AnimatedTextHandle, AnimatedTextProps>(
   (
     {

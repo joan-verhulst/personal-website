@@ -13,10 +13,8 @@ import { useAction } from "~/modules/cms/hooks/use-action";
 const ROW =
   "flex w-full cursor-pointer items-center gap-3 rounded-[10px] px-[10px] py-2 text-left text-neutral-950 text-sm transition-colors duration-200 hover:bg-neutral-950/5 focus-visible:outline-2 focus-visible:outline-primary-500 disabled:cursor-wait";
 
-/** Rows above the navigation for things that aren't a page in the CMS. */
 const QuickActions = () => {
   const { run, isPending } = useAction();
-  // A full address on the admin host, where "/" is the dashboard
   const { siteUrl } = useAdminPath();
 
   return (
@@ -40,7 +38,6 @@ const QuickActions = () => {
               type="button"
               disabled={isPending}
               className={ROW}
-              // For changes made outside the CMS, which the site doesn't know about
               onClick={() =>
                 run(refreshSite, "The site will show the latest content")
               }

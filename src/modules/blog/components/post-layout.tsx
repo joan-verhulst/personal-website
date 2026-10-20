@@ -12,14 +12,9 @@ import { track } from "~/utils/eyes";
 
 interface Props {
   post: Post;
-  // At the top in place of the cover, like a demo, see postHeroes
   hero?: ReactNode;
 }
 
-/**
- * A post: its title, what it's about and when, its cover, then the writing
- * with its demos, and the other posts to read next.
- */
 const PostLayout = ({ post, hero, children }: PropsWithChildren<Props>) => {
   const others = posts.filter(({ slug }) => slug !== post.slug);
 
@@ -40,7 +35,7 @@ const PostLayout = ({ post, hero, children }: PropsWithChildren<Props>) => {
         <h1 className="mt-8 text-balance text-2xl text-neutral-950 leading-tight tracking-[-0.01em] md:text-3xl">
           {post.title}
         </h1>
-        <p className="mt-3 text-pretty font-light text-base text-neutral-950/66">
+        <p className="mt-3 text-pretty font-light text-lg text-neutral-950/66">
           {post.summary}
         </p>
         <p className="mt-4 flex gap-2 text-neutral-950/50 text-xs">

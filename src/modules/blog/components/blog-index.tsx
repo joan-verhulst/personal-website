@@ -14,18 +14,11 @@ import PostLink from "~/modules/blog/components/post-link";
 import { useHapticSound } from "~/modules/core/hooks/use-haptic-sound";
 import cn from "~/utils/cn";
 
-// The same padding as the UI/UX wall's tiles, scaling with the card
 const PADDING_X = "px-[clamp(1.25rem,6cqw,3rem)]";
 const PADDING_TOP = "pt-[clamp(1.25rem,6cqw,3rem)]";
 
-// The words sit in a narrower column, centred over the wider tiles
 const TEXT = "mx-auto max-w-3xl px-2";
 
-/**
- * A post as a wide 21:9 tile, its cover being the card, like the UI/UX
- * wall's reels: the cover fills it edge to edge, cropped wide, with its
- * title and its kind over the top.
- */
 const PostTile = ({ post }: { post: Post }) => {
   const haptic = useHapticSound();
 
@@ -69,12 +62,6 @@ const sections = (
   ][]
 ).filter(([key]) => posts.some((post) => post.section === key));
 
-/**
- * The blog: its title and what it's about, then a section per kind of post,
- * each with its posts stacked as wide tiles, newest first.
- */
-// No entrance of its own: like the other sections, the tiles are there as
-// the card opens around them
 const BlogIndex = () => {
   return (
     <div className="px-3 pt-24 pb-64 md:px-4 md:pt-49 lg:px-6">
@@ -83,7 +70,7 @@ const BlogIndex = () => {
           <h1 className="text-balance text-2xl text-neutral-950 leading-tight tracking-[-0.01em] md:text-3xl">
             {blogHero.title}
           </h1>
-          <p className="mt-3 text-pretty font-light text-base text-neutral-950/66">
+          <p className="mt-3 text-pretty font-light text-lg text-neutral-950/66">
             {blogHero.description}
           </p>
         </header>
@@ -93,11 +80,11 @@ const BlogIndex = () => {
             <header className={TEXT}>
               <h2
                 id={`blog-${key}`}
-                className="text-balance text-lg text-neutral-950 leading-snug md:text-xl"
+                className="text-balance text-neutral-950 text-xl leading-snug md:text-2xl"
               >
                 {section.title}
               </h2>
-              <p className="mt-1 text-pretty font-light text-base text-neutral-950/66">
+              <p className="mt-1 text-pretty font-light text-lg text-neutral-950/66">
                 {section.description}
               </p>
             </header>

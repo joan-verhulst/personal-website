@@ -1,9 +1,6 @@
+import { FigmaCard } from "~/modules/blog/components/prose";
 import { InkPlayground } from "~/modules/blog/demos/ink-demos";
 
-/**
- * The distressed ink shader: the Photoshop routine it started as, what
- * changed when it became a shader, and the four settings to play with.
- */
 const DistressedInk = () => (
   <>
     <p>
@@ -95,6 +92,11 @@ const DistressedInk = () => (
     <p>
       The shader runs in WGSL on WebGPU, with a WebGL version for the demos.
     </p>
+    <FigmaCard
+      href="https://www.figma.com/community/shader/1677679061679200717/distressed-ink"
+      title="Try it in Figma"
+      description="Distressed Ink on the Figma Community"
+    />
   </>
 );
 

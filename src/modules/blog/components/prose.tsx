@@ -1,20 +1,13 @@
+import { ArrowUpRight } from "lucide-react";
 import { Google_Sans_Code } from "next/font/google";
 import type { PropsWithChildren, ReactNode, Ref } from "react";
 import cn from "~/utils/cn";
 
-// Code in the posts, in the mono cut of the site's own typeface
 export const codeFont = Google_Sans_Code({
   subsets: ["latin"],
   variable: "--font-code",
 });
 
-/**
- * A post's body. Text sits in a reading column down the middle, and a Wide
- * child breaks out of it, for demos that need the room. Plain elements are
- * styled from here, so a post reads like the writing it is: p, h2, h3, ul,
- * ol, strong, em, a and code. Roomy spaces it the way the posts read: text
- * stays together, and 128px goes around everything else.
- */
 export const Prose = ({
   isRoomy = false,
   className,
@@ -30,23 +23,15 @@ export const Prose = ({
     className={cn(
       codeFont.variable,
       "grid grid-cols-[1fr_min(38rem,calc(100%-2.5rem))_1fr] *:col-start-2",
-      // Text, at the site's own sizes: light body copy, headings that lead
-      // by size and color rather than weight
-      "font-light text-base text-neutral-950/75 leading-relaxed",
+      "font-light text-lg text-neutral-950/75 leading-relaxed",
       "[&>p]:mt-4",
-      // A section heading starts a new group
       isRoomy ? "[&>h2]:mt-32" : "[&>h2]:mt-14",
-      "[&>h2]:mb-1 [&>h2]:scroll-mt-28 [&>h2]:text-balance [&>h2]:font-normal [&>h2]:text-lg [&>h2]:text-neutral-950 [&>h2]:leading-snug md:[&>h2]:text-xl",
-      "[&>h3]:mt-10 [&>h3]:mb-1 [&>h3]:scroll-mt-28 [&>h3]:font-normal [&>h3]:text-base [&>h3]:text-neutral-950",
+      "[&>h2]:mb-1 [&>h2]:scroll-mt-28 [&>h2]:text-balance [&>h2]:font-normal [&>h2]:text-neutral-950 [&>h2]:text-xl [&>h2]:leading-snug md:[&>h2]:text-2xl",
+      "[&>h3]:mt-10 [&>h3]:mb-1 [&>h3]:scroll-mt-28 [&>h3]:font-normal [&>h3]:text-lg [&>h3]:text-neutral-950",
       "[&>ol]:mt-4 [&>ol]:list-decimal [&>ol]:pl-5 [&>ul]:mt-4 [&>ul]:list-disc [&>ul]:pl-5 [&_li::marker]:text-neutral-950/35 [&_li]:mt-1.5 [&_li]:pl-1",
-      // Inline
       "[&_strong]:font-normal [&_strong]:text-neutral-950",
       "[&_a]:text-neutral-950 [&_a]:underline [&_a]:decoration-neutral-950/25 [&_a]:underline-offset-3 hover:[&_a]:decoration-neutral-950",
       "[&_:not(pre)>code]:font-(family-name:--font-code) [&_:not(pre)>code]:rounded-md [&_:not(pre)>code]:bg-neutral-950/6 [&_:not(pre)>code]:px-1.5 [&_:not(pre)>code]:py-0.5 [&_:not(pre)>code]:text-[0.85em] [&_:not(pre)>code]:text-neutral-950",
-      // Roomy: text keeps its own spacing, and 128px goes around everything
-      // that isn't text, a demo (a div), a code block (a figure) or a callout
-      // (an aside). One of those right under a heading stays by it, and the
-      // first block sits flush, so the layout above sets the gap to it
       isRoomy && [
         "[&>:is(div,figure,aside)]:mt-32 [&>:is(div,figure,aside)]:mb-0",
         "[&>:is(div,figure,aside)+:is(p,ul,ol,h3)]:mt-32",
@@ -67,7 +52,6 @@ export const Wide = ({
 }: PropsWithChildren<{ className?: string }>) => (
   <div
     className={cn(
-      // Over the column the prose puts every child in
       "col-span-full! mx-auto mt-10 mb-4 w-[min(60rem,calc(100%-2rem))]",
       className,
     )}
@@ -84,10 +68,6 @@ const CALLOUT_LABELS: Record<CalloutKind, string> = {
   source: "Where this comes from",
 };
 
-/**
- * Set off from the text: a thought on the side, something that went wrong,
- * or where an idea was borrowed from.
- */
 export const Callout = ({
   kind = "aside",
   title,
@@ -112,4 +92,33 @@ export const Callout = ({
     </span>
     {children}
   </aside>
+);
+
+const FigmaLogo = () => (
+  <svg aria-hidden="true" viewBox="0 0 38 57" className="h-5 w-auto">
+    <path fill="#1abcfe" d="M19 28.5a9.5 9.5 0 1 1 19 0 9.5 9.5 0 0 1-19 0z" />
+    <path fill="#0acf83" d="M0 47.5A9.5 9.5 0 0 1 9.5 38H19v9.5a9.5 9.5 0 1 1-19 0z" />
+    <path fill="#ff7262" d="M19 0v19h9.5a9.5 9.5 0 1 0 0-19H19z" />
+    <path fill="#f24e1e" d="M0 9.5A9.5 9.5 0 0 0 9.5 19H19V0H9.5A9.5 9.5 0 0 0 0 9.5z" />
+    <path fill="#a259ff" d="M0 28.5A9.5 9.5 0 0 0 9.5 38H19V19H9.5A9.5 9.5 0 0 0 0 28.5z" />
+  </svg>
+);
+
+/** A card linking out to Figma, e.g. to try a post's shader there. */
+export const FigmaCard = ({ href, title, description }: { href: string; title: string; description?: string }) => (
+  <a
+    href={href}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="group no-underline! mt-10 flex items-center gap-4 rounded-3xl border border-neutral-950/10 p-5 transition-colors duration-200 hover:border-neutral-950/20"
+  >
+    <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-neutral-950/4">
+      <FigmaLogo />
+    </span>
+    <span className="flex min-w-0 flex-1 flex-col">
+      <span className="font-normal text-base text-neutral-950">{title}</span>
+      {description && <span className="text-neutral-950/60 text-sm">{description}</span>}
+    </span>
+    <ArrowUpRight className="size-4 shrink-0 text-neutral-950/50 transition duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-neutral-950" />
+  </a>
 );

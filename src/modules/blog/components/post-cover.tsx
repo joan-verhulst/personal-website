@@ -1,12 +1,19 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import type { ComponentType } from "react";
 import SkyCover from "~/modules/blog/components/sky-cover";
 import { InkCover } from "~/modules/blog/demos/ink-demos";
 import type { Post } from "~/data/posts";
 
+// The system brings its own stylesheet and fonts, so its cover only loads where it shows.
+const SystemCover = dynamic(() =>
+  import("~/modules/blog/demos/design-system-demos").then((module) => module.SystemCover),
+);
+
 const liveCovers: Record<string, ComponentType> = {
+  "design-system": SystemCover,
   "distressed-ink": InkCover,
 };
 

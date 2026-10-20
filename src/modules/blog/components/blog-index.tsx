@@ -43,7 +43,7 @@ const PostTile = ({ post }: { post: Post }) => {
         <span className="min-w-0 flex-1 truncate text-[clamp(0.875rem,2.5cqw,1.125rem)] text-neutral-50">
           {post.title}
         </span>
-        <span className="inline-flex h-8 shrink-0 items-center rounded-full border border-neutral-50/20 px-3 text-neutral-50 text-sm">
+        <span className="inline-flex h-8 shrink-0 items-center rounded-full border border-neutral-50/20 px-3 text-neutral-50 text-sm transition-colors duration-300 group-hover:bg-neutral-50/15">
           {postSections[post.section].title}
         </span>
         <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-neutral-50/20 text-neutral-50 transition-colors duration-300 group-hover:bg-neutral-50/15">

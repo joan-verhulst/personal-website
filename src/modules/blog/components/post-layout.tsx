@@ -1,7 +1,13 @@
 "use client";
 
 import { ArrowLeft } from "lucide-react";
-import { type PropsWithChildren, type ReactNode, useEffect } from "react";
+import {
+  type PropsWithChildren,
+  type ReactNode,
+  useEffect,
+  useRef,
+} from "react";
+import PostIndex from "~/modules/blog/components/post-index";
 import PostCover from "~/modules/blog/components/post-cover";
 import PostLink from "~/modules/blog/components/post-link";
 import { Prose } from "~/modules/blog/components/prose";
@@ -17,13 +23,21 @@ interface Props {
 
 const PostLayout = ({ post, hero, children }: PropsWithChildren<Props>) => {
   const others = posts.filter(({ slug }) => slug !== post.slug);
+  const proseRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     track("Post Opened", { post: post.slug });
   }, [post.slug]);
 
   return (
-    <article className="pb-32">
+    <article className="relative pb-32">
+      {/* On the page's own margin, level with the header. */}
+      <div className="pointer-events-none absolute inset-y-0 left-8 hidden xl:block">
+        <div className="pointer-events-auto sticky top-49">
+          <PostIndex target={proseRef} />
+        </div>
+      </div>
+
       <header className="mx-auto w-[min(38rem,calc(100%-2.5rem))] pt-24 md:pt-49">
         <PostLink
           href={ownPages.blog.path}
@@ -45,13 +59,13 @@ const PostLayout = ({ post, hero, children }: PropsWithChildren<Props>) => {
         </p>
       </header>
 
-      <div className="inset-border mx-auto my-32 w-[min(60rem,calc(100%-2rem))] overflow-hidden rounded-4xl">
+      <div className="relative inset-border mx-auto my-32 w-[min(60rem,calc(100%-2rem))] overflow-hidden rounded-4xl">
         <div className="relative aspect-2/1">
           {hero ?? <PostCover post={post} isStill />}
         </div>
       </div>
 
-      <Prose isRoomy>
+      <Prose ref={proseRef} isRoomy className="scroll-mt-28">
         {children}
         <p className="mt-10! text-neutral-950/60">
           – {siteData.owner.name.split(" ")[0]}

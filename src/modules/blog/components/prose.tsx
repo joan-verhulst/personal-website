@@ -1,4 +1,4 @@
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, Github } from "lucide-react";
 import { Google_Sans_Code } from "next/font/google";
 import type { PropsWithChildren, ReactNode, Ref } from "react";
 import cn from "~/utils/cn";
@@ -104,8 +104,13 @@ const FigmaLogo = () => (
   </svg>
 );
 
-/** A card linking out to Figma, e.g. to try a post's shader there. */
-export const FigmaCard = ({ href, title, description }: { href: string; title: string; description?: string }) => (
+interface OutboundCardProps {
+  href: string;
+  title: string;
+  description?: string;
+}
+
+const OutboundCard = ({ href, title, description, logo }: OutboundCardProps & { logo: ReactNode }) => (
   <a
     href={href}
     target="_blank"
@@ -113,7 +118,7 @@ export const FigmaCard = ({ href, title, description }: { href: string; title: s
     className="group no-underline! mt-10 flex items-center gap-4 rounded-3xl border border-neutral-950/10 p-5 transition-colors duration-200 hover:border-neutral-950/20"
   >
     <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-neutral-950/4">
-      <FigmaLogo />
+      {logo}
     </span>
     <span className="flex min-w-0 flex-1 flex-col">
       <span className="font-normal text-base text-neutral-950">{title}</span>
@@ -121,4 +126,12 @@ export const FigmaCard = ({ href, title, description }: { href: string; title: s
     </span>
     <ArrowUpRight className="size-4 shrink-0 text-neutral-950/50 transition duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-neutral-950" />
   </a>
+);
+
+/** A card linking out to Figma, e.g. to try a post's shader there. */
+export const FigmaCard = (props: OutboundCardProps) => <OutboundCard {...props} logo={<FigmaLogo />} />;
+
+/** A card linking out to a post's code on GitHub. */
+export const GitHubCard = (props: OutboundCardProps) => (
+  <OutboundCard {...props} logo={<Github className="size-5 text-neutral-950" strokeWidth={1.5} />} />
 );

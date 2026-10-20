@@ -8,17 +8,19 @@ interface DemoProps {
   caption?: ReactNode;
   controls?: ReactNode;
   className?: string;
+  frameClassName?: string;
 }
 
 export const Demo = ({
   caption,
   controls,
   className,
+  frameClassName,
   children,
 }: PropsWithChildren<DemoProps>) => (
   <Wide>
     <figure>
-      <div className="overflow-hidden rounded-4xl border border-neutral-950/10 bg-neutral-50">
+      <div className={cn("overflow-hidden rounded-4xl border border-neutral-950/10 bg-neutral-50", frameClassName)}>
         <div className={cn("relative", className)}>{children}</div>
         {controls && (
           <div className="grid gap-x-8 gap-y-4 border-neutral-950/10 border-t px-5 py-4 md:grid-cols-2 md:px-6 md:py-5 md:[&>*:nth-child(odd):last-child]:col-span-2">

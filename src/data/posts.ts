@@ -12,6 +12,11 @@ export const postSections = {
     description:
       "Visual effects I built as shaders, how each one works and how I got there, with demos you can play with along the way.",
   },
+  design: {
+    title: "Design systems",
+    description:
+      "How the products I design are put together, measured down to the padding.",
+  },
 };
 
 export type PostSection = keyof typeof postSections;
@@ -29,6 +34,15 @@ export interface Post {
 }
 
 export const posts: Post[] = [
+  {
+    slug: "design-system",
+    title: "The design system I've built over the years",
+    section: "design",
+    summary:
+      "Finding the system in screens from five products, and rebuilding it on Radix with tokens that swap per product, measured component by component.",
+    date: "2026-10-20",
+    minutes: 5,
+  },
   {
     slug: "cloud-shader",
     title: "Building a procedural cloud sky shader",

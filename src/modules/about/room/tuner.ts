@@ -1,7 +1,3 @@
-// The room's tuner, for shaping it by hand while running the site locally:
-// open /about?tune. Click anything to move or turn it, drag the sliders for
-// the time, the light, the colours and the paint, and save it all to
-// layout.json. Never part of the built site, see room.tsx
 
 import { type Object3D, Raycaster, Vector2, Vector3 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
@@ -18,12 +14,8 @@ import type { Room } from "~/modules/about/room/room-scene";
 import { homeHourAt } from "~/modules/about/room/schedule";
 import { STILL_PHASES, stillHourOn } from "~/modules/about/room/stills";
 
-// Changes are kept in the browser until they're saved, so a reload loses
-// nothing
 const DRAFT_KEY = "room-layout-draft";
 const SAVE_URL = "/api/dev/room-layout";
-// Where the loading pictures go, how wide they're drawn and how finely
-// they're kept: shown blurred, they can be small
 const STILLS_URL = "/api/dev/room-stills";
 const STILL_WIDTH = 1280;
 const STILL_QUALITY = 0.82;
@@ -60,13 +52,8 @@ const NAMES: Record<PieceKey, string> = {
   plantDesk: "Plant on the desk",
 };
 
-// Moving these changes where I sit, sleep or walk
 const SETTLES: PieceKey[] = ["bed", "chair", "walkway"];
 
-/**
- * The draft left from last time, if there is one, with anything added to
- * the room since filled in from what's saved.
- */
 export const readDraft = (): RoomLayout | null => {
   try {
     const raw = localStorage.getItem(DRAFT_KEY);
@@ -78,13 +65,10 @@ export const readDraft = (): RoomLayout | null => {
 
 const round = (value: number, places = 3) => Number(value.toFixed(places));
 
-// Shows every control's value again, after it was changed from elsewhere
 const refresh = (folder: GUI) => {
   for (const controller of folder.controllersRecursive()) controller.updateDisplay();
 };
 
-// Copies a layout's values into another one in place, so the panel's
-// controls stay bound to the objects they were made for
 const assignDeep = (target: Record<string, unknown>, source: Record<string, unknown>) => {
   for (const [key, value] of Object.entries(source)) {
     const current = target[key];
@@ -96,10 +80,6 @@ const assignDeep = (target: Record<string, unknown>, source: Record<string, unkn
   }
 };
 
-/**
- * Opens the tuner over the room. `setOffset` moves the room's clock, and
- * the clock in its status with it. Returns what closes the tuner.
- */
 export const attachTuner = (
   room: Room,
   { hasDraft, setOffset }: { hasDraft: boolean; setOffset: (ms: number) => void },
@@ -123,12 +103,9 @@ export const attachTuner = (
   };
   let selected: PieceKey | null = null;
 
-  // ── Saving ───────────────────────────────────────────────────────────────
-
   let draftTimer: ReturnType<typeof setTimeout> | undefined;
   const changed = () => {
     state.status = "Unsaved changes";
-    // Whatever changed may change how light bounces around the room
     tuning.relight();
     clearTimeout(draftTimer);
     draftTimer = setTimeout(() => {
@@ -138,9 +115,6 @@ export const attachTuner = (
     }, 300);
   };
 
-  // The loading pictures, drawn as the room is now: the clock is moved to
-  // each one's hour, the room settles, and it's drawn. The clock and what
-  // I'm doing go back to what the tuner says afterwards
   const drawStills = async () => {
     tuning.setActivity(null);
     const pictures = new FormData();
@@ -162,16 +136,7 @@ export const attachTuner = (
     if (!response.ok) throw new Error(String(response.status));
   };
 
-  // Saves the layout, after drawing the loading pictures to go with it, so
-  // they always show the room as it's saved
-  const save = async () => {
-    let hasStills = true;
-    try {
-      await drawStills();
-      layout.stills = Date.now();
-    } catch {
-      hasStills = false;
-    }
+  const writeLayout = async (done: string) => {
     state.status = "Saving…";
     try {
       const response = await fetch(SAVE_URL, {
@@ -182,16 +147,30 @@ export const attachTuner = (
       if (!response.ok) throw new Error(String(response.status));
       clearTimeout(draftTimer);
       localStorage.removeItem(DRAFT_KEY);
-      state.status = hasStills
-        ? "Saved to layout.json, with the loading pictures"
-        : "Saved to layout.json, but not the loading pictures";
+      state.status = done;
     } catch {
       state.status = "Couldn't save: is the dev server running?";
     }
   };
 
-  // A clean, large picture of the room at the hour it shows, downloaded:
-  // to paint over, or to hand to an image tool as the sketch
+  // The layout only, the loading pictures stay as they were
+  const save = () => writeLayout("Saved to layout.json");
+
+  const saveWithStills = async () => {
+    let hasStills = true;
+    try {
+      await drawStills();
+      layout.stills = Date.now();
+    } catch {
+      hasStills = false;
+    }
+    await writeLayout(
+      hasStills
+        ? "Saved to layout.json, with the loading pictures"
+        : "Saved to layout.json, but not the loading pictures",
+    );
+  };
+
   const picture = async () => {
     state.status = "Drawing the picture…";
     const blob = await tuning.snapshot(2400);
@@ -219,10 +198,13 @@ export const attachTuner = (
     }
   };
 
-  // ── Moving things ────────────────────────────────────────────────────────
-
+  // Made, the controls turn the camera to their own target, the room's
+  // middle: back to the layout's view, which the loading pictures are drawn
+  // from
   const orbit = new OrbitControls(camera, canvas);
   orbit.enabled = false;
+  orbit.target.fromArray(layout.camera.target);
+  tuning.applyCamera();
   const gizmo = new TransformControls(camera, canvas);
   overlay.add(gizmo.getHelper());
   gizmo.addEventListener("dragging-changed", (event) => {
@@ -260,7 +242,6 @@ export const attachTuner = (
     tuning.highlight(key ? pieces[key] : null);
   };
 
-  // Takes the picked piece out of the room or puts it back
   const applyShown = () => {
     if (!selected || selected === "walkway") return;
     layout.pieces[selected].hidden = !state.shown || undefined;
@@ -268,8 +249,6 @@ export const attachTuner = (
     changed();
   };
 
-  // The gizmo moved something: back into the layout, upright, with its turn
-  // read off where it points
   const forward = new Vector3();
   gizmo.addEventListener("objectChange", () => {
     if (!selected) return;
@@ -286,7 +265,6 @@ export const attachTuner = (
     changed();
   });
 
-  // A click that didn't drag picks what's under it
   const raycaster = new Raycaster();
   const pointer = new Vector2();
   let press: { x: number; y: number; onGizmo: boolean } | null = null;
@@ -330,8 +308,6 @@ export const attachTuner = (
   canvas.addEventListener("pointerup", handleUp);
   window.addEventListener("keydown", handleKey);
 
-  // ── The camera ───────────────────────────────────────────────────────────
-
   const applyFreeCamera = () => {
     orbit.enabled = state.freeCamera;
     if (state.freeCamera) {
@@ -350,8 +326,6 @@ export const attachTuner = (
     state.status = "Camera set to this view: save to keep it";
   };
 
-  // ── The clock ────────────────────────────────────────────────────────────
-
   const applyTime = () => {
     if (state.followClock) {
       setOffset(0);
@@ -364,11 +338,10 @@ export const attachTuner = (
   const applyActivity = () =>
     tuning.setActivity(state.activity === "auto" ? null : (state.activity as "work" | "away" | "sleep"));
 
-  // ── The panel ────────────────────────────────────────────────────────────
-
   const gui = new GUI({ title: "Room", width: 300 });
   gui.add(state, "status").name("Status").disable().listen();
-  gui.add({ save }, "save").name("Save, with the loading pictures");
+  gui.add({ save }, "save").name("Save");
+  gui.add({ saveWithStills }, "saveWithStills").name("Save, with the loading pictures");
   gui.add({ copy }, "copy").name("Copy as JSON");
   gui.add({ picture }, "picture").name("Save a picture of the room");
   gui
@@ -475,13 +448,22 @@ export const attachTuner = (
     });
   }
 
-  // The style, in the materials and the models, see toon.ts
   const look = gui.addFolder("Style");
   look.add(layout.paint, "bands", 0, 8, 1).name("Light in bands (0 is smooth)").onChange(changed);
   look.add(layout.paint, "softness", 0, 0.5, 0.01).name("Band edges, soft").onChange(changed);
   look.add(layout.paint, "outline", 0, 5, 0.1).name("Outline width (px)").onChange(changed);
   look.add(layout.paint, "detail", 0, 1, 0.01).name("Texture detail").onChange(changed);
   look.add(layout.paint, "smooth").name("Smooth edges").onChange(changed);
+
+  const quality = gui.addFolder("Quality while moving");
+  quality
+    .add(layout.quality, "playResolution", 0.4, 1, 0.05)
+    .name("Size while a day plays")
+    .onChange(changed);
+  quality
+    .add(layout.quality, "movingShade", 0.4, 1, 0.05)
+    .name("Contact shade size while moving")
+    .onChange(changed);
 
   const shape = gui.addFolder("Room shape");
   shape.close();

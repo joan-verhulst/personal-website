@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { siteData } from "~/data/site";
 import { useAnimationPreference } from "~/modules/core/context/animation-preference-context";
+import { useThreeD } from "~/modules/core/hooks/use-three-d";
 import { onSkyReady, paintSky } from "~/modules/core/utils/shared-sky";
 import {
   createSkyRenderer,
@@ -17,27 +18,19 @@ import cn from "~/utils/cn";
 
 const { home } = siteData.owner;
 
-// As the footer looks: this much sky from the horizon up, and the sun's
-// compass direction spread across the width, east on the left
 const SPAN = 50;
 const REACH = 120;
 const EDGE = 0.42;
-// The canvas has at most this many pixels
 const PIXEL_BUDGET = 1_500_000;
 
-// A played day, in hours a second: with the sun up, around sunrise and
-// sunset, and through the night. It lingers where the colors are
 const DAY_PACE = 0.8;
 const DUSK_PACE = 0.25;
 const NIGHT_PACE = 3;
-// How many times faster than the wind the clouds drift while it plays
 const CLOUD_PACE = 30;
 // Frames a second while it plays, and how long it shows the sky as it is
 // before it starts
 const PLAY_FPS = 30;
 const PLAY_AFTER_SECONDS = 1.2;
-// A frame that comes this many milliseconds early still counts, so a frame
-// rate that halves the screen's isn't thrown off by a little jitter
 const FRAME_SLACK = 4;
 
 const HOUR = 3_600_000;
@@ -48,13 +41,11 @@ const smoothstep = (from: number, to: number, value: number) => {
   return t * t * (3 - 2 * t);
 };
 
-// How fast a played day goes with the sun this high, in hours a second
 const paceAt = (elevation: number) =>
   elevation >= 0
     ? DUSK_PACE + (DAY_PACE - DUSK_PACE) * smoothstep(4, 16, elevation)
     : DUSK_PACE + (NIGHT_PACE - DUSK_PACE) * smoothstep(-6, -16, elevation);
 
-/** A frame of the footer's sky at a moment, for a canvas this sharp. */
 export const skyFrameAt = (
   date: Date,
   weather: SkyWeather,
@@ -76,10 +67,6 @@ export const skyFrameAt = (
   };
 };
 
-/**
- * Sizes a canvas to how large it shows, within the budget, and hands back
- * the pixel ratio it ended up with.
- */
 export const fitCanvas = (canvas: HTMLCanvasElement) => {
   const width = canvas.clientWidth;
   const height = canvas.clientHeight;
@@ -98,15 +85,8 @@ export const drawSky = (
   glass: GlassShape[] = [],
 ) => renderer.draw(frame, glass, SKY_DEFAULTS, { clouds: true });
 
-// ── The played day ──────────────────────────────────────────────────────────
-
 // A cover that plays draws every frame. On the footer's renderer that would
-// take the canvas from the footer each time, see shared-sky.ts, so covers
-// that play have one of their own. It's made once a cover has played for a
-// moment, compiles in the background where the browser can, and is kept for
-// the visit. Covers take turns with its canvas and copy what it drew, like
-// paintSky. Undefined until then, and again once the GPU dropped it, until a
-// cover plays again. Null without WebGL2, or once it was dropped too often
+// take the canvas from the footer each time, see shared-sky.ts, so covers get their own.
 let player: SkyRenderer | null | undefined;
 let playerCanvas: HTMLCanvasElement | null = null;
 const playerListeners = new Set<() => void>();
@@ -122,8 +102,6 @@ const setUpPlayer = () => {
   player = createSkyRenderer(
     playerCanvas,
     () => {
-      // Nothing more from the one that's gone. Made again, on a canvas of
-      // its own, the next time a cover plays
       player?.destroy();
       player = null;
       playerCanvas = null;
@@ -141,7 +119,6 @@ const setUpPlayer = () => {
 
 const isPlayerReady = () => player?.isReady() === true;
 
-// Draws a frame into a cover's canvas on the player. False until it's ready
 const paintPlayed = (context: CanvasRenderingContext2D, frame: SkyFrame) => {
   const { width, height } = context.canvas;
   if (!player?.isReady() || !playerCanvas || width === 0 || height === 0) {
@@ -157,42 +134,35 @@ const paintPlayed = (context: CanvasRenderingContext2D, frame: SkyFrame) => {
 };
 
 interface Props {
-  // Plays the day over home from now on, while it shows: the sun goes round
-  // under today's weather, lingering on sunrise and sunset, and the wind
-  // carries the clouds. Still with animations off, and while an open
-  // section covers it
   isPlaying?: boolean;
   className?: string;
 }
 
-/**
- * The sky over home right now, drawn by the footer's own renderer, see
- * paintSky: the sky post's cover. Drawn again every minute, or played. Out
- * of sight until the first sky is in, and for good without WebGL2: the dark
- * of the box around it shows instead.
- */
 const SkyCover = ({ isPlaying = false, className }: Props) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { animationsEnabled } = useAnimationPreference();
   const plays = isPlaying && animationsEnabled;
+  // With the 3D turned off in the settings, the box's dark shows, as it
+  // does without WebGL2
+  const isThreeD = useThreeD();
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    if (!isThreeD) {
+      canvas.style.visibility = "hidden";
+      return;
+    }
     const context = canvas.getContext("2d", { alpha: false });
     if (!context) return;
     let weather = skyWeather(null, SKY_DEFAULTS.clouds);
     let ratio = 1;
     let isCancelled = false;
     let isSeen = false;
-    // How far ahead of the clock the played day is, how far its wind has
-    // carried the clouds, and how long it has played, for the rain and snow
     let ahead = 0;
     const drift: [number, number] = [0, 0];
     let played = 0;
 
-    // Nothing until it's on screen and the shaders are ready. A day that
-    // plays is drawn on the player once that's ready
     const draw = () => {
       if (!isSeen) return;
       const frame = skyFrameAt(new Date(Date.now() + ahead), weather, ratio, {
@@ -206,8 +176,6 @@ const SkyCover = ({ isPlaying = false, className }: Props) => {
       if (isDrawn) canvas.style.visibility = "visible";
     };
 
-    // While it plays and shows, a frame at a time: the sky as it is for a
-    // moment, then the day goes by. Not while an open section covers it
     let request = 0;
     let last = 0;
     let shownFor = 0;
@@ -237,8 +205,6 @@ const SkyCover = ({ isPlaying = false, className }: Props) => {
       if (isSeen && plays) request = requestAnimationFrame(play);
     });
     observer.observe(canvas);
-    // Sized to how large it shows, which clears it, so it's drawn again.
-    // The first time is right away
     const resizeObserver = new ResizeObserver(() => {
       ratio = fitCanvas(canvas);
       draw();
@@ -262,7 +228,7 @@ const SkyCover = ({ isPlaying = false, className }: Props) => {
       cancelAnimationFrame(request);
       clearInterval(timer);
     };
-  }, [plays]);
+  }, [plays, isThreeD]);
 
   return (
     <canvas

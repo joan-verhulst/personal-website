@@ -1,6 +1,3 @@
-// The room, built and drawn off the page: the page hands its canvas over,
-// see room-client.ts, so nothing the room does, building, compiling, drawing,
-// ever holds up the page's scrolling or its animations
 
 import type { FromRoom, ToRoom } from "~/modules/about/room/handle";
 import { type Painted, SURFACE_NAMES, type SurfaceName } from "~/modules/about/room/painting";
@@ -8,8 +5,6 @@ import { createRoom, type Room, type RoomView } from "~/modules/about/room/room-
 
 const tell = (message: FromRoom) => self.postMessage(message);
 
-// The surfaces are painted by the page's own painters, and arrive here one
-// by one
 const settle = {} as Record<SurfaceName, (painted: Painted) => void>;
 const results = {} as Record<SurfaceName, Promise<Painted>>;
 for (const name of SURFACE_NAMES) {
@@ -18,7 +13,6 @@ for (const name of SURFACE_NAMES) {
   });
 }
 
-// What the page has said so far, for the room once it's built
 let room: Room | null = null;
 let isGone = false;
 let view: RoomView = { width: 0, height: 0, devicePixelRatio: 1 };
@@ -34,6 +28,7 @@ self.addEventListener("message", async ({ data }: MessageEvent<ToRoom>) => {
           onStatus: (label) => tell({ type: "status", label }),
           onProgress: (share) => tell({ type: "progress", share }),
           onReady: () => tell({ type: "ready" }),
+          onPerf: data.profile ? (report) => tell({ type: "perf", report }) : undefined,
           layout: data.layout,
           pictures: data.pictures,
           sleeve: data.sleeve,

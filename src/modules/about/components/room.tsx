@@ -4,37 +4,32 @@ import { gsap } from "gsap";
 import { FastForward } from "lucide-react";
 import Image from "next/image";
 import { type PointerEvent, useEffect, useRef, useState } from "react";
+import RoomPerf from "~/modules/about/components/room-perf";
 import { handleOf, type RoomHandle } from "~/modules/about/room/handle";
 import { copyLayout, savedLayout } from "~/modules/about/room/layout";
 import type { Hotspot } from "~/modules/about/room/parts";
+import type { PerfReport } from "~/modules/about/room/profiler";
 import type { Room as RoomScene, RoomView } from "~/modules/about/room/room-scene";
 import { homeClockAt } from "~/modules/about/room/schedule";
 import { stillPhaseAt, stillUrl } from "~/modules/about/room/stills";
 import { useContent } from "~/modules/content/components/content-provider";
 import { useAnimationPreference } from "~/modules/core/context/animation-preference-context";
 import { useHapticSound } from "~/modules/core/hooks/use-haptic-sound";
+import { useThreeD } from "~/modules/core/hooks/use-three-d";
 import { holdGraphics, whenGraphicsFree } from "~/modules/core/utils/gpu-busy";
 import { getState, subscribe } from "~/utils/app-layer";
 import cn from "~/utils/cn";
 
-// How long a played day takes
 const PLAY_SECONDS = 16;
+const CLOCK_EVERY = 1000 / 30;
 const DAY = 86_400_000;
-// A press that moves more than this is the page scrolling, not a click
 const DRAG_FROM = 6;
-// How far along the room is once its code has come: the rest is its
-// surfaces being painted and its light baked, which the room reports
 const LOADED_SHARE = 0.1;
-// How long after the room shows its loading picture is let go of: the
-// room's fade, and a little
 const STILL_AFTER = 700;
 
 interface Props {
-  // Shown where the room can't be drawn
   fallback?: string;
-  // What hangs in the frames on its walls, as image addresses
   pictures: string[];
-  // Something in the room was clicked
   onPick: (target: Hotspot["target"]) => void;
 }
 
@@ -44,11 +39,8 @@ interface Press {
   y: number;
 }
 
-// Being painted, on screen, or not possible here
 type Mode = "building" | "ready" | "failed";
 
-// Settles once the section has finished opening over the home screen, if
-// it's opening, and the page then has a quiet moment
 const whenCalm = () =>
   new Promise<void>((resolve) => {
     const quietly = () => {
@@ -66,8 +58,6 @@ const whenCalm = () =>
     });
   });
 
-// Lets go of a room once the section has finished closing and the page has
-// a quiet moment
 const destroyWhenCalm = (room: RoomHandle) => {
   const quietly = () => {
     if ("requestIdleCallback" in window) window.requestIdleCallback(() => room.destroy(), { timeout: 2000 });
@@ -84,8 +74,6 @@ const destroyWhenCalm = (room: RoomHandle) => {
   });
 };
 
-// How large the room shows, for the room, which may be drawn in a worker
-// where it can't measure the page itself
 const viewOf = (host: HTMLElement): RoomView => ({
   width: host.clientWidth,
   height: host.clientHeight,
@@ -94,56 +82,44 @@ const viewOf = (host: HTMLElement): RoomView => ({
 
 const prefersLessMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-// Locally, /about?tune opens the room's tuner, see room/tuner.ts. Never in
-// the built site
 const wantsTuner = () =>
   process.env.NODE_ENV === "development" &&
   new URLSearchParams(window.location.search).has("tune");
 
-/**
- * The room on the about page: a painting of my room, drawn with three.js
- * once it's on screen, with the sun as it is at home right now and me in it
- * on my day's schedule, see room/room-scene.ts. The status says what I'm
- * doing and the button plays the last day through. The things that open
- * something on the page say so under the pointer.
- */
+const wantsPerf = () =>
+  process.env.NODE_ENV === "development" &&
+  new URLSearchParams(window.location.search).has("perf");
+
 const Room = ({ fallback, pictures, onPick }: Props) => {
-  // Holds the canvas, which is made with the room: a canvas keeps its
-  // drawing context for good, and a room gives its context back when it
-  // goes, so the next room needs a canvas of its own
   const hostRef = useRef<HTMLDivElement>(null);
   const roomRef = useRef<RoomHandle | null>(null);
-  // Which look under the pointer is the latest: answers to older ones are
-  // too late to show
   const hoverRef = useRef(0);
   const pressRef = useRef<Press | null>(null);
   const offsetRef = useRef({ ms: 0 });
-  // While tuning, clicks in the room are the tuner's
   const isTuningRef = useRef(false);
   const { animationsEnabled } = useAnimationPreference();
   const haptic = useHapticSound();
-  // What's on rotation first, on the record player's label and sleeve
   const { records } = useContent();
   const firstCover = records[0]?.cover;
   const sleeve = firstCover ? `/_next/image?url=${encodeURIComponent(firstCover)}&w=384&q=75` : undefined;
   const [mode, setMode] = useState<Mode>("building");
-  // How far the room is from showing, 0 to 1, while it's being built
+  const isThreeD = useThreeD();
+  const shown: Mode = isThreeD ? mode : "failed";
   const [progress, setProgress] = useState(0);
-  // A picture of the room as it looks at this hour, shown blurred until the
-  // room itself is ready. Picked here, not on the server: the page is built
-  // ahead, and the hour is the visitor's
   const [still, setStill] = useState<string | null>(null);
   const [status, setStatus] = useState("");
   const [clock, setClock] = useState("");
   const [isPlaying, setPlaying] = useState(false);
   const [pointed, setPointed] = useState<{ hotspot: Hotspot; x: number; y: number } | null>(null);
+  const [isProfiling, setProfiling] = useState(false);
+  const [perf, setPerf] = useState<PerfReport | null>(null);
 
-  // Built when it first comes on screen, drawn while it shows. The pictures
-  // are read once, when it's built
   // biome-ignore lint/correctness/useExhaustiveDependencies: built once, see above
   useEffect(() => {
     const host = hostRef.current;
-    if (!host) return;
+    if (!isThreeD || !host) return;
+    setMode("building");
+    setProgress(0);
     const canvas = document.createElement("canvas");
     canvas.className = "block size-full";
     host.append(canvas);
@@ -154,12 +130,7 @@ const Room = ({ fallback, pictures, onPick }: Props) => {
     let detachTuner: (() => void) | null = null;
     let stillTimer: ReturnType<typeof setTimeout> | null = null;
 
-    // Shown once its light is baked, so the light never settles in view. The
-    // room shows itself anyway if that takes too long, counting only while
-    // it's on screen, see room-scene.ts
-    // While the room is made, the browser's graphics are busy with it: other
-    // canvases on the page wait to start, see gpu-busy.ts. Free again a
-    // moment after it shows, once its first full frames are drawn
+    // While the room is made, other canvases wait for the GPU, see gpu-busy.ts
     let freeGraphics: (() => void) | null = null;
     const letGraphicsGo = () => {
       freeGraphics?.();
@@ -168,7 +139,6 @@ const Room = ({ fallback, pictures, onPick }: Props) => {
     const reveal = () => {
       if (isCancelled) return;
       setMode("ready");
-      // The picture under it goes once the room has faded in over it
       stillTimer = setTimeout(() => {
         setStill(null);
         letGraphicsGo();
@@ -185,17 +155,14 @@ const Room = ({ fallback, pictures, onPick }: Props) => {
     const build = async () => {
       isBuilding = true;
       const isTuning = wantsTuner();
-      // The surfaces' painting starts first, from a small module of its
-      // own, while the rest of the room is still on its way
+      const profile = wantsPerf();
+      setProfiling(profile);
+      const onPerf = profile ? setPerf : undefined;
       const painting = import("~/modules/about/room/painter").then(({ startPainting }) =>
         startPainting(),
       );
-      // The room itself waits for the section to finish opening and for a
-      // quiet moment: building it is heavy, and the opening would stutter
       await whenCalm();
-      // And for lighter graphics set up first, like the light table's loupe,
-      // to be entirely ready: they'd wait behind the room otherwise, holding
-      // the page up, see gpu-busy.ts
+      // Lighter canvases (the loupe) go first, or they'd wait behind the room
       await whenGraphicsFree();
       if (isCancelled) {
         painting.then((started) => started.stop()).catch(() => {});
@@ -203,9 +170,6 @@ const Room = ({ fallback, pictures, onPick }: Props) => {
       }
       freeGraphics = holdGraphics();
 
-      // Drawn in a worker where the browser can, off the page entirely, see
-      // room.worker.ts. The tuner reaches into the room, so it's drawn on
-      // the page while tuning, and where there's no other way
       if (!isTuning && typeof canvas.transferControlToOffscreen === "function") {
         let started: Awaited<typeof painting>;
         let startRoomWorker: typeof import("~/modules/about/room/room-client").startRoomWorker;
@@ -232,12 +196,14 @@ const Room = ({ fallback, pictures, onPick }: Props) => {
             pictures,
             sleeve,
             reducedMotion: prefersLessMotion(),
+            profile,
             painting: started,
           },
           {
             onStatus: setStatus,
             onProgress: tellProgress,
             onReady: reveal,
+            onPerf,
             onFailed: () => {
               fail();
             },
@@ -262,8 +228,6 @@ const Room = ({ fallback, pictures, onPick }: Props) => {
           painting,
         ]);
       } catch {
-        // Its code didn't come, like just after the site changed: the
-        // picture of the room instead, and no painting for nothing
         painting.then((started) => started.stop()).catch(() => {});
         fail();
         return;
@@ -274,7 +238,6 @@ const Room = ({ fallback, pictures, onPick }: Props) => {
         return;
       }
       setProgress(LOADED_SHARE);
-      // After a paint, so the box is up while the room is being made
       await new Promise((resolve) => requestAnimationFrame(resolve));
       if (isCancelled) {
         started.stop();
@@ -287,6 +250,7 @@ const Room = ({ fallback, pictures, onPick }: Props) => {
           onStatus: setStatus,
           onProgress: tellProgress,
           onReady: reveal,
+          onPerf,
           layout: draft ?? copyLayout(savedLayout),
           pictures,
           sleeve,
@@ -298,7 +262,6 @@ const Room = ({ fallback, pictures, onPick }: Props) => {
         fail();
         return;
       }
-      // Gone while it was being built: let go of it at once
       if (isCancelled) {
         built.destroy();
         return;
@@ -340,8 +303,6 @@ const Room = ({ fallback, pictures, onPick }: Props) => {
       gsap.killTweensOf(offsetRef.current);
       detachTuner?.();
       isTuningRef.current = false;
-      // Stopped at once, let go of later: freeing everything it holds is
-      // heavy, and leaving the page is when the section closes, animated
       if (room) {
         room.setVisible(false);
         destroyWhenCalm(room);
@@ -349,14 +310,14 @@ const Room = ({ fallback, pictures, onPick }: Props) => {
       roomRef.current = null;
       canvas.remove();
     };
-  }, []);
+  }, [isThreeD]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: picked again on each turn
   useEffect(() => {
     const { stills } = savedLayout;
     if (stills) setStill(stillUrl(stillPhaseAt(new Date()), stills));
-  }, []);
+  }, [isThreeD]);
 
-  // The clock at home, on the second, following a played day
   useEffect(() => {
     const show = () =>
       setClock(homeClockAt(new Date(Date.now() + offsetRef.current.ms)));
@@ -371,17 +332,22 @@ const Room = ({ fallback, pictures, onPick }: Props) => {
     haptic.onClick();
     setPlaying(true);
     const offset = offsetRef.current;
-    const tick = () => {
+    // The clock shows no more than the room draws, or each change redraws this
+    let lastShown = Number.NEGATIVE_INFINITY;
+    const tick = (isLast = false) => {
       room.setOffset(offset.ms);
+      const now = performance.now();
+      if (!isLast && now - lastShown < CLOCK_EVERY) return;
+      lastShown = now;
       setClock(homeClockAt(new Date(Date.now() + offset.ms)));
     };
     gsap.fromTo(offset, { ms: -DAY }, {
       ms: 0,
       duration: PLAY_SECONDS,
       ease: "sine.inOut",
-      onUpdate: tick,
+      onUpdate: () => tick(),
       onComplete: () => {
-        tick();
+        tick(true);
         setPlaying(false);
       },
     });
@@ -396,7 +362,6 @@ const Room = ({ fallback, pictures, onPick }: Props) => {
     const room = roomRef.current;
     if (!room || event.pointerType !== "mouse" || isTuningRef.current) return;
     const { x, y } = at(event);
-    // Outlined, and grown a little, in the room itself
     const asked = ++hoverRef.current;
     room.hover({ x, y }).then((hotspot) => {
       if (asked !== hoverRef.current) return;
@@ -414,8 +379,6 @@ const Room = ({ fallback, pictures, onPick }: Props) => {
     pressRef.current = { id: event.pointerId, x, y };
   };
 
-  // A press that stayed put is a click. One that moved, or was cancelled,
-  // was the page scrolling, which isn't
   const handleUp = (event: PointerEvent<HTMLDivElement>, isCancelled = false) => {
     const press = pressRef.current;
     if (!press || press.id !== event.pointerId) return;
@@ -438,8 +401,6 @@ const Room = ({ fallback, pictures, onPick }: Props) => {
 
   return (
     <div className="relative size-full select-none overflow-hidden bg-neutral-950">
-      {/* The room as it looks at this hour: blurred while the live one is
-          made, which then fades in over it; sharp where it can't be drawn */}
       {still && (
         <img
           src={still}
@@ -450,17 +411,16 @@ const Room = ({ fallback, pictures, onPick }: Props) => {
           onError={() => setStill(null)}
           className={cn(
             "absolute inset-0 size-full object-cover transition-[filter,scale] duration-500",
-            mode !== "failed" && "scale-105 blur-md brightness-75",
+            shown !== "failed" && "scale-105 blur-md brightness-75",
           )}
         />
       )}
 
-      {/* Where the room can't be drawn and there's no picture of it, the photo */}
-      {fallback && !still && mode === "failed" && (
+      {fallback && !still && shown === "failed" && (
         <Image src={fallback} alt="" fill sizes="(min-width: 1024px) 960px, 100vw" className="object-cover" />
       )}
 
-      {mode !== "failed" && (
+      {shown !== "failed" && (
         <div
           ref={hostRef}
           role="img"
@@ -471,16 +431,16 @@ const Room = ({ fallback, pictures, onPick }: Props) => {
           onPointerCancel={(event) => handleUp(event, true)}
           onPointerLeave={handleLeave}
           className={cn(
-            // Positioned like the picture under it, so it's drawn over it
             "relative size-full transition-opacity duration-500",
-            mode === "ready" ? "opacity-100" : "opacity-0",
+            shown === "ready" ? "opacity-100" : "opacity-0",
             pointed ? "cursor-pointer" : "cursor-default",
           )}
         />
       )}
 
-      {/* What's under the pointer, and that it opens */}
-      {pointed && (
+      {isProfiling && isThreeD && <RoomPerf report={perf} />}
+
+      {pointed && shown === "ready" && (
         <div
           aria-hidden
           className="pointer-events-none absolute flex h-6 items-center gap-1.5 whitespace-nowrap rounded-[0.625rem] bg-neutral-950/50 px-2 text-neutral-50 text-sm backdrop-blur-lg"
@@ -493,8 +453,7 @@ const Room = ({ fallback, pictures, onPick }: Props) => {
         </div>
       )}
 
-      {/* While the room is made: how far it is, where its clock will be */}
-      {mode === "building" && (
+      {shown === "building" && (
         <div className="pointer-events-none absolute inset-x-4 bottom-4 flex items-end">
           <div
             role="progressbar"
@@ -515,8 +474,7 @@ const Room = ({ fallback, pictures, onPick }: Props) => {
         </div>
       )}
 
-      {/* The time at home and what I'm doing there */}
-      {mode === "ready" && (
+      {shown === "ready" && (
         <div className="pointer-events-none absolute inset-x-4 bottom-4 flex items-end justify-between gap-3">
           <div
             aria-live="polite"

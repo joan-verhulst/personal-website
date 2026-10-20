@@ -1,7 +1,3 @@
-// The page's side of the room drawn in a worker, see room.worker.ts: hands
-// the canvas over, passes on the painted surfaces as they come, the room's
-// size, whether it shows, the played day and the pointer, and hears back
-// what the room is doing
 
 import type { FromRoom, RoomHandle, ToRoom } from "~/modules/about/room/handle";
 import type { RoomLayout } from "~/modules/about/room/layout";
@@ -10,15 +6,11 @@ import { SURFACE_NAMES } from "~/modules/about/room/painting";
 import type { Hotspot } from "~/modules/about/room/parts";
 import type { RoomCallbacks, RoomView } from "~/modules/about/room/room-scene";
 
-// After it's asked to go, the worker gets this long, in ms, to let go of
-// what it holds before it's stopped regardless
 const GONE_WITHIN = 10_000;
 
-/** Whether this browser can draw the room in a worker. */
 export const canDrawInWorker = (canvas: HTMLCanvasElement) =>
   typeof canvas.transferControlToOffscreen === "function" && typeof Worker !== "undefined";
 
-/** Hands `canvas` to a worker that builds and draws the room on it. */
 export const startRoomWorker = (
   canvas: HTMLCanvasElement,
   options: {
@@ -27,6 +19,7 @@ export const startRoomWorker = (
     pictures: string[];
     sleeve?: string;
     reducedMotion: boolean;
+    profile: boolean;
     painting: Painting;
   },
   callbacks: RoomCallbacks & { onFailed: () => void },
@@ -40,7 +33,6 @@ export const startRoomWorker = (
     if (!isGone) worker.postMessage(message, transfer);
   };
 
-  // Questions about the pointer, waiting for their answers
   const waiting = new Map<number, (hotspot: Hotspot | null) => void>();
   let nextId = 0;
   const ask = (question: (id: number) => ToRoom) =>
@@ -70,18 +62,18 @@ export const startRoomWorker = (
         waiting.get(data.id)?.(data.hotspot);
         waiting.delete(data.id);
         return;
+      case "perf":
+        callbacks.onPerf?.(data.report);
+        return;
       case "failed":
         callbacks.onFailed();
         return;
     }
   });
-  // Its code didn't load, or it broke
   worker.addEventListener("error", () => {
     if (!isGone) callbacks.onFailed();
   });
 
-  // Addresses in full: a worker may be started from an address of its own,
-  // a blob's, from which one that starts with a slash leads nowhere
   const absolute = (address: string) => new URL(address, location.href).href;
   send(
     {
@@ -93,7 +85,6 @@ export const startRoomWorker = (
     },
     [offscreen],
   );
-  // Each surface on to the worker as it's painted, handed over, not copied
   for (const name of SURFACE_NAMES) {
     painting.results[name].then((painted) => {
       send({ type: "painted", painted }, [painted.color.buffer, painted.bump.buffer]);

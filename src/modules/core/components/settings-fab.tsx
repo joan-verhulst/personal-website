@@ -2,6 +2,7 @@
 
 import { gsap } from "gsap";
 import {
+  Box,
   Settings2,
   Sparkles,
   SparklesIcon,
@@ -18,16 +19,17 @@ import {
   PREFERENCE_EVENT,
   setSoundEnabled,
 } from "~/modules/core/hooks/use-haptic-sound";
+import { setThreeDEnabled, useThreeD } from "~/modules/core/hooks/use-three-d";
 import { track } from "~/utils/eyes";
 
 const SettingsFab = () => {
   const [expanded, setExpanded] = useState(false);
   const [muted, setMuted] = useState(false);
   const { animationsEnabled, setAnimationsEnabled } = useAnimationPreference();
+  const isThreeD = useThreeD();
   const contentRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Sync muted state with localStorage and preference change events
   useEffect(() => {
     setMuted(!isSoundEnabled());
 
@@ -50,7 +52,6 @@ const SettingsFab = () => {
     });
   }, []);
 
-  // Collapse on click outside
   useEffect(() => {
     if (!expanded) return;
     const handleClickOutside = (e: MouseEvent) => {
@@ -70,7 +71,6 @@ const SettingsFab = () => {
 
     setExpanded(true);
 
-    // Measure the natural width, then animate from 0
     if (!contentRef.current) return;
     gsap.set(contentRef.current, { width: "auto", opacity: 1 });
     const fullWidth = contentRef.current.offsetWidth;
@@ -101,20 +101,26 @@ const SettingsFab = () => {
     });
   };
 
+  const handleThreeDToggle = () => {
+    setThreeDEnabled(!isThreeD);
+    track("Setting Changed", {
+      setting: "3d",
+      enabled: !isThreeD,
+      from: "settings",
+    });
+  };
+
   return (
-    // Fades out while the footer is open, see data-footer in use-curtain.ts
     <div
       ref={containerRef}
       className="pointer-events-auto in-data-[footer=open]:invisible flex h-10 items-center overflow-hidden rounded-full border border-neutral-950/10 bg-neutral-50 in-data-[footer=open]:opacity-0 transition-[opacity,visibility] duration-300"
     >
-      {/* Expandable settings panel */}
       <div
         ref={contentRef}
         className="flex items-center overflow-hidden"
         style={{ width: 0, opacity: 0 }}
       >
         <div className="flex items-center gap-2 pl-2">
-          {/* Animation toggle */}
           <button
             onClick={handleAnimationsToggle}
             className="flex cursor-pointer items-center gap-1 whitespace-nowrap rounded-full bg-primary-500 px-2.5 py-1 text-neutral-50 text-xs transition-colors hover:bg-primary-600"
@@ -132,7 +138,15 @@ const SettingsFab = () => {
             )}
           </button>
 
-          {/* Sound toggle */}
+          <button
+            type="button"
+            onClick={handleThreeDToggle}
+            className="flex cursor-pointer items-center gap-1 whitespace-nowrap rounded-full bg-primary-500 px-2.5 py-1 text-neutral-50 text-xs transition-colors hover:bg-primary-600"
+          >
+            {isThreeD ? "Disable 3D" : "Enable 3D"}
+            <Box className="h-3 w-3" />
+          </button>
+
           <button
             onClick={handleSoundToggle}
             className="flex cursor-pointer items-center gap-1 whitespace-nowrap rounded-full bg-primary-500 px-2.5 py-1 text-neutral-50 text-xs transition-colors hover:bg-primary-600"
@@ -152,7 +166,6 @@ const SettingsFab = () => {
         </div>
       </div>
 
-      {/* Settings icon */}
       <button
         onClick={handleFabClick}
         className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center text-neutral-950/40 transition-colors hover:text-neutral-950"

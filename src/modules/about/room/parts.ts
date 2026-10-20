@@ -1,8 +1,3 @@
-// What's in the room, built in code. The room itself is a closed box: four
-// walls, a floor and a ceiling, every one of them solid to the sun, with the
-// window and the door cut out of them. Everything in it is built around its
-// own origin and placed by the layout, see layout.json, so the tuner can
-// move it. Every surface is painted, see textures.ts
 
 import {
   AdditiveBlending,
@@ -54,13 +49,9 @@ import {
 } from "~/modules/about/room/textures";
 import { COVER_COLORS } from "~/modules/favorites/utils/brochure";
 
-// What a click on something in the room opens on the page
 export type Hotspot = { label: string; target: "gear" | "music" };
 
-// How thick the walls, the floor's edge and the ceiling are
 export const WALL = 0.12;
-
-// ── Materials ───────────────────────────────────────────────────────────────
 
 const standard = (
   color: string,
@@ -81,8 +72,6 @@ const standard = (
     }),
   });
 
-// A painted surface on a material: its picture and its bumps, repeated
-// this many times across and up whatever it's on
 const painted = (
   surface: Surface,
   repeatX: number,
@@ -102,23 +91,16 @@ const painted = (
   });
 };
 
-/** Everything the room is painted with, made once per room. */
 export interface Palette {
-  // Painted once, then shared
   walnut: Surface;
   planks: Surface;
   spruce: Surface;
   sunburst: Surface;
   rug: Surface;
-  // Every texture made, to let go of with the room, and whether it's gone:
-  // a picture that arrives after that is let go of right away
   textures: Texture[];
   isDisposed: boolean;
-  // Settles once the surfaces are painted: flat colours until then
   painted: Promise<void>;
-  // Stops the painting, when the room goes before it's done
   stopPainting: () => void;
-  // Materials whose colour the layout sets, see applyColors
   walls: MeshStandardMaterial;
   hallway: MeshStandardMaterial;
   floor: MeshStandardMaterial;
@@ -127,13 +109,10 @@ export interface Palette {
   sheets: MeshStandardMaterial;
   pillows: MeshStandardMaterial;
   chair: MeshStandardMaterial;
-  // Every walnut surface, tinted together
   wood: MeshStandardMaterial[];
-  // Coloured with the trim: casings, skirting, the window frame, the door
   trim: MeshStandardMaterial;
   frame: MeshStandardMaterial;
   door: MeshStandardMaterial;
-  // Plain ones
   ceiling: MeshStandardMaterial;
   brass: MeshStandardMaterial;
   pictureFrame: MeshStandardMaterial;
@@ -155,11 +134,6 @@ export interface Palette {
   leaf: MeshStandardMaterial;
 }
 
-/**
- * Every material, on surfaces that are painted in the background: flat
- * colours until `painted` settles, see createSurfaces in textures.ts. The
- * painting may have been started before the room, see painter.ts.
- */
 export const createPalette = (
   painting?: Painting,
   onPainted?: (done: number, total: number) => void,
@@ -168,7 +142,6 @@ export const createPalette = (
   const { plaster, fabric, linen, leather, walnut, planks, spruce, sunburst, rug } = surfaces;
   const leaf = leafTexture();
 
-  // The walls' picture repeats with their size, see wallBox
   const plasterMaterial = () =>
     new MeshStandardMaterial({
       map: plaster.color,
@@ -237,17 +210,12 @@ export const createPalette = (
   };
 };
 
-// Walnut, at this many repeats, tinted with the rest of the wood
 const woodMaterial = (palette: Palette, repeatX: number, repeatY: number) => {
   const material = painted(palette.walnut, repeatX, repeatY, { roughness: 0.5, bump: 0.015 });
   palette.wood.push(material);
   return material;
 };
 
-/**
- * The palette's own materials: they keep their own identity when the room
- * is merged, see merge.ts, so the layout's colours still reach them.
- */
 export const tintedBy = (palette: Palette) => {
   const materials = new Set<Material>(palette.wood);
   for (const value of Object.values(palette)) {
@@ -256,7 +224,6 @@ export const tintedBy = (palette: Palette) => {
   return materials;
 };
 
-/** Gives the materials the layout's colours. */
 export const applyColors = (palette: Palette, colors: RoomLayout["colors"]) => {
   palette.walls.color.set(colors.walls);
   palette.hallway.color.set(colors.hallway);
@@ -271,8 +238,6 @@ export const applyColors = (palette: Palette, colors: RoomLayout["colors"]) => {
   palette.frame.color.set(colors.trim);
   palette.door.color.set(colors.trim);
 };
-
-// ── Builders ────────────────────────────────────────────────────────────────
 
 const mesh = (
   geometry: BufferGeometry,
@@ -309,8 +274,6 @@ const rounded = (
   z = 0,
 ) =>
   mesh(
-    // A bevel under 2 cm reads the same in two steps as in four, at a
-    // third of the triangles
     new RoundedBoxGeometry(width, height, depth, radius < 0.02 ? 2 : 4, radius),
     material,
     x,
@@ -336,8 +299,6 @@ const cylinder = (
     z,
   );
 
-// A box whose picture repeats every `tile` meters on every face, whatever
-// its size, so plaster looks the same on a narrow piece of wall and a wide one
 const wallBox = (
   width: number,
   height: number,
@@ -350,7 +311,6 @@ const wallBox = (
 ) => {
   const geometry = new BoxGeometry(width, height, depth);
   const uv = geometry.attributes.uv;
-  // The faces in order, +x, -x, +y, -y, +z, -z, four corners each
   const sizes = [
     [depth, height],
     [depth, height],
@@ -368,8 +328,6 @@ const wallBox = (
   return mesh(geometry, material, x, y, z);
 };
 
-// Something that can be clicked: every mesh in it says what it opens, and
-// which group is the whole thing, to outline and grow under the pointer
 const markHotspot = (group: Group, hotspot: Hotspot) => {
   group.traverse((child) => {
     if (child instanceof Mesh) {
@@ -380,8 +338,6 @@ const markHotspot = (group: Group, hotspot: Hotspot) => {
   return group;
 };
 
-// ── The shell ───────────────────────────────────────────────────────────────
-
 interface Opening {
   from: number;
   to: number;
@@ -390,12 +346,6 @@ interface Opening {
   isDoor: boolean;
 }
 
-/**
- * A wall along its own x, `length` long, centred on its origin, standing on
- * the floor, WALL thick, with its room side facing +z. Openings are cut out
- * of it; a window gets a frame, mullions and a sill, a door a casing.
- * Skirting runs along the room side, around the doors.
- */
 const buildWall = (
   palette: Palette,
   material: Material,
@@ -421,8 +371,6 @@ const buildWall = (
     const width = to - from;
     const middle = (from + to) / 2;
     if (isDoor) {
-      // The casing around the doorway, on the room side, and the jambs
-      // lining it through the wall
       wall.add(box(0.07, top, 0.03, palette.trim, from - 0.035, top / 2, face + 0.015));
       wall.add(box(0.07, top, 0.03, palette.trim, to + 0.035, top / 2, face + 0.015));
       wall.add(box(width + 0.14, 0.07, 0.03, palette.trim, middle, top + 0.035, face + 0.015));
@@ -431,14 +379,11 @@ const buildWall = (
       wall.add(box(width, 0.02, WALL + 0.004, palette.trim, middle, top - 0.01, 0));
       continue;
     }
-    // The reveal, lining the opening through the wall
     const height = top - bottom;
     wall.add(box(0.015, height, WALL + 0.004, palette.frame, from + 0.0075, (bottom + top) / 2, 0));
     wall.add(box(0.015, height, WALL + 0.004, palette.frame, to - 0.0075, (bottom + top) / 2, 0));
     wall.add(box(width, 0.015, WALL + 0.004, palette.frame, middle, top - 0.0075, 0));
     wall.add(box(width, 0.015, WALL + 0.004, palette.frame, middle, bottom + 0.0075, 0));
-    // The window: a frame in the opening, two mullions across it and a sill
-    // under it on the room side. They block the sun like the walls do
     const middleY = (bottom + top) / 2;
     wall.add(box(0.05, top - bottom, 0.06, palette.frame, from + 0.025, middleY, 0));
     wall.add(box(0.05, top - bottom, 0.06, palette.frame, to - 0.025, middleY, 0));
@@ -449,7 +394,6 @@ const buildWall = (
     wall.add(box(width + 0.12, 0.03, 0.16, palette.frame, middle, bottom - 0.015, face + 0.05));
   }
 
-  // Skirting on the room side, broken by the doors
   let from = -half;
   for (const opening of [...sorted.filter(({ isDoor }) => isDoor), { from: half, to: half }]) {
     if (opening.from > from) {
@@ -460,10 +404,8 @@ const buildWall = (
   return wall;
 };
 
-/** Where the window is and which way it faces, worked out from the room. */
 export const windowOf = (room: RoomShape) => {
   const { window: win, width, depth } = room;
-  // A point on the window's opening: along the wall, and up it
   const point = (along: number, y: number) =>
     win.wall === "near"
       ? new Vector3(along, y, depth / 2)
@@ -472,7 +414,6 @@ export const windowOf = (room: RoomShape) => {
   const middle = (win.from + win.to) / 2;
   const middleY = (win.bottom + win.top) / 2;
   const gap = 0.03;
-  // The four panes between the mullions, each as its four corners
   const panes = [
     [win.from + 0.05, middle - gap, win.bottom + 0.05, middleY - gap],
     [middle + gap, win.to - 0.05, win.bottom + 0.05, middleY - gap],
@@ -488,11 +429,6 @@ export const windowOf = (room: RoomShape) => {
   };
 };
 
-/**
- * The closed box of the room: the floor, the ceiling and four walls, all
- * solid to the sun, the window in the near or the left wall and the door in
- * the right one. Through the door, the hallway, with its own light.
- */
 export const createShell = (palette: Palette, room: RoomShape) => {
   const shell = new Group();
   const { width, depth, height, hallway, window: win, door } = room;
@@ -501,7 +437,6 @@ export const createShell = (palette: Palette, room: RoomShape) => {
   const outerW = width + WALL * 2;
   const outerD = depth + WALL * 2;
 
-  // The floor, with its boards about 12 cm wide, a slab under it
   for (const material of [palette.floor]) {
     material.map?.repeat.set(outerW / 1.85, outerD / 1.85);
     material.bumpMap?.repeat.set(outerW / 1.85, outerD / 1.85);
@@ -512,11 +447,8 @@ export const createShell = (palette: Palette, room: RoomShape) => {
   shell.add(floor);
   shell.add(box(outerW, WALL, outerD, palette.trim, 0, -WALL / 2 - 0.001, 0));
 
-  // The ceiling: a slab, so the sun can't come through it
   shell.add(box(outerW, WALL, outerD, palette.ceiling, 0, height + WALL / 2, 0));
 
-  // Openings in each wall's own x. The near and the left wall run the other
-  // way from the room's x and z, see the turns below
   const windowOpening: Opening = { from: -win.to, to: -win.from, bottom: win.bottom, top: win.top, isDoor: false };
   const doorOpening: Opening = { from: door.from, to: door.to, bottom: 0, top: door.height, isDoor: true };
 
@@ -540,7 +472,6 @@ export const createShell = (palette: Palette, room: RoomShape) => {
   );
   place(buildWall(palette, palette.walls, outerD, height, [doorOpening]), halfW + WALL / 2, 0, -Math.PI / 2);
 
-  // The hallway beyond the door: a closed box of its own, lit from inside
   const hallX = halfW + WALL + hallway / 2;
   palette.hallFloor.map?.repeat.set(hallway / 1.85, outerD / 1.85);
   palette.hallFloor.bumpMap?.repeat.set(hallway / 1.85, outerD / 1.85);
@@ -557,7 +488,6 @@ export const createShell = (palette: Palette, room: RoomShape) => {
   hallLight.position.set(hallX, height - 0.35, (door.from + door.to) / 2);
   shell.add(hallLight);
 
-  // The door, hinged at the doorway's far edge, swung open into the hallway
   const span = door.to - door.from;
   const leaf = new Group();
   leaf.position.set(halfW + WALL, 0, door.from);
@@ -573,17 +503,10 @@ export const createShell = (palette: Palette, room: RoomShape) => {
   return shell;
 };
 
-// ── The bed ─────────────────────────────────────────────────────────────────
-
-// Its own origin is its middle on the floor; the head is toward its +z
 export const BED_SIZE = { width: 1.6, length: 2.0 };
 
-// A duvet thrown over the bed: a slab with folds pressed into its top
-// The top is a soft, uneven drape with a few creases running through it,
-// from noise rather than waves, so no fold repeats another. Fine enough for
-// the creases to be round
 const duvetGeometry = (width: number, depth: number) => {
-  const geometry = new BoxGeometry(width, 0.2, depth, 96, 1, 96);
+  const geometry = new BoxGeometry(width, 0.2, depth, 48, 1, 48);
   const position = geometry.attributes.position;
   for (let i = 0; i < position.count; i++) {
     const x = position.getX(i);
@@ -596,9 +519,16 @@ const duvetGeometry = (width: number, depth: number) => {
     const crease = ridged(u * 0.7, v * 0.9 + 0.2, 4, 3) ** 3;
     const wrinkle = fbm(u, v, 32, 2) - 0.5;
     const fold = 0.09 * drape + 0.03 * crease + 0.006 * wrinkle;
-    // Lower toward the edges, where it hangs
     const edge = Math.max(Math.abs(x) / (width / 2), Math.abs(z) / (depth / 2));
     position.setY(i, y + fold - 0.06 * edge ** 4);
+  }
+  const bottom = geometry.groups[3];
+  const index = geometry.index;
+  if (bottom && index) {
+    const faces = Array.from(index.array);
+    faces.splice(bottom.start, bottom.count);
+    geometry.setIndex(faces);
+    geometry.clearGroups();
   }
   geometry.computeVertexNormals();
   return geometry;
@@ -612,14 +542,12 @@ export const createBed = (palette: Palette) => {
   for (const side of [-1, 1]) {
     bed.add(rounded(0.6, 0.14, 0.4, 0.06, palette.pillows, side * 0.38, 0.5, length / 2 - 0.3));
   }
-  // From the foot up to just short of the pillows
   const duvet = mesh(duvetGeometry(width + 0.06, 1.6), palette.duvet, 0, 0.55, -length / 2 + 0.85);
   duvet.rotation.y = 0.02;
   bed.add(duvet);
   return { bed, duvet };
 };
 
-/** The round rug, around its middle. */
 export const createRug = (palette: Palette) => {
   const rug = new Group();
   const woven = painted(palette.rug, 1, 1, { roughness: 1, bump: 0.03 });
@@ -632,9 +560,6 @@ export const createRug = (palette: Palette) => {
   return rug;
 };
 
-// ── The desk ────────────────────────────────────────────────────────────────
-
-// Its own origin is its middle on the floor; its front is toward its +z
 export const DESK_SIZE = { width: 2.4, depth: 0.7, top: 0.74 };
 
 export const createDesk = (palette: Palette) => {
@@ -650,8 +575,6 @@ export const createDesk = (palette: Palette) => {
   }
   desk.add(box(width - 0.2, 0.04, 0.045, palette.blackMetal, 0, 0.12, back + 0.06));
 
-  // Two monitors, on their stands, turned a little toward each other. Their
-  // pictures show, but they don't light the room
   const screen = screenTexture();
   palette.textures.push(screen);
   const screenMaterial = new MeshStandardMaterial({
@@ -678,8 +601,6 @@ export const createDesk = (palette: Palette) => {
     desk.add(monitor);
   }
 
-  // Two warm lamps, one at either end: a round foot, a stem and a fabric
-  // shade the light glows through
   const shadeMaterial = new MeshStandardMaterial({
     color: "#efe3cf",
     emissive: "#ffb46a",
@@ -693,7 +614,6 @@ export const createDesk = (palette: Palette) => {
     lamp.add(cylinder(0.065, 0.07, 0.016, palette.brass, 0, 0.008, 0, 32));
     lamp.add(cylinder(0.008, 0.008, 0.26, palette.brass, 0, 0.14, 0, 12));
     const shade = mesh(new CylinderGeometry(0.075, 0.11, 0.14, 40, 1, true), shadeMaterial, 0, 0.3, 0);
-    // The shade lets its light through, so it casts no shadow of its own
     shade.castShadow = false;
     lamp.add(shade);
     const light = new PointLight("#ffb46a", 0, 4, 2);
@@ -707,8 +627,6 @@ export const createDesk = (palette: Palette) => {
     return light;
   });
 
-  // An LED strip along the back edge, under the top, washing the wall
-  // behind with light. The strip shines away from the room, toward the wall
   const ledMaterial = standard("#000000", { emissive: "#ffc890", emissiveIntensity: 0 });
   const led = box(width - 0.12, 0.012, 0.008, ledMaterial, 0, top - 0.035, back + 0.004);
   led.castShadow = false;
@@ -717,12 +635,11 @@ export const createDesk = (palette: Palette) => {
   ledLight.position.set(0, top - 0.035, back - 0.002);
   desk.add(ledLight);
 
-  // The keyboard, key by key, and the mouse
   const keyboard = new Group();
   keyboard.position.set(-0.13, top + 0.025, front - 0.2);
   keyboard.add(rounded(0.44, 0.014, 0.15, 0.004, palette.rubber, 0, 0.007, 0));
   const keyMaterial = standard("#46464c", { roughness: 0.6, emissive: "#5050ff", emissiveIntensity: 0.12 });
-  const keys = new InstancedMesh(new RoundedBoxGeometry(0.024, 0.008, 0.024, 2, 0.003), keyMaterial, 70);
+  const keys = new InstancedMesh(new BoxGeometry(0.024, 0.008, 0.024), keyMaterial, 70);
   const key = new Object3D();
   let count = 0;
   for (let row = 0; row < 5; row++) {
@@ -738,7 +655,6 @@ export const createDesk = (palette: Palette) => {
   desk.add(keyboard);
   desk.add(rounded(0.065, 0.036, 0.11, 0.016, palette.rubber, 0.27, top + 0.043, front - 0.2));
 
-  // The PC on the floor under the desk's right end, its fans dark
   const pc = new Group();
   pc.position.set(width / 2 - 0.25, 0.225, 0.05);
   pc.add(rounded(0.22, 0.45, 0.42, 0.01, palette.blackPlastic, 0, 0, 0));
@@ -748,7 +664,6 @@ export const createDesk = (palette: Palette) => {
   }
   desk.add(pc);
 
-  // The book of gear, lying on the desk to be picked up
   const book = new Group();
   book.position.set(-width / 2 + 0.25, top + 0.025, front - 0.22);
   book.rotation.y = -0.3;
@@ -762,11 +677,6 @@ export const createDesk = (palette: Palette) => {
   return { desk, screenMaterial, shadeMaterial, deskLamps, ledMaterial, ledLight };
 };
 
-/**
- * Headphones lying on the desk: the band in a half circle, a cup at either
- * end. They open what's on rotation. Their own origin is under the band's
- * middle, on whatever they lie on.
- */
 export const createHeadphones = (palette: Palette) => {
   const headphones = new Group();
   const band = mesh(new TorusGeometry(0.085, 0.011, 10, 32, Math.PI), palette.blackPlastic, 0, 0.022, 0);
@@ -779,18 +689,8 @@ export const createHeadphones = (palette: Palette) => {
   return markHotspot(headphones, { label: "On rotation", target: "music" });
 };
 
-// The colours of the sleeves in the record cabinet, muted, like a shelf of
-// records seen from the side
 const SLEEVE_COLORS = ["#e8e1d2", "#1d1d1f", "#b8452c", "#d8b25a", "#5d7a8c", "#3b4a36", "#a59c8c", "#7a3b2e", "#f1ece2", "#2f3b52"];
 
-/**
- * The record player on a low cabinet of records: two cubbies of sleeves,
- * the deck on top with a record on the platter and the arm down on it, and
- * the record's sleeve leaning on the wall beside it. The record's label and
- * sleeve show `cover`, what's on rotation first. It opens what's on
- * rotation. Its own origin is on the floor at the middle of the cabinet's
- * back, against the wall; it stands out along +z.
- */
 export const createTurntable = (palette: Palette, cover: string | undefined) => {
   const player = new Group();
   const width = 0.78;
@@ -799,7 +699,6 @@ export const createTurntable = (palette: Palette, cover: string | undefined) => 
   const board = 0.025;
   const wood = woodMaterial(palette, 1, 0.4);
 
-  // The cabinet: open at the front, a board down the middle
   player.add(box(width, board, depth, wood, 0, height - board / 2, depth / 2));
   player.add(box(width, board, depth, wood, 0, board / 2, depth / 2));
   for (const x of [-(width - board) / 2, 0, (width - board) / 2]) {
@@ -807,7 +706,6 @@ export const createTurntable = (palette: Palette, cover: string | undefined) => 
   }
   player.add(box(width, height, 0.008, wood, 0, height / 2, 0.004));
 
-  // The records, standing on edge in both cubbies, each its own colour
   const inner = (width - board * 3) / 2;
   const sleeve = 0.315;
   const perCubby = 30;
@@ -830,7 +728,6 @@ export const createTurntable = (palette: Palette, cover: string | undefined) => 
   sleeves.receiveShadow = true;
   player.add(sleeves);
 
-  // The deck: a lacquered plinth on four feet, at the cabinet's left
   const deckX = -width / 2 + 0.22;
   const deckZ = depth / 2;
   const lacquer = standard("#1c1c1e", { roughness: 0.3 });
@@ -843,13 +740,11 @@ export const createTurntable = (palette: Palette, cover: string | undefined) => 
   player.add(rounded(0.42, 0.07, 0.34, 0.01, lacquer, deckX, height + 0.047, deckZ));
   const top = height + 0.082;
 
-  // The platter, the record on it, its label and the spindle
   const platterX = deckX - 0.05;
   const platterZ = deckZ + 0.01;
   player.add(cylinder(0.148, 0.148, 0.018, aluminium, platterX, top + 0.009, platterZ, 64));
   const vinyl = standard("#0e0e0f", { roughness: 0.25 });
   player.add(cylinder(0.146, 0.146, 0.003, vinyl, platterX, top + 0.0195, platterZ, 64));
-  // What's on rotation, on the label and the sleeve both, once it's loaded
   const art = new MeshStandardMaterial({ color: "#e9dcc0", roughness: 0.6 });
   if (cover) showPicture(palette, art, cover, 1);
   const label = mesh(new CircleGeometry(0.045, 40), art, platterX, top + 0.0215, platterZ);
@@ -858,7 +753,6 @@ export const createTurntable = (palette: Palette, cover: string | undefined) => 
   player.add(label);
   player.add(cylinder(0.0035, 0.0035, 0.014, palette.chrome, platterX, top + 0.025, platterZ, 12));
 
-  // The tonearm, from its pivot at the back right down onto the record
   const pivotX = deckX + 0.16;
   const pivotZ = deckZ - 0.1;
   player.add(cylinder(0.028, 0.03, 0.02, aluminium, pivotX, top + 0.01, pivotZ, 32));
@@ -868,7 +762,6 @@ export const createTurntable = (palette: Palette, cover: string | undefined) => 
   const reach = Math.hypot(toX, toZ);
   const arm = new Group();
   arm.position.set(pivotX, top + 0.062, pivotZ);
-  // Turned toward the record, then tipped down onto it
   arm.rotation.set(Math.atan2(0.035, reach), Math.atan2(toX, toZ), 0, "YXZ");
   const tube = cylinder(0.0045, 0.0045, reach, palette.chrome, 0, 0, reach / 2, 12);
   tube.rotation.x = Math.PI / 2;
@@ -880,11 +773,9 @@ export const createTurntable = (palette: Palette, cover: string | undefined) => 
   arm.add(box(0.014, 0.012, 0.02, palette.blackPlastic, 0, -0.01, reach + 0.004));
   player.add(arm);
 
-  // Its knobs: the speed at the front left, start at the front right
   player.add(cylinder(0.013, 0.013, 0.008, aluminium, deckX - 0.18, top + 0.004, deckZ + 0.14, 20));
   player.add(cylinder(0.011, 0.011, 0.006, aluminium, deckX + 0.17, top + 0.003, deckZ + 0.14, 20));
 
-  // The sleeve, standing on the cabinet's right, leaning on the wall
   const leaning = new Group();
   leaning.position.set(width / 2 - 0.175, height, 0.05);
   leaning.rotation.x = -0.12;
@@ -897,7 +788,6 @@ export const createTurntable = (palette: Palette, cover: string | undefined) => 
   return markHotspot(player, { label: "Record player", target: "music" });
 };
 
-/** The desk chair, around its middle, facing its -z. */
 export const createChair = (palette: Palette) => {
   const chair = new Group();
   const leather = palette.chair;
@@ -921,11 +811,8 @@ export const createChair = (palette: Palette) => {
   return chair;
 };
 
-// ── The shelves with the gear ───────────────────────────────────────────────
-
 const named = (id: string) => gear.find((item) => item.id === id)?.name ?? id;
 
-// A lens barrel pointing +z, with its rings and glass
 const lens = (palette: Palette, radius: number, length: number) => {
   const barrel = new Group();
   const body = cylinder(radius, radius * 1.05, length, palette.camera, 0, 0, length / 2, 28);
@@ -940,11 +827,6 @@ const lens = (palette: Palette, radius: number, length: number) => {
   return barrel;
 };
 
-/**
- * Two shelves with the cameras, the lens and the film. Its own origin is on
- * the wall behind, at the floor; the shelves run along its x and stand out
- * along its +z.
- */
 export const createShelves = (palette: Palette) => {
   const shelves = new Group();
   const upper = 1.95;
@@ -961,8 +843,6 @@ export const createShelves = (palette: Palette) => {
   }
   const top = upper + 0.014;
 
-  // The RZ67: a box of a body with its finder on top, the lens out front
-  // and the focus knob on the side
   const rz67 = new Group();
   rz67.position.set(0.225, top, out);
   rz67.add(rounded(0.11, 0.12, 0.1, 0.008, palette.camera, 0, 0.06, 0));
@@ -976,7 +856,6 @@ export const createShelves = (palette: Palette) => {
   rz67.add(knob);
   shelves.add(markHotspot(rz67, { label: named("mamiya-rz67"), target: "gear" }));
 
-  // The M645, smaller, with its prism
   const m645 = new Group();
   m645.position.set(-0.025, top, out);
   m645.add(rounded(0.08, 0.075, 0.09, 0.006, palette.camera, 0, 0.0375, 0));
@@ -986,7 +865,6 @@ export const createShelves = (palette: Palette) => {
   m645.add(mLens);
   shelves.add(markHotspot(m645, { label: named("mamiya-m645"), target: "gear" }));
 
-  // The 110mm, standing on end
   const standing = new Group();
   standing.position.set(-0.225, top, out);
   standing.add(cylinder(0.04, 0.045, 0.1, palette.camera, 0, 0.05, 0, 28));
@@ -994,7 +872,6 @@ export const createShelves = (palette: Palette) => {
   standing.add(cylinder(0.03, 0.03, 0.004, palette.glass, 0, 0.102, 0, 24));
   shelves.add(markHotspot(standing, { label: named("mamiya-sekor-z-110mm"), target: "gear" }));
 
-  // The film, boxes in a row on the lower shelf, each with its label
   const films: [string, string, string][] = [
     ["kodak-ektar-100", "#f3c300", "#d11a2a"],
     ["kodak-gold-200", "#f3c300", "#2a2a2a"],
@@ -1009,7 +886,6 @@ export const createShelves = (palette: Palette) => {
     shelves.add(markHotspot(film, { label: named(id), target: "gear" }));
   });
 
-  // A small plant at the end of the lower shelf
   const plant = createPlant(palette, 0.05, 0.09, 14, 0.13);
   plant.position.set(-0.325, lower + 0.014, out);
   shelves.add(plant);
@@ -1017,10 +893,6 @@ export const createShelves = (palette: Palette) => {
   return shelves;
 };
 
-// ── Guitars ─────────────────────────────────────────────────────────────────
-
-// Half of a dreadnought's outline, mirrored: the body about the origin, in
-// the x and y plane, 0.4 wide and 0.52 tall
 const acousticOutline = () => {
   const shape = new Shape();
   shape.moveTo(0, -0.26);
@@ -1038,7 +910,6 @@ const acousticOutline = () => {
   return shape;
 };
 
-// A strat's outline, with its horns, about the origin
 const electricOutline = () => {
   const shape = new Shape();
   shape.moveTo(0, -0.21);
@@ -1054,8 +925,6 @@ const electricOutline = () => {
   return shape;
 };
 
-// A body cut from a shape, this thick, with a bevelled edge. Its picture is
-// laid over the body's own coordinates, this wide, centred
 const body = (shape: Shape, depth: number, bevel: number, material: Material, span: number) => {
   const made = mesh(
     new ExtrudeGeometry(shape, {
@@ -1063,8 +932,8 @@ const body = (shape: Shape, depth: number, bevel: number, material: Material, sp
       bevelEnabled: true,
       bevelThickness: bevel,
       bevelSize: bevel,
-      bevelSegments: 4,
-      curveSegments: 32,
+      bevelSegments: 3,
+      curveSegments: 12,
     }),
     material,
     0,
@@ -1081,7 +950,6 @@ const body = (shape: Shape, depth: number, bevel: number, material: Material, sp
   return made;
 };
 
-// The neck up +y from `from`, with its fretboard, frets, headstock and tuners
 const neck = (
   palette: Palette,
   group: Group,
@@ -1094,7 +962,6 @@ const neck = (
   const middle = from + length / 2;
   group.add(rounded(0.046, length, 0.022, 0.006, wood, 0, middle, surface - 0.013));
   group.add(box(0.047, length - 0.02, 0.005, board, 0, middle, surface));
-  // Frets, closer together up the neck
   for (let fret = 1; fret <= 12; fret++) {
     const at = from + length * (1 - 0.5 ** (fret / 12)) * 1.45;
     if (at > from + length - 0.02) break;
@@ -1108,7 +975,6 @@ const neck = (
       group.add(peg);
     }
   }
-  // The strings, from the bridge up to the nut
   for (let string = 0; string < 6; string++) {
     const wire = box(0.0012, length + 0.32, 0.0012, palette.string, -0.0175 + string * 0.007, from + 0.11, surface + 0.006);
     wire.castShadow = false;
@@ -1116,14 +982,9 @@ const neck = (
   }
 };
 
-/**
- * An acoustic on its hanger, its top facing +z and its neck up +y, the body
- * at the origin. The hanger is behind it, at the wall.
- */
 export const createAcoustic = (palette: Palette, top: Surface, label: string) => {
   const guitar = new Group();
   guitar.add(body(acousticOutline(), 0.1, 0.012, painted(top, 1, 1, { roughness: 0.4, bump: 0.004 }), 0.56));
-  // The dark inside, seen through the soundhole
   const inside = cylinder(0.06, 0.06, 0.004, standard("#17100a"), 0, 0.07, 0.02, 24);
   inside.rotation.x = Math.PI / 2;
   guitar.add(inside);
@@ -1134,7 +995,6 @@ export const createAcoustic = (palette: Palette, top: Surface, label: string) =>
   return markHotspot(guitar, { label, target: "gear" });
 };
 
-/** The electric on its stand, around the stand's middle on the floor. */
 export const createElectric = (palette: Palette) => {
   const stand = new Group();
   const guitar = new Group();
@@ -1168,12 +1028,6 @@ export const createElectric = (palette: Palette) => {
 
 export const guitarName = named("epiphone-hummingbird");
 
-// ── Plants and the lamp ─────────────────────────────────────────────────────
-
-/**
- * A pot with a head of leaves, on the floor at its own origin: `leaves`
- * painted leaves, each about `leaf` long, fanning out and up from the stem.
- */
 export const createPlant = (
   palette: Palette,
   potRadius: number,
@@ -1187,8 +1041,6 @@ export const createPlant = (
   plant.add(mesh(new TorusGeometry(potRadius, potRadius * 0.09, 8, 28), pot, 0, potHeight, 0).rotateX(Math.PI / 2));
   plant.add(cylinder(potRadius * 0.9, potRadius * 0.9, 0.01, standard("#2b2016"), 0, potHeight - 0.01, 0, 20));
 
-  // Each leaf is a picture on a plane, its stalk end at the stem, leaning
-  // out and up. The plane is 1 wide and 2 tall, from its base
   const blade = new PlaneGeometry(1, 2, 1, 4);
   blade.translate(0, 1, 0);
   const heads = new InstancedMesh(blade, palette.leaf, leaves);
@@ -1214,10 +1066,6 @@ export const createPlant = (
   return plant;
 };
 
-/**
- * The pendant: its own origin is where it hangs from the ceiling, the cord
- * down to the socket and the bulb, and the bulb's light.
- */
 export const createLamp = (palette: Palette) => {
   const lamp = new Group();
   const drop = 0.8;
@@ -1238,10 +1086,6 @@ export const createLamp = (palette: Palette) => {
   return { lamp, bulbMaterial, light };
 };
 
-// ── The sun's beams ─────────────────────────────────────────────────────────
-
-// How far into the room a beam is drawn. Past a wall or the floor it's
-// hidden by them anyway
 const BEAM_LENGTH = 7;
 
 const BEAM_SHADER = {
@@ -1264,11 +1108,6 @@ const BEAM_SHADER = {
   `,
 };
 
-/**
- * The sun's light in the air: a soft prism of light from each pane of the
- * window along the sun's direction, fading as it goes, added over whatever
- * is behind it. Laid along the sun every frame, see `update`.
- */
 export const createSunbeams = () => {
   const beams = new Group();
   const material = new ShaderMaterial({
@@ -1286,7 +1125,6 @@ export const createSunbeams = () => {
 
   const prisms = Array.from({ length: 4 }, () => {
     const geometry = new BufferGeometry();
-    // Four corners at the window, then the same four far along the beam
     const positions = new Float32Array(24);
     geometry.setAttribute("position", new BufferAttribute(positions, 3));
     geometry.setAttribute("aAlong", new BufferAttribute(new Float32Array([0, 0, 0, 0, 1, 1, 1, 1]), 1));
@@ -1298,7 +1136,6 @@ export const createSunbeams = () => {
     return { geometry, positions };
   });
 
-  // Lays the beams from the window's panes along the way from the sun
   const update = (toSun: Vector3, strength: number, panes: Vector3[][]) => {
     material.uniforms.uStrength.value = strength;
     beams.visible = strength > 0.002;
@@ -1321,12 +1158,8 @@ export const createSunbeams = () => {
   return { beams, update };
 };
 
-// ── Decoration ──────────────────────────────────────────────────────────────
-
 const pictures = new TextureLoader();
 
-// A picture, as a texture: on the page as an image, in a worker, where
-// there are no images, as a bitmap, the right way up
 const loadPicture = (url: string, onLoad: (texture: Texture) => void) => {
   if (typeof document !== "undefined") {
     pictures.load(url, onLoad);
@@ -1339,22 +1172,16 @@ const loadPicture = (url: string, onLoad: (texture: Texture) => void) => {
   });
 };
 
-// What a picture's material shows until its picture comes: white, under
-// the material's own colour. With a picture from the start, the material is
-// built for one, and the real one coming later doesn't build it again
 const blankPicture = new DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);
 blankPicture.colorSpace = SRGBColorSpace;
 blankPicture.needsUpdate = true;
 
-// Lays a picture over a material, cropped to fill it like object-fit: cover,
-// once it has loaded
 const showPicture = (
   palette: Palette,
   material: MeshStandardMaterial,
   url: string,
   aspect: number,
 ) => {
-  // Its picture comes later: never merged into a plain colour, see merge.ts
   material.userData.isPicture = true;
   material.map = blankPicture;
   loadPicture(url, (texture) => {
@@ -1381,8 +1208,6 @@ const showPicture = (
 
 export type FrameStyle = "black" | "wood" | "white";
 
-// The frames on the walls: how large the picture is, how it's framed, and
-// which of the site's pictures hangs in it
 export const FRAMES = {
   frameLarge: { width: 0.72, height: 0.52, style: "wood", picture: 0 },
   framePortrait: { width: 0.36, height: 0.46, style: "black", picture: 1 },
@@ -1394,11 +1219,6 @@ export const FRAMES = {
   frameRight: { width: 0.6, height: 0.44, style: "wood", picture: 7 },
 } as const satisfies Record<string, { width: number; height: number; style: FrameStyle; picture: number }>;
 
-/**
- * A framed picture with a mat, its face toward +z and its back on the wall,
- * centred on its own origin. Until the picture is in, and without one, the
- * mat holds a plain paper.
- */
 export const createFrame = (
   palette: Palette,
   width: number,
@@ -1426,16 +1246,11 @@ export const createFrame = (
 };
 
 const blade = () => {
-  // A leaf's plane, 1 wide and 2 long, from its stalk end
   const geometry = new PlaneGeometry(1, 2, 1, 2);
   geometry.translate(0, 1, 0);
   return geometry;
 };
 
-/**
- * A trailing stem of small leaves, hanging from its own origin, this long,
- * drifting out along +z as it falls.
- */
 export const createVine = (palette: Palette, length: number, leaves: number, seed = 0) => {
   const vine = new Group();
   const points = Array.from({ length: 9 }, (_, i) => {
@@ -1454,7 +1269,6 @@ export const createVine = (palette: Palette, length: number, leaves: number, see
     const t = (i + 0.5) / leaves;
     const side = i % 2 === 0 ? 1 : -1;
     const size = (0.035 + 0.02 * (((i * 13 + seed * 7) % 10) / 10)) * (1 - t * 0.35);
-    // Out to the side and a little down, spun about the stem
     euler.set(0.3, seed + i * 1.7, side * (Math.PI / 2 + 0.3), "YXZ");
     quaternion.setFromEuler(euler);
     scale.set(size * 0.6, size * 0.5, 1);
@@ -1467,7 +1281,6 @@ export const createVine = (palette: Palette, length: number, leaves: number, see
   return vine;
 };
 
-/** A small plant in a pot with vines trailing over the edge, standing at its own origin. */
 const trailingPlant = (palette: Palette, vines: number, seed: number) => {
   const plant = createPlant(palette, 0.05, 0.085, 12, 0.11, palette.ceramic);
   for (let i = 0; i < vines; i++) {
@@ -1482,12 +1295,6 @@ const trailingPlant = (palette: Palette, vines: number, seed: number) => {
 
 const BOOK_COLORS = ["#7a3b2e", "#2f4858", "#c8b48a", "#5b6b4a", "#8c6a4a", "#3b3b3b", "#d9cfbd", "#9a5b3c"];
 
-/**
- * A floating shelf: books, a candle and a trailing plant, or a stack of
- * books, a jar, an old camera and a trailing plant. Its own origin is on
- * the wall at the board's height; the board runs along x and stands out
- * along +z.
- */
 export const createWallShelf = (palette: Palette, variant: "books" | "trinkets") => {
   const shelf = new Group();
   const length = 0.8;
@@ -1501,7 +1308,6 @@ export const createWallShelf = (palette: Palette, variant: "books" | "trinkets")
   const book = (color: string) => standard(color, { roughness: 0.8 });
 
   if (variant === "books") {
-    // A row of books, the last one leaning on the others
     let x = -0.37;
     for (let i = 0; i < 8; i++) {
       const thickness = 0.024 + ((i * 37) % 5) * 0.006;
@@ -1518,7 +1324,6 @@ export const createWallShelf = (palette: Palette, variant: "books" | "trinkets")
     shelf.add(cylinder(0.042, 0.042, 0.008, palette.brass, 0.12, top + 0.004, 0.11, 24));
     shelf.add(cylinder(0.026, 0.026, 0.1, palette.paper, 0.12, top + 0.058, 0.11, 24));
   } else {
-    // A stack of books lying down, a jar and an old camera
     for (let i = 0; i < 3; i++) {
       const lying = rounded(0.2 - i * 0.02, 0.032, 0.14, 0.003, book(BOOK_COLORS[(i * 3 + 1) % BOOK_COLORS.length]), -0.24, top + 0.016 + i * 0.033, 0.1);
       lying.rotation.y = (i - 1) * 0.08;
@@ -1541,10 +1346,6 @@ export const createWallShelf = (palette: Palette, variant: "books" | "trinkets")
   return shelf;
 };
 
-/**
- * A plant hanging from the ceiling, its pot on three cords and its vines
- * trailing. Its own origin is the hook.
- */
 export const createHangingPlant = (palette: Palette) => {
   const plant = new Group();
   const drop = 0.55;
@@ -1572,10 +1373,6 @@ export const createHangingPlant = (palette: Palette) => {
   return plant;
 };
 
-/**
- * A tall plant on the floor: three stems from a ceramic pot, broad leaves
- * along them. Standing at its own origin.
- */
 export const createTallPlant = (palette: Palette) => {
   const plant = new Group();
   const potRadius = 0.17;

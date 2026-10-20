@@ -15,6 +15,7 @@ import {
 import ImagePopover from "~/modules/core/components/image-popover";
 import { useAnimationPreference } from "~/modules/core/context/animation-preference-context";
 import { useHapticSound } from "~/modules/core/hooks/use-haptic-sound";
+import { useThreeD } from "~/modules/core/hooks/use-three-d";
 import Loupe from "~/modules/photography/components/loupe";
 import PrintCard, {
   type PhotoView,
@@ -39,15 +40,10 @@ gsap.registerPlugin(Draggable, Flip, InertiaPlugin);
 const VIEWS: PhotoView[] = ["table", "grid"];
 const VIEW_STORAGE_KEY = "photography-view";
 
-// Room a focused print keeps from the frame's edges
 const FOCUS_INSET = 24;
 
-// How far past its bottom edge the table has to be pulled to open the
-// footer. Its edge resistance lets it follow 15% of the finger, so this is
-// a pull of about 160px
 const PULL_TO_FOOTER = 24;
 
-// Photo width in the grid below: 2, 3 or 4 columns, tiles padded 6%, capped at 120rem wide
 const GRID_IMAGE_SIZES =
   "(min-width: 1920px) 390px, (min-width: 1536px) 21vw, (min-width: 768px) 28vw, 42vw";
 
@@ -58,10 +54,6 @@ interface Props {
   prints: Print[];
 }
 
-/**
- * The same prints two ways: scattered on a table you drag around, or in a
- * regular grid. Switching flies every print from where it is to its new place.
- */
 const PhotoTable = ({ prints }: Props) => {
   const stageRef = useRef<HTMLDivElement>(null);
   const worldRef = useRef<HTMLDivElement>(null);
@@ -81,10 +73,11 @@ const PhotoTable = ({ prints }: Props) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   // The loupe needs WebGL2, which nearly every browser has. Where it's
-  // missing, the table goes without it
+  // missing, the table goes without it, and with the 3D turned off in the
+  // settings
   const [canLoupe, setCanLoupe] = useState(true);
+  const isThreeD = useThreeD();
   const { animationsEnabled } = useAnimationPreference();
-  // One instance for every print
   const haptic = useHapticSound();
 
   const isTable = view === "table";
@@ -92,13 +85,10 @@ const PhotoTable = ({ prints }: Props) => {
     () => order?.map((index) => prints[index]) ?? prints,
     [order, prints],
   );
-  // Each print keeps its number, wherever it's dealt
   const numbers = useMemo(
     () => ordered.map((_, index) => (order?.[index] ?? index) + 1),
     [order, ordered],
   );
-
-  // ── Viewport and saved view ─────────────────────────────────────────────────
 
   // Layout effect, so a saved grid view applies before the first paint
   useLayoutEffect(() => {
@@ -110,7 +100,6 @@ const PhotoTable = ({ prints }: Props) => {
     const measure = () =>
       setViewport((current) => {
         const next = { width: window.innerWidth, height: window.innerHeight };
-        // Mobile toolbars change the height a little, not worth a new layout
         if (
           current &&
           current.width === next.width &&
@@ -134,8 +123,6 @@ const PhotoTable = ({ prints }: Props) => {
     };
   }, []);
 
-  // ── Layout ──────────────────────────────────────────────────────────────────
-
   useLayoutEffect(() => {
     const stage = stageRef.current;
     const world = worldRef.current;
@@ -146,13 +133,11 @@ const PhotoTable = ({ prints }: Props) => {
     );
     const motion = animationsEnabled && !prefersReducedMotion();
 
-    // Prints are sized to the screen, scattered and bounded within the frame
     const frame = { width: stage.clientWidth, height: stage.clientHeight };
     const layout = isTable
       ? scatterLayout(ordered, getPrintBase(viewport), frame, seed)
       : null;
 
-    // Stop whatever is still flying, including the leftovers of an interrupted flip
     Flip.killFlipsOf(cards);
     gsap.killTweensOf(cards);
     gsap.set(cards, { clearProps: "position,top,left" });
@@ -160,15 +145,12 @@ const PhotoTable = ({ prints }: Props) => {
     draggableRef.current = null;
 
     if (!layout) {
-      // Grid: back to normal flow
       gsap.set(world, { clearProps: "transform,width,height" });
       gsap.set(cards, { clearProps: "transform,width,height,--tilt" });
     } else {
-      // Opened from the home screen, the page scrolls inside the layer over it
       const scroller = stage.closest("[data-section-scroll]");
       if (scroller) scroller.scrollTop = 0;
       else if (window.scrollY > 0) window.scrollTo(0, 0);
-      // The grid scrolls the frame, the table pans inside it instead
       stage.scrollTop = 0;
 
       const bounds = getDragBounds(layout, frame);
@@ -196,7 +178,6 @@ const PhotoTable = ({ prints }: Props) => {
         bounds,
         inertia: motion,
         edgeResistance: 0.85,
-        // Raising the z-index on press would lift the table over the popover
         zIndexBoost: false,
         dragClickables: true,
         allowContextMenu: true,
@@ -229,7 +210,6 @@ const PhotoTable = ({ prints }: Props) => {
       flipState.current = null;
     } else if (!hasEntered.current && motion) {
       if (layout) {
-        // Dropped onto the table: a little lifted and turned, then settling in place
         gsap.from(cards, {
           scale: 1.1,
           rotation: (index) =>
@@ -261,7 +241,6 @@ const PhotoTable = ({ prints }: Props) => {
     };
   }, []);
 
-  // Trackpads and mouse wheels pan the table too
   useEffect(() => {
     const stage = stageRef.current;
     if (!stage || !isTable) return;
@@ -269,10 +248,7 @@ const PhotoTable = ({ prints }: Props) => {
     const handleWheel = (event: WheelEvent) => {
       const draggable = draggableRef.current;
       const world = worldRef.current;
-      // Leave pinch zoom to the browser
       if (!draggable || !world || event.ctrlKey) return;
-      // Left to the footer: down once the table's bottom edge is in view,
-      // and anything while the footer is open or being pulled
       const isDown =
         event.deltaY > 0 && Math.abs(event.deltaY) > Math.abs(event.deltaX);
       if (!isFooterClosed(stage) || (isDown && draggable.y <= draggable.minY)) {
@@ -280,7 +256,6 @@ const PhotoTable = ({ prints }: Props) => {
       }
       event.preventDefault();
 
-      // Some mice report lines instead of pixels
       const unit = event.deltaMode === 1 ? 16 : 1;
       gsap.set(world, {
         x: gsap.utils.clamp(
@@ -302,15 +277,10 @@ const PhotoTable = ({ prints }: Props) => {
     return () => stage.removeEventListener("wheel", handleWheel);
   }, [isTable]);
 
-  // ── Loupe ───────────────────────────────────────────────────────────────────
-
   useEffect(() => {
     if (!canDrawLoupe()) setCanLoupe(false);
   }, []);
 
-  // ── Actions ─────────────────────────────────────────────────────────────────
-
-  // Records where every print is, so the next layout can fly them from there
   const captureForFlip = () => {
     if (!animationsEnabled || prefersReducedMotion()) return;
     flipState.current = Flip.getState(
@@ -329,7 +299,6 @@ const PhotoTable = ({ prints }: Props) => {
     } catch {}
   };
 
-  // The table scatters the prints anew, the grid deals them in a new order
   const shuffle = () => {
     captureForFlip();
     if (isTable) setSeed((current) => current + 1);
@@ -341,11 +310,9 @@ const PhotoTable = ({ prints }: Props) => {
     haptic.onClick();
     setActiveIndex(index);
     setIsPopoverOpen(true);
-    // By where it's dealt, which the grid shuffles
     track("Photo Opened", { photo: ordered[index].title });
   };
 
-  // Keyboard focus pans a print hidden past the frame's edge into view
   const handleFocus = (event: FocusEvent<HTMLButtonElement>) => {
     const draggable = draggableRef.current;
     const world = worldRef.current;
@@ -385,7 +352,6 @@ const PhotoTable = ({ prints }: Props) => {
 
   return (
     <>
-      {/* Both views sit in a frame, inset evenly. The grid scrolls inside it */}
       <div className="h-svh p-4 md:p-8 lg:p-12">
         <div
           ref={stageRef}
@@ -395,8 +361,6 @@ const PhotoTable = ({ prints }: Props) => {
               ? "touch-none overflow-hidden"
               : "overflow-y-auto overscroll-contain",
           )}
-          // The table takes every touch, so a pull past its edge opens the
-          // footer instead, see onDragEnd
           data-gestures={isTable || undefined}
         >
           <div
@@ -427,7 +391,7 @@ const PhotoTable = ({ prints }: Props) => {
           {/* Lies on the table, and is taken off it for the grid. If the
               lens couldn't be made, or the GPU dropped it, it's gone for
               this visit to the page */}
-          {canLoupe && (
+          {canLoupe && isThreeD && (
             <Loupe
               stageRef={stageRef}
               cardRefs={cardRefs}

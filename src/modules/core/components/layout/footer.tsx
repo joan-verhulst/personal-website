@@ -25,6 +25,7 @@ import { useAnimationPreference } from "~/modules/core/context/animation-prefere
 import { useCurtain } from "~/modules/core/hooks/use-curtain";
 import { useHapticSound } from "~/modules/core/hooks/use-haptic-sound";
 import { useSky } from "~/modules/core/hooks/use-sky";
+import { useThreeD } from "~/modules/core/hooks/use-three-d";
 import {
   CONDITION_LABELS,
   type SkyCondition,
@@ -34,7 +35,6 @@ import cn from "~/utils/cn";
 import { track } from "~/utils/eyes";
 import { scrollerOf } from "~/utils/footer";
 
-// The weather app's icon for each sky, by day and by night
 const CONDITION_ICONS: Record<SkyCondition, [LucideIcon, LucideIcon]> = {
   clear: [Sun, Moon],
   partly: [CloudSun, CloudMoon],
@@ -52,13 +52,6 @@ const isPlainClick = (event: MouseEvent) =>
   !event.shiftKey &&
   !event.altKey;
 
-/**
- * A page with the footer under it. The footer is fixed behind the page, and
- * the page lifts off it when it's pulled past its end, see useCurtain.
- *
- * Fixed works the same whether the page scrolls the window, loaded directly,
- * or the layer's scroller, opened from home.
- */
 const PageWithFooter = ({
   className,
   children,
@@ -75,10 +68,12 @@ const PageWithFooter = ({
   const skyRef = useRef<HTMLDivElement>(null);
   const clockRef = useRef<HTMLSpanElement>(null);
 
+  const isThreeD = useThreeD();
   const sky = useSky({
     skyRef,
     clockRef,
     animationsEnabled,
+    isThreeD,
     // The hover click: softer, and sound only, never a buzz on a phone
     onHour: haptic.onMouseEnter,
   });
@@ -89,11 +84,7 @@ const PageWithFooter = ({
     contentRef,
     animationsEnabled,
     onPop: haptic.onClick,
-    // The footer is a way to get in touch too: the page's contact card, and
-    // the same links as the contact modal
     onOpen: () => track("Contact Opened", { from: "footer" }),
-    // The content rises as the page lifts, and the glass under it with it.
-    // The clouds only drift while the footer shows
     onDraw: sky.refresh,
   });
 
@@ -105,7 +96,6 @@ const PageWithFooter = ({
     });
   };
 
-  // Same as the island: from a section, another one takes its place
   const visit = (event: MouseEvent<HTMLAnchorElement>, href: string) => {
     if (!isPlainClick(event)) return;
     event.preventDefault();
@@ -115,8 +105,6 @@ const PageWithFooter = ({
 
   const contactLinks = getContactLinks(contact);
 
-  // The sky's status: what it's doing at home, and the time there. The
-  // clock is written by the sky itself, every frame while a day plays
   const Condition = CONDITION_ICONS[sky.condition][sky.isNight ? 1 : 0];
   const status = (
     <>
@@ -131,7 +119,6 @@ const PageWithFooter = ({
 
   return (
     <>
-      {/* Above the footer and opaque. Its bottom corners round as it lifts */}
       <main
         ref={pageRef}
         className={cn(
@@ -142,22 +129,14 @@ const PageWithFooter = ({
         {children}
       </main>
 
-      {/* Tabbing into it while the page still covers it lifts the page */}
       <footer
         ref={footerRef}
         onFocus={() => curtain.current?.open()}
-        // The shader draws the data-glass elements as glass, see global.css
         data-glass-on={sky.hasGlass ? "" : undefined}
         className="fixed inset-x-0 bottom-0 z-0 overflow-hidden bg-neutral-900 text-neutral-50"
       >
-        {/* The sky as it is now at home, see useSky, which puts its canvas
-            here while this footer draws */}
         <div ref={skyRef} className="absolute inset-0 bg-neutral-900" />
 
-        {/* The top padding holds CURTAIN_ROOM over the visible 64px, which
-            the page's corners and its spring show. The bottom padding keeps
-            the last row clear of the settings button, which floats over the
-            bottom right corner */}
         <div
           ref={contentRef}
           className="relative flex flex-col gap-10 px-5 pt-40 pb-20 md:gap-14 md:px-8"
@@ -254,8 +233,6 @@ const PageWithFooter = ({
               <span>
                 © {new Date().getFullYear()} {siteData.owner.name}
               </span>
-              {/* Credited where it can be seen and followed: Buienradar's
-                  free data asks for a link, Open-Meteo's for a mention */}
               <span>
                 Weather from{" "}
                 <a
@@ -278,8 +255,6 @@ const PageWithFooter = ({
               </span>
             </div>
             <div className="flex gap-2">
-              {/* The sky's status. With animations, it plays the last 24
-                  hours, back to now, with the status following along */}
               {animationsEnabled ? (
                 <button
                   data-glass

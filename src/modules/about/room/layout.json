@@ -282,5 +282,9 @@
     "softness": 0.5,
     "outline": 1
   },
-  "stills": 1792425251829
+  "quality": {
+    "playResolution": 0.9,
+    "movingShade": 0.75
+  },
+  "stills": 1792490740344
 }

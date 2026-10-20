@@ -1,16 +1,11 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-// What the OG renderer can draw. Anything else, a video or a WebP, is left out
 const DRAWABLE = ["image/png", "image/jpeg", "image/gif"];
 
 const toDataUri = (type: string, data: Buffer) =>
   `data:${type};base64,${data.toString("base64")}`;
 
-/**
- * An image as a data URI, so the renderer doesn't fetch it again. A missing
- * image leaves its tile empty instead of failing the build.
- */
 export const loadImage = async (url: string | undefined) => {
   if (!url) return undefined;
   try {
@@ -23,7 +18,6 @@ export const loadImage = async (url: string | undefined) => {
   }
 };
 
-/** An image from public/, as a data URI. */
 export const loadPublicImage = async (file: string) => {
   try {
     const data = await readFile(path.join(process.cwd(), "public", file));
@@ -33,11 +27,6 @@ export const loadPublicImage = async (file: string) => {
   }
 };
 
-/**
- * The site's typeface, cut down to the characters on the card. The renderer
- * needs a TrueType file, which Google Fonts serves to clients it doesn't
- * know. Without it the card falls back to the renderer's own font.
- */
 export const loadFont = async (text: string) => {
   try {
     const css = await fetch(
@@ -53,3 +42,8 @@ export const loadFont = async (text: string) => {
     return undefined;
   }
 };
+
+// The OG renderer reads the modern rgb(r g b / a) syntax as black, so CSS for
+// it is rewritten to rgba(r, g, b, a) first.
+export const legacyColors = (css: string) =>
+  css.replace(/rgb\(([\d.]+) ([\d.]+) ([\d.]+) \/ ([\d.]+)\)/g, "rgba($1, $2, $3, $4)");

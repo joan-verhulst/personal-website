@@ -11,6 +11,7 @@ import HomeScreenCard, {
 import {
   loadFont,
   loadImage,
+  legacyColors,
   loadPublicImage,
 } from "~/modules/og/utils/og-assets";
 import { wallBackgrounds } from "~/modules/ui-ux/utils/wall-backgrounds";
@@ -26,20 +27,12 @@ const LABELS: Record<OgTile, string> = {
   contact: widgets.contact.label,
 };
 
-// The wall backgrounds put a glow over a gradient. The renderer can't size a
-// radial gradient, so the card keeps the gradient underneath
 const flatBackground = (background: string) =>
-  background.match(/linear-gradient\(.*\)$/)?.[0] ?? "#faf9f9";
+  legacyColors(background.match(/linear-gradient\(.*\)$/)?.[0] ?? "#faf9f9");
 
-// The blog's sky card at golden hour, without the sun's glow, which is a
-// radial gradient too
 const SKY = flatBackground(skyGradient(6, 0.5, 50));
 const POST_COVER = posts.find((post) => post.cover)?.cover;
 
-/**
- * The home screen as a link preview, from what's in the CMS. With a section,
- * its tile stays lit and the others are greyed out.
- */
 export const renderHomeOg = async (active?: OgTile) => {
   const { about, contact, covers, highlights, records } = await getContent();
   const [firstHighlight, secondHighlight = firstHighlight] = highlights;

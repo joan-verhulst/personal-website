@@ -28,37 +28,23 @@ import {
 } from "~/modules/digital-art/utils/slide-image";
 import { scrollerOf } from "~/utils/footer";
 
-// The slides' height, as a share of the frame's height, and of its width at
-// most, so on a phone a landscape piece still fits with its neighbours
-// peeking in
 const HEIGHT_SHARE = 0.62;
 const WIDTH_SHARE = 0.5;
-// While dragging, the slide it's heading for and the ones beside it grow by
-// this much, at the full slider's size
 const PREVIEW_GROW = 64;
 const PREVIEW_GROW_NEXT = 24;
 // The card after the slides, its width as a share of their height
 const END_SHARE = 0.75;
 
 interface Size {
-  // The frame's width, and the slides' height in it
   width: number;
   height: number;
 }
 
 interface Props {
   items: Artwork[];
-  // In a blank card after the slides, a link on to the rest
   end?: ReactNode;
 }
 
-/**
- * The digital art slider, small, in a frame on the about page: the same
- * slides, dragged and flicked the same way, scaled down to the frame. It
- * leaves the page alone: up and down scrolls on past it, and only a
- * sideways swipe moves it. After the slides, a card can lead on to the
- * rest.
- */
 const MiniSlider = ({ items, end }: Props) => {
   const frameRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -68,19 +54,15 @@ const MiniSlider = ({ items, end }: Props) => {
   const { animationsEnabled } = useAnimationPreference();
 
   const [size, setSize] = useState<Size | null>(null);
-  // Put in, pictures and all, once the frame is about a screen away
   const [isNear, setIsNear] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [pendingIndex, setPendingIndex] = useState<number | null>(null);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  // The slides, and the card after them
   const count = items.length + (end ? 1 : 0);
 
-  // The full slider's measures, scaled to these slides
   const scale = size ? size.height / SLIDE_HEIGHT : 1;
   const gap = Math.round(GAP * scale);
   const inactiveSize = Math.round(INACTIVE_SIZE * scale);
-  // Wider than the frame leaves room for, a piece is cropped instead
   const sizes = useMemo(() => {
     if (!size) return [];
     const widest = size.width - 2 * (gap + inactiveSize / 2);
@@ -89,8 +71,6 @@ const MiniSlider = ({ items, end }: Props) => {
     );
   }, [items, size, gap, inactiveSize]);
   const endSize = size ? Math.round(size.height * END_SHARE) : 0;
-
-  // ── Size ────────────────────────────────────────────────────────────────────
 
   // Layout effect, so the size is known before the slides are first painted
   useLayoutEffect(() => {
@@ -123,8 +103,6 @@ const MiniSlider = ({ items, end }: Props) => {
   useEffect(() => {
     const frame = frameRef.current;
     if (!frame) return;
-    // Opened over home, the page scrolls in the layer, which cuts off what's
-    // past its edges, so a screen away is measured from there
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (!entry.isIntersecting) return;
@@ -137,9 +115,6 @@ const MiniSlider = ({ items, end }: Props) => {
     return () => observer.disconnect();
   }, []);
 
-  // ── Layout helpers ──────────────────────────────────────────────────────────
-
-  // The card after the slides keeps its width
   const getSlideSize = useCallback(
     (index: number, forActiveIndex: number) => {
       if (index === items.length) return endSize;
@@ -150,7 +125,6 @@ const MiniSlider = ({ items, end }: Props) => {
     [items.length, sizes, inactiveSize, endSize],
   );
 
-  // Every slide before the active one is collapsed
   const calculateCenterOffset = useCallback(
     (targetIndex: number) =>
       size
@@ -194,7 +168,6 @@ const MiniSlider = ({ items, end }: Props) => {
     [calculateCenterOffset, count],
   );
 
-  // One tween per image, retargeted on every move, like the full slider
   const parallax = useRef(new Map<HTMLImageElement, gsap.QuickToFunc>());
   const shiftImage = useCallback((img: HTMLImageElement, x: number) => {
     let to = parallax.current.get(img);
@@ -228,8 +201,6 @@ const MiniSlider = ({ items, end }: Props) => {
     };
   }, []);
 
-  // ── Slide sizes and position ────────────────────────────────────────────────
-
   // Layout effect, so the slides are in place before they're first painted
   useLayoutEffect(() => {
     const trackElement = trackRef.current;
@@ -250,8 +221,6 @@ const MiniSlider = ({ items, end }: Props) => {
     else gsap.to(trackElement, { x, ...SETTLE });
   }, [activeIndex, size, isNear, calculateCenterOffset, getSlideSize]);
 
-  // While dragging, the slide it's heading for grows a little, and the ones
-  // beside it less
   const isDragging = useRef(false);
   const previewHeights = useRef<number[]>([]);
   useEffect(() => {
@@ -271,8 +240,6 @@ const MiniSlider = ({ items, end }: Props) => {
       gsap.to(slide, { height, duration: 0.6, ease: "power2.out" });
     });
   }, [pendingIndex, size, isNear, scale]);
-
-  // ── Drag ────────────────────────────────────────────────────────────────────
 
   const dragStartX = useRef(0);
   const dragStartOffset = useRef(0);
@@ -334,7 +301,6 @@ const MiniSlider = ({ items, end }: Props) => {
     ],
   );
 
-  // Also when the browser takes the touch over, to scroll the page
   const handleDragEnd = useCallback(() => {
     const trackElement = trackRef.current;
     if (!isDragging.current || !trackElement) return;
@@ -378,10 +344,6 @@ const MiniSlider = ({ items, end }: Props) => {
     };
   }, [handleDragMove, handleDragEnd]);
 
-  // ── Wheel ───────────────────────────────────────────────────────────────────
-
-  // A sideways swipe on a trackpad moves it a piece at a time. Up and down
-  // is left to the page
   const wheelAccumulator = useRef(0);
   const wheelTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
@@ -406,15 +368,10 @@ const MiniSlider = ({ items, end }: Props) => {
       }
     };
 
-    // React listens to wheel passively, so its handler couldn't keep the
-    // browser from going back a page
     frame.addEventListener("wheel", handleWheel, { passive: false });
     return () => frame.removeEventListener("wheel", handleWheel);
   }, [activeIndex, count]);
 
-  // ── Slides ──────────────────────────────────────────────────────────────────
-
-  // A click, not the end of a drag
   const handleSlideClick = useCallback((index: number) => {
     const trackElement = trackRef.current;
     if (!trackElement) return;
@@ -424,7 +381,6 @@ const MiniSlider = ({ items, end }: Props) => {
     }
   }, []);
 
-  // The card's link only follows a click, not the end of a drag
   const handleEndClick = useCallback((event: ReactMouseEvent) => {
     const trackElement = trackRef.current;
     if (!trackElement) return;
@@ -441,7 +397,7 @@ const MiniSlider = ({ items, end }: Props) => {
       // Sideways is its own, up and down scrolls the page. Clipped, not
       // hidden, so tabbing to the end card's link can't scroll the frame
       // out from under the track
-      className="relative h-84 cursor-grab touch-pan-y select-none overflow-clip rounded-[2.5rem] border border-neutral-950/10 md:h-105"
+      className="relative h-84 cursor-grab touch-pan-y select-none overflow-clip rounded-[2.5rem] border border-neutral-950/10 bg-neutral-50 md:h-105"
       onPointerDown={handleDragStart}
     >
       {size && isNear && (
@@ -469,7 +425,6 @@ const MiniSlider = ({ items, end }: Props) => {
               ref={(element) => setSlideRef(items.length, element)}
               className="h-full shrink-0"
               onClickCapture={handleEndClick}
-              // Dragged, the link would go along instead of the slider
               onDragStart={(event) => event.preventDefault()}
             >
               {end}

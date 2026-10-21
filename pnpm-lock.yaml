@@ -47,6 +47,9 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
+      continuum:
+        specifier: github:joan-verhulst/continuum#ac2468db182e2f1340485cf787bf61b893c3d16d
+        version: https://codeload.github.com/joan-verhulst/continuum/tar.gz/ac2468db182e2f1340485cf787bf61b893c3d16d(@types/react-dom@19.2.3(@types/react@19.2.10))(@types/react@19.2.10)(react-dom@19.2.3(react@19.2.4))(react@19.2.4)
       eyes-next:
         specifier: ^0.3.0
         version: 0.3.0(next@16.1.6(react-dom@19.2.3(react@19.2.4))(react@19.2.4))(react@19.2.4)
@@ -59,9 +62,6 @@ importers:
       next:
         specifier: 16.1.6
         version: 16.1.6(react-dom@19.2.3(react@19.2.4))(react@19.2.4)
-      personal-design-system:
-        specifier: github:joan-verhulst/personal-design-system#ecf0eed7efdfff2934ded922dfdddb206895e96b
-        version: https://codeload.github.com/joan-verhulst/personal-design-system/tar.gz/ecf0eed7efdfff2934ded922dfdddb206895e96b(@types/react-dom@19.2.3(@types/react@19.2.10))(@types/react@19.2.10)(react-dom@19.2.3(react@19.2.4))(react@19.2.4)
       react:
         specifier: 19.2.4
         version: 19.2.4
@@ -1805,6 +1805,13 @@ packages:
     resolution: {integrity: sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA==}
     engines: {node: '>=6'}
 
+  continuum@https://codeload.github.com/joan-verhulst/continuum/tar.gz/ac2468db182e2f1340485cf787bf61b893c3d16d:
+    resolution: {tarball: https://codeload.github.com/joan-verhulst/continuum/tar.gz/ac2468db182e2f1340485cf787bf61b893c3d16d}
+    version: 0.1.0
+    peerDependencies:
+      react: '>=19'
+      react-dom: '>=19'
+
   cookie@1.1.1:
     resolution: {integrity: sha512-ei8Aos7ja0weRpFzJnEA9UHJ/7XQmqglbRwnf2ATjcB9Wq874VKH9kfjjirM6UhU2/E5fFYadylyhFldcqSidQ==}
     engines: {node: '>=18'}
@@ -1933,8 +1940,8 @@ packages:
     peerDependencies:
       react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
-  lucide-react@1.60.0:
-    resolution: {integrity: sha512-UqxOW0FgAfDyb9VmjKb6/BkOzW6yfhf/QNboKtS2NDsscnNRW2CDzlyhbMKBQ1ontmcxuIDqHJ2AVgFR3NI+GA==}
+  lucide-react@1.61.0:
+    resolution: {integrity: sha512-v2SQPPPNjnr+BlhL9Spuzmo5yR+hLkftfuE4E3jaxdNPgSH0hJKPcLJBP7yAta87jQNPsSERS59PJjCJ/CorBA==}
     peerDependencies:
       '@types/react': '*'
       react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
@@ -1980,13 +1987,6 @@ packages:
   oxc-parser@0.153.0:
     resolution: {integrity: sha512-cEnpyyV1OJRXv++SFNw0z8i+2o/cr88rVLaOYJafELDoHM5yHvCAbwGRLvxuany6SNLcbblSMUyZaGzH+quSYg==}
     engines: {node: ^20.19.0 || >=22.12.0}
-
-  personal-design-system@https://codeload.github.com/joan-verhulst/personal-design-system/tar.gz/ecf0eed7efdfff2934ded922dfdddb206895e96b:
-    resolution: {tarball: https://codeload.github.com/joan-verhulst/personal-design-system/tar.gz/ecf0eed7efdfff2934ded922dfdddb206895e96b}
-    version: 0.1.0
-    peerDependencies:
-      react: '>=19'
-      react-dom: '>=19'
 
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
@@ -3708,6 +3708,19 @@ snapshots:
 
   clsx@2.1.1: {}
 
+  continuum@https://codeload.github.com/joan-verhulst/continuum/tar.gz/ac2468db182e2f1340485cf787bf61b893c3d16d(@types/react-dom@19.2.3(@types/react@19.2.10))(@types/react@19.2.10)(react-dom@19.2.3(react@19.2.4))(react@19.2.4):
+    dependencies:
+      class-variance-authority: 0.7.1
+      clsx: 2.1.1
+      lucide-react: 1.61.0(@types/react@19.2.10)(react@19.2.4)
+      radix-ui: 1.8.1(@types/react-dom@19.2.3(@types/react@19.2.10))(@types/react@19.2.10)(react-dom@19.2.3(react@19.2.4))(react@19.2.4)
+      react: 19.2.4
+      react-dom: 19.2.3(react@19.2.4)
+      tailwind-merge: 3.4.0
+    transitivePeerDependencies:
+      - '@types/react'
+      - '@types/react-dom'
+
   cookie@1.1.1: {}
 
   csstype@3.2.3: {}
@@ -3799,7 +3812,7 @@ snapshots:
     dependencies:
       react: 19.2.4
 
-  lucide-react@1.60.0(@types/react@19.2.10)(react@19.2.4):
+  lucide-react@1.61.0(@types/react@19.2.10)(react@19.2.4):
     dependencies:
       react: 19.2.4
     optionalDependencies:
@@ -3864,19 +3877,6 @@ snapshots:
       '@oxc-parser/binding-win32-arm64-msvc': 0.153.0
       '@oxc-parser/binding-win32-ia32-msvc': 0.153.0
       '@oxc-parser/binding-win32-x64-msvc': 0.153.0
-
-  personal-design-system@https://codeload.github.com/joan-verhulst/personal-design-system/tar.gz/ecf0eed7efdfff2934ded922dfdddb206895e96b(@types/react-dom@19.2.3(@types/react@19.2.10))(@types/react@19.2.10)(react-dom@19.2.3(react@19.2.4))(react@19.2.4):
-    dependencies:
-      class-variance-authority: 0.7.1
-      clsx: 2.1.1
-      lucide-react: 1.60.0(@types/react@19.2.10)(react@19.2.4)
-      radix-ui: 1.8.1(@types/react-dom@19.2.3(@types/react@19.2.10))(@types/react@19.2.10)(react-dom@19.2.3(react@19.2.4))(react@19.2.4)
-      react: 19.2.4
-      react-dom: 19.2.3(react@19.2.4)
-      tailwind-merge: 3.4.0
-    transitivePeerDependencies:
-      - '@types/react'
-      - '@types/react-dom'
 
   picocolors@1.1.1: {}
 

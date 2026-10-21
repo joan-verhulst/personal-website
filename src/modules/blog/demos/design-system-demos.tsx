@@ -1,6 +1,6 @@
 "use client";
 
-import "personal-design-system/styles.css";
+import "continuum/styles.css";
 
 import {
   Bell,
@@ -83,7 +83,7 @@ import {
   Toolbar,
   ToolbarButton,
   ToolbarChip,
-} from "personal-design-system";
+} from "continuum";
 import {
   type ComponentProps,
   type CSSProperties,

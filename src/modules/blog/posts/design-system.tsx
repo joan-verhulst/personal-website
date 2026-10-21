@@ -146,9 +146,9 @@ const DesignSystem = () => (
       the shared styling.
     </p>
     <GitHubCard
-      href="https://github.com/joan-verhulst/personal-design-system"
+      href="https://github.com/joan-verhulst/continuum"
       title="View the design system on GitHub"
-      description="personal-design-system on GitHub"
+      description="Continuum on GitHub"
     />
   </>
 );

@@ -66,7 +66,7 @@ export const SKY_DEFAULTS: SkyParams = {
       ragged: 0,
       softness: 0.15,
       murk: 0,
-      veil: 0.35,
+      veil: 0,
       fall: 0,
     },
     {

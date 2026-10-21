@@ -441,6 +441,8 @@ const float HORIZON_GLOW = 0.12;
 const float LINING = 0.04;
 const float LINING_DEPTH = 0.35;
 const vec3 CITY = vec3(0.02, 0.015, 0.01);
+// How much light the clouds keep once night has fallen
+const float NIGHT_CLOUDS = 0.2;
 
 vec3 undevelop(vec3 color) {
   vec3 y = min(pow(color, vec3(2.2)), 0.98);
@@ -494,7 +496,7 @@ vec3 cloudLight(
   float dusk = 1.0 - smoothstep(-0.14, -0.02, uSunElevation);
   vec3 city = CITY * dusk * (1.0 - thin);
 
-  return down + ambient + under + side + glow + lining + city;
+  return (down + ambient + under + side + glow + lining + city) * mix(1.0, NIGHT_CLOUDS, night);
 }
 
 float threshold(float coverage, vec2 stats) {

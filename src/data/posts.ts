@@ -46,7 +46,7 @@ export const posts: Post[] = [
     title: "The design system I've built over the years",
     section: "design",
     summary:
-      "Finding the system in screens from five products, and rebuilding it on Radix with tokens that swap per product, measured component by component.",
+      "The design rules, components and tokens I've built up over the years, now brought together in code with Radix, Tailwind and preset themes.",
     date: "2026-10-20",
     minutes: 5,
   },

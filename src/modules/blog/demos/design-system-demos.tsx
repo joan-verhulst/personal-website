@@ -97,6 +97,7 @@ import {
 import { Choice, Demo, Slider } from "~/modules/blog/components/demo";
 import { REDLINE, Redline, SELECTION } from "~/modules/blog/demos/redline";
 import cn from "~/utils/cn";
+import { scrollerOf } from "~/utils/footer";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -188,6 +189,37 @@ const PILL = 44;
 /** Centres the 18px chevron in the pill, inside its 1px border. */
 const CHEVRON_INSET = (PILL - 2 - 18) / 2;
 
+/** A dot per product's theme, each in its own action colour; picking one sets the page's demos. */
+const ThemeDots = ({ className, size = "size-7" }: { className?: string; size?: string }) => {
+  const { theme } = useSettings();
+
+  return (
+    <div className={cn("flex", className)}>
+      {themeOptions.map((option) => (
+        <SystemTheme key={option.value} theme={option.value} mode="light" asChild>
+          <button
+            type="button"
+            aria-label={option.label}
+            aria-pressed={option.value === theme}
+            onClick={() => updateSettings({ theme: option.value })}
+            className={cn(
+              size,
+              "cursor-pointer rounded-full shadow-[inset_0_0_0_1px_rgb(0_0_0/0.08)] ring-offset-2 ring-offset-neutral-50 transition-[box-shadow,transform] duration-200 hover:scale-110",
+              option.value === theme ? "ring-1 ring-neutral-950" : "ring-0",
+            )}
+            style={{
+              backgroundColor: "var(--pds-action)",
+              backgroundImage: option.shaded
+                ? "radial-gradient(circle at 35% 30%, var(--pds-primary-300), var(--pds-primary-500) 55%, var(--pds-primary-700))"
+                : undefined,
+            }}
+          />
+        </SystemTheme>
+      ))}
+    </div>
+  );
+};
+
 /** The page's demo settings, floating at the right so they stay in reach while scrolling. */
 export const DemoSettings = () => {
   const { theme, mode, radius } = useSettings();
@@ -197,21 +229,28 @@ export const DemoSettings = () => {
   const ref = useRef<HTMLElement>(null);
   const content = useRef<HTMLDivElement>(null);
   // Folded through the intro and outro, open while the middle of the screen sits between the
-  // first section's heading and the bottom of the last demo. A manual toggle holds until the
-  // reader crosses into or out of that stretch.
+  // top of the first demo and the bottom of the last. The demos load in late, so they're looked
+  // up on every check. A manual toggle holds until the reader crosses into or out of that stretch.
   useEffect(() => {
     const post = ref.current?.parentElement;
-    const heading = post?.querySelector("h2");
-    const demos = post?.querySelectorAll("figure");
-    const last = demos?.[demos.length - 1];
-    if (!heading || !last) return;
+    if (!post) return;
+    // The page scrolls itself, unless the post is open in a section layer
+    const scroller = scrollerOf(post);
+    const scrollTarget = scroller ?? window;
 
     let active: boolean | undefined;
     let frame = 0;
     const update = () => {
       frame = 0;
-      const middle = window.innerHeight / 2;
-      const next = heading.getBoundingClientRect().top <= middle && last.getBoundingClientRect().bottom >= middle;
+      // On smaller screens it stays shut until the reader opens it
+      if (!window.matchMedia("(min-width: 48rem)").matches) return;
+      const demos = post.querySelectorAll("figure");
+      const first = demos[0];
+      const last = demos[demos.length - 1];
+      if (!first || !last) return;
+      const top = scroller?.getBoundingClientRect().top ?? 0;
+      const middle = top + (scroller?.clientHeight ?? window.innerHeight) / 2;
+      const next = first.getBoundingClientRect().top <= middle && last.getBoundingClientRect().bottom >= middle;
       if (next === active) return;
       active = next;
       setCollapsed(!next);
@@ -221,11 +260,11 @@ export const DemoSettings = () => {
     };
 
     update();
-    window.addEventListener("scroll", schedule, { passive: true });
+    scrollTarget.addEventListener("scroll", schedule, { passive: true });
     window.addEventListener("resize", schedule);
     return () => {
       cancelAnimationFrame(frame);
-      window.removeEventListener("scroll", schedule);
+      scrollTarget.removeEventListener("scroll", schedule);
       window.removeEventListener("resize", schedule);
     };
   }, []);
@@ -245,12 +284,12 @@ export const DemoSettings = () => {
   return (
     <aside
       ref={ref}
-      className="fixed right-4 bottom-4 z-40 flex flex-col items-end gap-2 xl:top-1/2 xl:right-6 xl:bottom-auto xl:-translate-y-1/2"
+      className="fixed bottom-4 left-4 z-40 flex flex-col items-start gap-2 md:right-4 md:left-auto md:items-end xl:top-1/2 xl:right-6 xl:bottom-auto xl:-translate-y-1/2"
     >
       <div
         className={cn(
           "relative items-start justify-end overflow-hidden border border-neutral-950/10 bg-neutral-50/90 backdrop-blur-xl",
-          open ? "flex" : "hidden xl:flex",
+          open ? "flex" : "hidden md:flex",
         )}
         style={{
           width: collapsed ? PILL : 256,
@@ -305,28 +344,8 @@ export const DemoSettings = () => {
               <span className="text-neutral-950/60">Theme</span>
               <span className="text-neutral-950">{themeLabel}</span>
             </legend>
-            <div className="flex justify-between">
-              {themeOptions.map((option) => (
-                <SystemTheme key={option.value} theme={option.value} mode="light" asChild>
-                  <button
-                    type="button"
-                    aria-label={option.label}
-                    aria-pressed={option.value === theme}
-                    onClick={() => updateSettings({ theme: option.value })}
-                    className={cn(
-                      "size-7 cursor-pointer rounded-full shadow-[inset_0_0_0_1px_rgb(0_0_0/0.08)] ring-offset-2 ring-offset-neutral-50 transition-[box-shadow,transform] duration-200 hover:scale-110",
-                      option.value === theme ? "ring-1 ring-neutral-950" : "ring-0",
-                    )}
-                    style={{
-                      backgroundColor: "var(--pds-action)",
-                      backgroundImage: option.shaded
-                        ? "radial-gradient(circle at 35% 30%, var(--pds-primary-300), var(--pds-primary-500) 55%, var(--pds-primary-700))"
-                        : undefined,
-                    }}
-                  />
-                </SystemTheme>
-              ))}
-            </div>
+            <ThemeDots className="justify-between" />
+
           </fieldset>
           <Choice label="Mode" value={mode} options={modeOptions} onChange={(value) => updateSettings({ mode: value })} />
           <Slider
@@ -343,8 +362,11 @@ export const DemoSettings = () => {
       <button
         type="button"
         aria-expanded={open}
-        onClick={() => setOpen(!open)}
-        className="h-10 cursor-pointer rounded-full border border-neutral-950/10 bg-neutral-50/90 px-4 text-neutral-950 text-sm shadow-[0_12px_24px_-12px_rgb(0_0_0/0.18)] backdrop-blur-xl xl:hidden"
+        onClick={() => {
+          setOpen(!open);
+          setCollapsed(false);
+        }}
+        className="h-10 cursor-pointer rounded-full border border-neutral-950/10 bg-neutral-50/90 px-4 text-neutral-950 text-sm shadow-[0_12px_24px_-12px_rgb(0_0_0/0.18)] backdrop-blur-xl md:hidden"
       >
         {open ? "Close" : "Demo settings"}
       </button>
@@ -1454,10 +1476,16 @@ export const LayoutSpec = () => (
   </Spec>
 );
 
+/** The same screen in the chosen theme, with the themes to pick from in place of a caption. */
 export const ThemePlayground = () => (
   <Demo
     frameClassName="rounded-2xl"
-    caption="The same screen in every product's theme. Nothing in it names a colour; it names a step."
+    caption={
+      <span className="inline-flex items-center gap-3 rounded-full border border-neutral-950/10 bg-neutral-50 py-1.5 pr-2 pl-4">
+        <span className="text-neutral-950/60 text-xs">Demo</span>
+        <ThemeDots className="gap-2" size="size-5" />
+      </span>
+    }
   >
     <Fitted />
   </Demo>

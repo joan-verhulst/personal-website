@@ -528,12 +528,15 @@ const Fitted = ({ className }: { className?: string }) => {
 // The table is drawn at this size, then scaled to cover its frame.
 const TABLE = { width: 2000, height: 1400 };
 
+// Extra table round the layout, so the frame's corners still look onto the mat.
+const BLEED = 400;
+
 // A faint plus every 64px, like the marks on a cutting mat.
 const TABLE_GRID = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Cpath d='M32 27v10M27 32h10' stroke='%23000' stroke-opacity='0.14'/%3E%3C/svg%3E")`;
 
 /** Something lying on the table, at a spot in table pixels. */
 const Piece = ({ x, y, children }: PropsWithChildren<{ x: number; y: number }>) => (
-  <div className="absolute" style={{ left: x, top: y }}>
+  <div className="absolute" style={{ left: x + BLEED, top: y + BLEED }}>
     {children}
   </div>
 );
@@ -559,6 +562,16 @@ const sessions = [
   { label: "Fri", value: 240 },
   { label: "Sat", value: 290 },
   { label: "Sun", value: 110 },
+];
+
+const revenue = [
+  { label: "Mon", value: 210 },
+  { label: "Tue", value: 260 },
+  { label: "Wed", value: 230 },
+  { label: "Thu", value: 320 },
+  { label: "Fri", value: 360 },
+  { label: "Sat", value: 300 },
+  { label: "Sun", value: 380 },
 ];
 
 const funnel = [
@@ -606,25 +619,19 @@ export const SystemCover = () => {
         <Theme
           className={cn(fonts, "relative")}
           style={{
-            width: TABLE.width,
-            height: TABLE.height,
+            width: TABLE.width + BLEED * 2,
+            height: TABLE.height + BLEED * 2,
             backgroundImage: dark ? TABLE_GRID.replace("%23000", "%23fff") : TABLE_GRID,
             transform: "rotateX(55deg) rotateZ(-38deg)",
           }}
         >
           {/* Big type, printed flat onto the middle of the table, with everything else round it */}
-          <div
-            className="absolute flex -translate-x-1/2 -translate-y-1/2 items-start gap-4"
-            style={{ left: TABLE.width / 2, top: TABLE.height / 2 }}
+          <span
+            className="absolute -translate-x-1/2 -translate-y-1/2 font-medium text-neutral-950 leading-none tracking-[-0.04em]"
+            style={{ left: BLEED + TABLE.width / 2, top: BLEED + TABLE.height / 2, fontSize: 300 }}
           >
-            <span
-              className="font-medium text-neutral-950 leading-none tracking-[-0.04em]"
-              style={{ fontSize: 300 }}
-            >
-              Aa
-            </span>
-            <span className="mt-10 size-9" style={{ backgroundColor: "var(--pds-chart-5)" }} />
-          </div>
+            Aa
+          </span>
 
           <Piece x={120} y={120}>
             <div className="h-[460px] w-60 overflow-hidden rounded-[calc(16px*var(--radius-scale))] border border-neutral-200 bg-neutral-100">
@@ -843,6 +850,62 @@ export const SystemCover = () => {
                 <FileText {...icon} /> Summarise
               </ToolbarButton>
             </Toolbar>
+          </Piece>
+
+          <Piece x={600} y={-250}>
+            <StatCard className="w-56" label="Invoices sent" value="248" delta="+12%" trend="up" />
+          </Piece>
+
+          <Piece x={560} y={-30}>
+            <div className={SLAB}>
+              <Breadcrumb>
+                <BreadcrumbList>
+                  <BreadcrumbItem>
+                    <BreadcrumbHome />
+                  </BreadcrumbItem>
+                  <BreadcrumbSeparator />
+                  <BreadcrumbItem>Clients</BreadcrumbItem>
+                  <BreadcrumbSeparator />
+                  <BreadcrumbItem>
+                    <BreadcrumbPage>Harbour & Co</BreadcrumbPage>
+                  </BreadcrumbItem>
+                </BreadcrumbList>
+              </Breadcrumb>
+            </div>
+          </Piece>
+
+          <Piece x={900} y={-220}>
+            <div className={cn(SLAB, "flex w-60 flex-col gap-1")}>
+              <NavItem icon={<FileText {...icon} />} active>
+                All invoices
+              </NavItem>
+              <NavItem icon={<Clock {...icon} />}>Overdue</NavItem>
+              <NavItem icon={<Repeat {...icon} />}>Recurring</NavItem>
+            </div>
+          </Piece>
+
+          <Piece x={1160} y={1260}>
+            <Card layout="chart" className="w-[440px]">
+              <CardHeader>
+                <CardTitle>Revenue</CardTitle>
+                <div className="flex items-baseline gap-2">
+                  <CardValue size="lg">€48.2k</CardValue>
+                  <CardDelta>+6.1% last mo</CardDelta>
+                </div>
+              </CardHeader>
+              <AreaChart data={revenue} color="var(--pds-chart-2)" height={110} yTicks={[0, 200, 400]} />
+            </Card>
+          </Piece>
+
+          <Piece x={1680} y={1160}>
+            <div className={cn(SLAB, "flex flex-col gap-3")}>
+              <Input size="sm" placeholder="Search" leadingIcon={<Search {...icon} />} />
+              <div className="flex items-center gap-2 text-[13px] text-neutral-600">
+                <Kbd>⌘</Kbd>
+                <Kbd>K</Kbd>
+                to search
+              </div>
+            </div>
           </Piece>
         </Theme>
       </div>

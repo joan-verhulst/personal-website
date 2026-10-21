@@ -14,8 +14,11 @@ import PostLink from "~/modules/blog/components/post-link";
 import { useHapticSound } from "~/modules/core/hooks/use-haptic-sound";
 import cn from "~/utils/cn";
 
-const PADDING_X = "px-[clamp(1.25rem,6cqw,3rem)]";
-const PADDING_TOP = "pt-[clamp(1.25rem,6cqw,3rem)]";
+// One inset from the card's left, bottom and right edges to what you read:
+// the title, the section and the arrow. The 32px row centres them, so its
+// bottom and right sit half a rem further out, and the faint outlines of the
+// section pill and the arrow hang just outside the line
+const INSET = "pl-[clamp(1.25rem,6cqw,3rem)] pr-[calc(clamp(1.25rem,6cqw,3rem)-0.5rem)] pb-[calc(clamp(1.25rem,6cqw,3rem)-0.5rem)]";
 
 const TEXT = "mx-auto max-w-3xl px-2";
 
@@ -32,12 +35,11 @@ const PostTile = ({ post }: { post: Post }) => {
       <span className="absolute inset-0 overflow-hidden">
         <PostCover post={post} sizes="(min-width: 1200px) 1152px, 100vw" />
       </span>
-      <span className="pointer-events-none absolute inset-x-0 top-0 h-1/3 bg-linear-to-b from-neutral-950/50 to-transparent" />
+      <span className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-linear-to-t from-neutral-950/35 to-transparent" />
       <span
         className={cn(
-          "absolute inset-x-0 top-0 flex items-center gap-2",
-          PADDING_X,
-          PADDING_TOP,
+          "absolute inset-x-0 bottom-0 flex items-center gap-2",
+          INSET,
         )}
       >
         <span className="min-w-0 flex-1 truncate text-[clamp(0.875rem,2.5cqw,1.125rem)] text-neutral-50">

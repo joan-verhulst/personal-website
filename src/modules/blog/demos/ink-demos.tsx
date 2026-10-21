@@ -7,7 +7,7 @@ import ShaderCanvas from "~/modules/blog/components/shader-canvas";
 import { INK_FRAGMENT } from "~/modules/blog/demos/ink-gl";
 import cn from "~/utils/cn";
 
-const PHOTO = "/blog/two-horses.jpg";
+const PHOTO = "/blog/storm-at-the-mill.jpg";
 const PHOTO_ASPECT = 3 / 2;
 
 export interface InkValues {
@@ -28,23 +28,25 @@ export interface InkValues {
 }
 
 export const DISTRESSED: InkValues = {
-  blur: 13,
-  unevenness: 0.34,
-  patchSize: 0.02,
-  focusX: 0.14,
-  focusY: 0.45,
-  focusSize: 0.18,
-  falloff: 0.72,
-  strokeLength: 2.5,
-  strokeAngle: -19,
+  blur: 10.8,
+  unevenness: 0.265,
+  patchSize: 0,
+  focusX: 0.23,
+  focusY: 0.365,
+  focusSize: 0.12,
+  falloff: 0.475,
+  strokeLength: 1,
+  strokeAngle: -59.4,
   balance: 0.55,
-  detailScale: 0.25,
-  clump: 0.85,
-  inkWeight: 0.48,
-  hardness: 1.8,
+  detailScale: 0,
+  clump: 0,
+  inkWeight: 0.33,
+  hardness: 1.188,
 };
 
 const BLACK_ON_PAPER = { ink: [0.086, 0.086, 0.086], paper: [0.973, 0.965, 0.945] };
+// The site's own white, neutral-50 (#faf9f9)
+const SITE_WHITE = [250 / 255, 249 / 255, 249 / 255];
 
 // How close the photo is, and the point of it in the middle, 0 to 1 from the
 // top left. It never shows past the photo's edges
@@ -54,10 +56,21 @@ interface Framing {
   y: number;
 }
 
-const WHOLE: Framing = { zoom: 1, x: 0.5, y: 0.5 };
-const ON_THE_HORSES: Framing = { zoom: 1.5, x: 0.515, y: 0.555 };
+// The photo in the mat's window
+const WHOLE: Framing = { zoom: 1.21, x: 0.615, y: 0.5 };
+// The print in a white mat, everywhere in the post; the shader runs over both,
+// so the print's edges distress like the rest of it
+const MOUNT: Mount = { height: 0.793, aspect: 0.8, lift: 0 };
 
-const usePhoto = (framing: Framing) => {
+// A white mat with a window cut into it: the window's height as a share of the
+// frame, its width to height, and how far it sits above the middle
+interface Mount {
+  height: number;
+  aspect: number;
+  lift: number;
+}
+
+const usePhoto = (framing: Framing, mount?: Mount) => {
   const boxRef = useRef<HTMLDivElement>(null);
   const [photo, setPhoto] = useState<HTMLCanvasElement | null>(null);
 
@@ -87,14 +100,33 @@ const usePhoto = (framing: Framing) => {
       canvas.height = height;
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
+      // Where the photo goes: the whole frame, or the mat's window
+      let area = { x: 0, y: 0, width, height };
+      if (mount) {
+        const windowHeight = height * mount.height;
+        const windowWidth = windowHeight * mount.aspect;
+        area = {
+          x: (width - windowWidth) / 2,
+          y: (height * (1 - mount.lift) - windowHeight) / 2,
+          width: windowWidth,
+          height: windowHeight,
+        };
+        ctx.fillStyle = "#faf9f9";
+        ctx.fillRect(0, 0, width, height);
+      }
       const scale =
-        Math.max(width / image.naturalWidth, height / image.naturalHeight) * framing.zoom;
+        Math.max(area.width / image.naturalWidth, area.height / image.naturalHeight) * framing.zoom;
       const drawnWidth = image.naturalWidth * scale;
       const drawnHeight = image.naturalHeight * scale;
-      const left = Math.min(0, Math.max(width - drawnWidth, width / 2 - framing.x * drawnWidth));
-      const top = Math.min(0, Math.max(height - drawnHeight, height / 2 - framing.y * drawnHeight));
+      const left = Math.min(0, Math.max(area.width - drawnWidth, area.width / 2 - framing.x * drawnWidth));
+      const top = Math.min(0, Math.max(area.height - drawnHeight, area.height / 2 - framing.y * drawnHeight));
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(area.x, area.y, area.width, area.height);
+      ctx.clip();
       ctx.imageSmoothingQuality = "high";
-      ctx.drawImage(image, left, top, drawnWidth, drawnHeight);
+      ctx.drawImage(image, area.x + left, area.y + top, drawnWidth, drawnHeight);
+      ctx.restore();
       setPhoto(canvas);
     };
 
@@ -108,7 +140,7 @@ const usePhoto = (framing: Framing) => {
       clearTimeout(timer);
       observer.disconnect();
     };
-  }, [framing]);
+  }, [framing, mount]);
 
   return { boxRef, photo };
 };
@@ -119,6 +151,8 @@ interface InkCanvasProps {
   showFocus?: boolean;
   isFilling?: boolean;
   framing?: Framing;
+  mount?: Mount;
+  paper?: number[];
   onPointer?: (x: number, y: number) => void;
   className?: string;
 }
@@ -129,10 +163,12 @@ const InkCanvas = ({
   showFocus = false,
   isFilling = false,
   framing = WHOLE,
+  mount = MOUNT,
+  paper = SITE_WHITE,
   onPointer,
   className,
 }: InkCanvasProps) => {
-  const { boxRef, photo } = usePhoto(framing);
+  const { boxRef, photo } = usePhoto(framing, mount);
   const [ratio, setRatio] = useState(1);
 
   useEffect(() => {
@@ -158,16 +194,19 @@ const InkCanvas = ({
       uInkWeight: values.inkWeight,
       uHardness: values.hardness,
       uInk: BLACK_ON_PAPER.ink,
-      uPaper: BLACK_ON_PAPER.paper,
+      uPaper: paper,
     }),
-    [ratio, split, showFocus, values],
+    [ratio, split, showFocus, values, paper],
   );
 
   return (
     <div
       ref={boxRef}
-      className={cn("w-full bg-[#f8f6f1]", isFilling ? "absolute inset-0" : "relative")}
-      style={isFilling ? undefined : { aspectRatio: PHOTO_ASPECT }}
+      className={cn("w-full", isFilling ? "absolute inset-0" : "relative")}
+      style={{
+        backgroundColor: `rgb(${paper.map((channel) => Math.round(channel * 255)).join(" ")})`,
+        aspectRatio: isFilling ? undefined : PHOTO_ASPECT,
+      }}
     >
       <ShaderCanvas
         fragment={INK_FRAGMENT}
@@ -183,8 +222,11 @@ const InkCanvas = ({
 const px = (value: number) => `${value.toFixed(1)} px`;
 const share = (value: number) => value.toFixed(2);
 
+/** The cover: the whole print in a white passe-partout, printed as one sheet. */
 export const InkCover = () => (
-  <InkCanvas values={DISTRESSED} isFilling framing={ON_THE_HORSES} />
+  <div inert className="absolute inset-0">
+    <InkCanvas values={DISTRESSED} isFilling framing={WHOLE} mount={MOUNT} paper={SITE_WHITE} />
+  </div>
 );
 
 export const InkBeforeAfter = () => {
@@ -194,6 +236,9 @@ export const InkBeforeAfter = () => {
     <>
       <InkCanvas
         values={DISTRESSED}
+        framing={WHOLE}
+        mount={MOUNT}
+        paper={SITE_WHITE}
         split={split}
         isFilling
         onPointer={(x) => setSplit(x)}
@@ -224,7 +269,7 @@ export const InkPlayground = () => {
         <>
           <Slider label="Blur" value={values.blur} min={0} max={20} step={0.1} format={px} onChange={set("blur")} />
           <Slider label="Stroke length" value={values.strokeLength} min={1} max={15} step={0.1} format={share} onChange={set("strokeLength")} />
-          <Slider label="Clump size" value={values.clump} min={0.25} max={8} step={0.05} format={px} onChange={set("clump")} />
+          <Slider label="Clump size" value={values.clump} min={0} max={8} step={0.05} format={px} onChange={set("clump")} />
           <Slider label="Ink weight" value={values.inkWeight} min={0} max={1} format={share} onChange={set("inkWeight")} />
         </>
       }

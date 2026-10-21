@@ -13,9 +13,8 @@ export const postSections = {
       "Visual effects I built as shaders, how each one works and how I got there, with demos you can play with along the way.",
   },
   design: {
-    title: "Design systems",
-    description:
-      "How the products I design are put together, measured down to the padding.",
+    title: "Design",
+    description: "How the products I design are put together, and the ideas behind them.",
   },
 };
 
@@ -34,6 +33,14 @@ export interface Post {
 }
 
 export const posts: Post[] = [
+  {
+    slug: "grid-systems",
+    title: "Translating Swiss design to software",
+    section: "design",
+    summary: "An experiment in bringing Swiss graphic design into modern software interfaces.",
+    date: "2026-10-21",
+    minutes: 5,
+  },
   {
     slug: "design-system",
     title: "The design system I've built over the years",

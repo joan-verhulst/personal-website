@@ -12,7 +12,13 @@ const SystemCover = dynamic(() =>
   import("~/modules/blog/demos/design-system-demos").then((module) => module.SystemCover),
 );
 
+// The grid post's cover is a live screen too, loaded only where it shows.
+const GridCover = dynamic(() =>
+  import("~/modules/blog/demos/grid-demos").then((module) => module.GridCover),
+);
+
 const liveCovers: Record<string, ComponentType> = {
+  "grid-systems": GridCover,
   "design-system": SystemCover,
   "distressed-ink": InkCover,
 };

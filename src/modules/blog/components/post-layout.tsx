@@ -34,7 +34,7 @@ const PostLayout = ({ post, hero, children }: PropsWithChildren<Props>) => {
       {/* On the page's own margin, level with the header. */}
       <div className="pointer-events-none absolute inset-y-0 left-8 hidden xl:block">
         <div className="pointer-events-auto sticky top-49">
-          <PostIndex target={proseRef} />
+          <PostIndex key={post.slug} target={proseRef} />
         </div>
       </div>
 

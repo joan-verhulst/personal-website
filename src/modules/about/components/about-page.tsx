@@ -368,9 +368,7 @@ const AboutPage = () => {
         </p>
         {products.length > 0 ? (
           <Wide className="relative mt-16 font-normal leading-normal">
-            <FlowerBurst side="left" seed={83}>
-              <ProductsShowcase products={products} />
-            </FlowerBurst>
+            <ProductsShowcase products={products} />
             <SectionLink href={pages.uiUx.path} className={ON_TABLE}>
               Explore my work
             </SectionLink>

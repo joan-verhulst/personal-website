@@ -3,6 +3,12 @@
     "extends": ["biome-config-pixel"],
     "overrides": [
         {
+            "includes": ["packages/**"],
+            "linter": { "enabled": false },
+            "formatter": { "enabled": false },
+            "assist": { "enabled": false }
+        },
+        {
             "includes": ["scripts/**"],
             "linter": {
                 "rules": {

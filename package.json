@@ -23,7 +23,7 @@
         "aws4fetch": "^1.0.20",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
-        "continuum": "github:joan-verhulst/continuum#aba9ea0cdc3b5de0e98821873f0e095f7a38b57a",
+        "continuum": "file:./packages/continuum",
         "eyes-next": "^0.3.0",
         "gsap": "^3.14.2",
         "lucide-react": "^0.563.0",

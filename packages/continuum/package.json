@@ -1,0 +1,27 @@
+{
+  "name": "continuum",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The parts of the Continuum design system that the blog's demos use.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "sideEffects": [
+    "*.css"
+  ],
+  "exports": {
+    ".": "./src/index.ts",
+    "./experimental": "./src/experimental/index.ts",
+    "./styles.css": "./dist/styles.css"
+  },
+  "peerDependencies": {
+    "react": ">=19",
+    "react-dom": ">=19"
+  },
+  "dependencies": {
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.60.0",
+    "radix-ui": "^1.8.1",
+    "tailwind-merge": "^3.4.0"
+  }
+}

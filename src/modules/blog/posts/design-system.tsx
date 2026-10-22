@@ -1,4 +1,3 @@
-import { GitHubCard } from "~/modules/blog/components/prose";
 import {
   BottomBarSpec,
   ButtonSpec,
@@ -145,11 +144,6 @@ const DesignSystem = () => (
       The components are built with Radix primitives and Tailwind, with design tokens controlling
       the shared styling.
     </p>
-    <GitHubCard
-      href="https://github.com/joan-verhulst/continuum"
-      title="View the design system on GitHub"
-      description="Continuum on GitHub"
-    />
   </>
 );
 
